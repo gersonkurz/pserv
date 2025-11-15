@@ -1,8 +1,10 @@
 // pserv5.cpp : Defines the entry point for the application.
 //
 
+#include "precomp.h"
 #include "framework.h"
 #include "pserv5.h"
+#include "utils/logging.h"
 
 #define MAX_LOADSTRING 100
 
@@ -25,7 +27,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
+    // Initialize logging
+    auto logger = pserv::utils::InitializeLogging();
+    logger->info("pserv5 starting up");
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -52,6 +56,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
+    logger->info("pserv5 shutting down");
     return (int) msg.wParam;
 }
 
