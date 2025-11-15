@@ -3,6 +3,10 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 
+namespace pserv::config {
+    class ConfigBackend;
+}
+
 namespace pserv {
 
 class MainWindow {
@@ -13,6 +17,7 @@ public:
     bool Initialize(HINSTANCE hInstance);
     void Show(int nCmdShow);
     int MessageLoop();
+    void SetConfigBackend(config::ConfigBackend* pBackend) { m_pConfigBackend = pBackend; }
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -27,6 +32,7 @@ private:
 
     HWND m_hWnd{nullptr};
     HINSTANCE m_hInstance{nullptr};
+    config::ConfigBackend* m_pConfigBackend{nullptr};
 
     // DirectX 11 resources
     Microsoft::WRL::ComPtr<ID3D11Device> m_pDevice;
@@ -36,6 +42,9 @@ private:
 
     // ImGui state
     bool m_bShowDemoWindow{true};
+
+    // Helper methods
+    void SaveWindowState();
 };
 
 } // namespace pserv

@@ -1,6 +1,8 @@
 #include "precomp.h"
 #include "main_window.h"
 #include "Resource.h"
+#include "Config/settings.h"
+#include "utils/win32_error.h"
 #include <dxgi.h>
 #include <imgui.h>
 #include <imgui_impl_win32.h>
@@ -47,13 +49,21 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
         return false;
     }
 
+    // Load window settings
+    auto& windowSettings = config::theSettings.window;
+    int width = windowSettings.width.get();
+    int height = windowSettings.height.get();
+    int posX = windowSettings.positionX.get();
+    int posY = windowSettings.positionY.get();
+    bool maximized = windowSettings.maximized.get();
+
     // Create window
     m_hWnd = CreateWindowW(
         L"pserv5WindowClass",
         L"pserv5",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        1280, 720,
+        posX, posY,
+        width, height,
         nullptr,
         nullptr,
         hInstance,
@@ -85,6 +95,11 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
 }
 
 void MainWindow::Show(int nCmdShow) {
+    // Override nCmdShow if we have a saved maximized state
+    auto& windowSettings = config::theSettings.window;
+    if (windowSettings.maximized.get()) {
+        nCmdShow = SW_SHOWMAXIMIZED;
+    }
     ShowWindow(m_hWnd, nCmdShow);
     UpdateWindow(m_hWnd);
 }
@@ -134,6 +149,9 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
         break;
 
     case WM_DESTROY:
+        if (pWindow) {
+            pWindow->SaveWindowState();
+        }
         PostQuitMessage(0);
         break;
 
@@ -267,6 +285,41 @@ void MainWindow::Render() {
 
     // Present
     m_pSwapChain->Present(1, 0); // VSync enabled
+}
+
+void MainWindow::SaveWindowState() {
+    if (!m_hWnd || !m_pConfigBackend) {
+        spdlog::warn("Cannot save window state: hWnd={}, pConfigBackend={}",
+            (void*)m_hWnd, (void*)m_pConfigBackend);
+        return;
+    }
+
+    auto& windowSettings = config::theSettings.window;
+
+    // Check if maximized
+    WINDOWPLACEMENT wp{};
+    wp.length = sizeof(WINDOWPLACEMENT);
+    if (!GetWindowPlacement(m_hWnd, &wp)) {
+        LogWin32Error("GetWindowPlacement");
+        return;
+    }
+
+    windowSettings.maximized.set(wp.showCmd == SW_SHOWMAXIMIZED);
+
+    // Get normal (non-maximized) position
+    RECT& rc = wp.rcNormalPosition;
+    windowSettings.positionX.set(rc.left);
+    windowSettings.positionY.set(rc.top);
+    windowSettings.width.set(rc.right - rc.left);
+    windowSettings.height.set(rc.bottom - rc.top);
+
+    // Save to config backend
+    windowSettings.save(*m_pConfigBackend);
+
+    spdlog::info("Window state saved: {}x{} at ({}, {}), maximized={}",
+        windowSettings.width.get(), windowSettings.height.get(),
+        windowSettings.positionX.get(), windowSettings.positionY.get(),
+        windowSettings.maximized.get());
 }
 
 } // namespace pserv

@@ -35,6 +35,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize main window
     pserv::MainWindow mainWindow;
+    mainWindow.SetConfigBackend(&backend);
     if (!mainWindow.Initialize(hInstance)) {
         logger->error("Failed to initialize main window");
         return 1;
