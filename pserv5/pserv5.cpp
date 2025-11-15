@@ -5,6 +5,8 @@
 #include "framework.h"
 #include "pserv5.h"
 #include "utils/logging.h"
+#include "Config/settings.h"
+#include "Config/toml_backend.h"
 
 #define MAX_LOADSTRING 100
 
@@ -27,9 +29,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // Initialize logging
+    // Step 1: Initialize logging with default settings
     auto logger = pserv::utils::InitializeLogging();
     logger->info("pserv5 starting up");
+
+    // Step 2: Load configuration
+    std::filesystem::path configPath = "pserv5.toml";
+    logger->info("Loading configuration from: {}", std::filesystem::absolute(configPath).string());
+
+    pserv::config::TomlBackend backend{configPath.string()};
+    pserv::config::theSettings.load(backend);
+
+    // Step 3: Apply logging configuration from loaded settings
+    std::string logLevel = pserv::config::theSettings.logging.logLevel.get();
+    logger->set_level(spdlog::level::from_str(logLevel));
+    logger->info("Log level set to: {}", logLevel);
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -55,6 +69,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
     }
+
+    // Save configuration on exit
+    pserv::config::theSettings.save(backend);
+    logger->info("Configuration saved to: {}", std::filesystem::absolute(configPath).string());
 
     logger->info("pserv5 shutting down");
     return (int) msg.wParam;
