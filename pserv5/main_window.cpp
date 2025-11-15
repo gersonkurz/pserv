@@ -2,15 +2,22 @@
 #include "main_window.h"
 #include "Resource.h"
 #include <dxgi.h>
+#include <imgui.h>
+#include <imgui_impl_win32.h>
+#include <imgui_impl_dx11.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
+
+// Forward declare message handler from imgui_impl_win32.cpp
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace pserv {
 
 MainWindow::MainWindow() = default;
 
 MainWindow::~MainWindow() {
+    CleanupImGui();
     CleanupDirectX();
     if (m_hWnd) {
         DestroyWindow(m_hWnd);
@@ -67,6 +74,12 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
         return false;
     }
 
+    // Initialize ImGui
+    if (!InitializeImGui()) {
+        spdlog::error("Failed to initialize ImGui");
+        return false;
+    }
+
     spdlog::info("Main window initialized successfully");
     return true;
 }
@@ -91,6 +104,10 @@ int MainWindow::MessageLoop() {
 }
 
 LRESULT CALLBACK MainWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    // Forward messages to ImGui first
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
+        return true;
+
     // Retrieve MainWindow instance pointer
     MainWindow* pWindow = reinterpret_cast<MainWindow*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
@@ -195,15 +212,58 @@ void MainWindow::CleanupRenderTarget() {
     m_pRenderTargetView.Reset();
 }
 
+bool MainWindow::InitializeImGui() {
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplWin32_Init(m_hWnd);
+    ImGui_ImplDX11_Init(m_pDevice.Get(), m_pDeviceContext.Get());
+
+    spdlog::info("ImGui initialized successfully");
+    return true;
+}
+
+void MainWindow::CleanupImGui() {
+    if (ImGui::GetCurrentContext()) {
+        ImGui_ImplDX11_Shutdown();
+        ImGui_ImplWin32_Shutdown();
+        ImGui::DestroyContext();
+    }
+}
+
 void MainWindow::Render() {
     if (!m_pDeviceContext || !m_pRenderTargetView) {
         return;
     }
 
+    // Start the Dear ImGui frame
+    ImGui_ImplDX11_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+
+    // Show ImGui demo window for testing
+    if (m_bShowDemoWindow) {
+        ImGui::ShowDemoWindow(&m_bShowDemoWindow);
+    }
+
+    // Rendering
+    ImGui::Render();
+
     // Clear to cornflower blue (classic DirectX default)
     const float clearColor[4] = { 0.392f, 0.584f, 0.929f, 1.0f };
     m_pDeviceContext->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);
     m_pDeviceContext->ClearRenderTargetView(m_pRenderTargetView.Get(), clearColor);
+
+    // Render ImGui
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
     // Present
     m_pSwapChain->Present(1, 0); // VSync enabled

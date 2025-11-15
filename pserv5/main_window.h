@@ -19,6 +19,8 @@ private:
 
     bool InitializeDirectX();
     void CleanupDirectX();
+    bool InitializeImGui();
+    void CleanupImGui();
     void CreateRenderTarget();
     void CleanupRenderTarget();
     void Render();
@@ -31,6 +33,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_pDeviceContext;
     Microsoft::WRL::ComPtr<IDXGISwapChain> m_pSwapChain;
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
+
+    // ImGui state
+    bool m_bShowDemoWindow{true};
 };
 
 } // namespace pserv
