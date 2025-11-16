@@ -53,6 +53,9 @@ namespace pserv::utils {
     }
 
     std::shared_ptr<spdlog::logger> InitializeLogging() {
+        // TODO: Remove this debug code - delete log file on startup for clean logs during development
+        std::remove("pserv5.log");
+
         // Console sink with default pattern
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         console_sink->set_level(spdlog::level::debug);

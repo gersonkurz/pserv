@@ -4,6 +4,8 @@
 #include <wrl/client.h>
 #include <vector>
 
+struct ImGuiTable;  // Forward declaration
+
 namespace pserv::config {
     class ConfigBackend;
 }
@@ -51,9 +53,11 @@ private:
     AsyncOperation* m_pAsyncOp{nullptr};  // Current async operation
     bool m_bShowProgressDialog{false};
     ServicesDataController* m_pServicesController{nullptr};  // Services controller
+    ImGuiTable* m_pServicesTable{nullptr};  // Cached pointer to services table
 
     // Helper methods
     void SaveWindowState();
+    void SaveServicesTableState(bool force = false);
     void ClearServices();
     void RenderProgressDialog();
 };

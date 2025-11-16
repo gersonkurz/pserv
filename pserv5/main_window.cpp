@@ -11,7 +11,10 @@
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
+#include <imgui_internal.h>
 #include <thread>
+#include <chrono>
+#include <sstream>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -201,6 +204,7 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
     case WM_DESTROY:
         if (pWindow) {
             pWindow->SaveWindowState();
+            pWindow->SaveServicesTableState(true); // Force save on window close
         }
         PostQuitMessage(0);
         break;
@@ -446,12 +450,79 @@ void MainWindow::Render() {
                                            ImGuiTableFlags_SizingFixedFit;
 
                     if (ImGui::BeginTable("ServicesTable", static_cast<int>(columns.size()), flags)) {
-                        // Setup columns with initial widths - all fixed so resizing triggers horizontal scroll
-                        ImGui::TableSetupColumn(columns[0].DisplayName.c_str(), ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, 300.0f, 0);
-                        ImGui::TableSetupColumn(columns[1].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, 200.0f, 1);
-                        ImGui::TableSetupColumn(columns[2].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, 80.0f, 2);
-                        ImGui::TableSetupColumn(columns[3].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, 100.0f, 3);
-                        ImGui::TableSetupColumn(columns[4].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, 80.0f, 4);
+                        // Cache the table pointer for saving state later
+                        m_pServicesTable = ImGui::GetCurrentTable();
+
+                        // Load saved column widths from config
+                        static std::vector<float> columnWidths;
+                        static bool widthsLoaded = false;
+                        if (!widthsLoaded) {
+                            std::string widthsStr = config::theSettings.servicesTable.columnWidths.get();
+                            spdlog::debug("Loading column widths from config: {}", widthsStr);
+                            std::istringstream iss(widthsStr);
+                            std::string token;
+                            while (std::getline(iss, token, ',')) {
+                                columnWidths.push_back(std::stof(token));
+                            }
+                            widthsLoaded = true;
+                            spdlog::debug("Loaded {} column widths", columnWidths.size());
+                        }
+
+                        // Ensure we have the correct number of widths
+                        while (columnWidths.size() < columns.size()) {
+                            columnWidths.push_back(100.0f);
+                        }
+
+                        // Setup columns with loaded widths - must be in storage order (0,1,2,3,4)
+                        ImGui::TableSetupColumn(columns[0].DisplayName.c_str(), ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, columnWidths[0], 0);
+                        ImGui::TableSetupColumn(columns[1].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, columnWidths[1], 1);
+                        ImGui::TableSetupColumn(columns[2].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, columnWidths[2], 2);
+                        ImGui::TableSetupColumn(columns[3].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, columnWidths[3], 3);
+                        ImGui::TableSetupColumn(columns[4].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, columnWidths[4], 4);
+
+                        // Apply saved column order AFTER TableSetupColumn but BEFORE TableHeadersRow
+                        static bool orderApplied = false;
+                        if (!orderApplied) {
+                            ImGuiTable* table = ImGui::GetCurrentTable();
+                            std::string orderStr = config::theSettings.servicesTable.columnOrder.get();
+                            spdlog::debug("Restoring column order: {}", orderStr);
+
+                            std::istringstream iss(orderStr);
+                            std::string token;
+                            std::vector<int> displayOrder;
+                            while (std::getline(iss, token, ',')) {
+                                displayOrder.push_back(std::stoi(token));
+                            }
+
+                            // Apply DisplayOrder to columns and rebuild DisplayOrderToIndex
+                            if (displayOrder.size() == columns.size()) {
+                                spdlog::debug("Before restoration:");
+                                for (int i = 0; i < table->ColumnsCount; ++i) {
+                                    spdlog::debug("  Column[{}]: DisplayOrder={}, IndexWithinEnabledSet={}",
+                                        i, table->Columns[i].DisplayOrder, table->Columns[i].IndexWithinEnabledSet);
+                                }
+
+                                for (size_t i = 0; i < displayOrder.size(); ++i) {
+                                    if (i < table->ColumnsCount) {
+                                        table->Columns[i].DisplayOrder = static_cast<ImGuiTableColumnIdx>(displayOrder[i]);
+                                    }
+                                }
+
+                                // Rebuild DisplayOrderToIndex mapping
+                                for (int column_n = 0; column_n < table->ColumnsCount; column_n++) {
+                                    table->DisplayOrderToIndex[table->Columns[column_n].DisplayOrder] = static_cast<ImGuiTableColumnIdx>(column_n);
+                                }
+
+                                spdlog::debug("After restoration:");
+                                for (int i = 0; i < table->ColumnsCount; ++i) {
+                                    spdlog::debug("  Column[{}]: DisplayOrder={}, IndexWithinEnabledSet={}",
+                                        i, table->Columns[i].DisplayOrder, table->Columns[i].IndexWithinEnabledSet);
+                                }
+                            }
+
+                            orderApplied = true;
+                        }
+
                         ImGui::TableSetupScrollFreeze(0, 1); // Freeze header row
                         ImGui::TableHeadersRow();
 
@@ -481,6 +552,9 @@ void MainWindow::Render() {
                         }
 
                         ImGui::EndTable();
+
+                        // Save table state periodically (throttled inside the method)
+                        SaveServicesTableState();
                     }
                 }
                 // Other views
@@ -550,6 +624,59 @@ void MainWindow::SaveWindowState() {
         windowSettings.width.get(), windowSettings.height.get(),
         windowSettings.positionX.get(), windowSettings.positionY.get(),
         windowSettings.maximized.get());
+}
+
+void MainWindow::SaveServicesTableState(bool force) {
+    spdlog::debug("SaveServicesTableState called: force={}, pConfigBackend={}, pServicesTable={}",
+        force, (void*)m_pConfigBackend, (void*)m_pServicesTable);
+
+    if (!m_pConfigBackend) {
+        spdlog::warn("Cannot save services table state: pConfigBackend is null");
+        return;
+    }
+
+    if (!m_pServicesTable) {
+        spdlog::debug("ServicesTable pointer is null, skipping save");
+        return;
+    }
+
+    // Throttle saves - only save once per second (unless forced)
+    static auto lastSaveTime = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSaveTime);
+    if (!force && elapsed.count() < 1000) {
+        spdlog::trace("Skipping save: throttled ({}ms elapsed)", elapsed.count());
+        return; // Skip save if less than 1 second has passed
+    }
+    lastSaveTime = now;
+
+    spdlog::debug("Proceeding with save");
+
+    auto& tableSettings = config::theSettings.servicesTable;
+
+    // Save column widths
+    std::ostringstream widthsStream;
+    for (int i = 0; i < m_pServicesTable->ColumnsCount; ++i) {
+        if (i > 0) widthsStream << ",";
+        widthsStream << m_pServicesTable->Columns[i].WidthGiven;
+    }
+    spdlog::debug("Column widths: {}", widthsStream.str());
+    tableSettings.columnWidths.set(widthsStream.str());
+
+    // Save column display order
+    std::ostringstream orderStream;
+    for (int i = 0; i < m_pServicesTable->ColumnsCount; ++i) {
+        if (i > 0) orderStream << ",";
+        orderStream << static_cast<int>(m_pServicesTable->Columns[i].DisplayOrder);
+    }
+    spdlog::debug("Column order: {}", orderStream.str());
+    tableSettings.columnOrder.set(orderStream.str());
+
+    // Save to config backend
+    tableSettings.save(*m_pConfigBackend);
+
+    spdlog::info("Services table state saved: widths={}, order={}",
+        widthsStream.str(), orderStream.str());
 }
 
 } // namespace pserv

@@ -26,6 +26,14 @@ public:
         ApplicationSettings(Section* pParent) : Section{pParent, "Application"} {}
         TypedValue<std::string> activeView{this, "ActiveView", "Services"};
     } application{this};
+
+    struct ServicesTableSettings : public Section {
+        ServicesTableSettings(Section* pParent) : Section{pParent, "ServicesTable"} {}
+        TypedValue<std::string> columnWidths{this, "ColumnWidths", "300,200,80,100,80"};
+        TypedValue<std::string> columnOrder{this, "ColumnOrder", "0,1,2,3,4"};
+        TypedValue<int32_t> sortColumn{this, "SortColumn", -1};
+        TypedValue<bool> sortAscending{this, "SortAscending", true};
+    } servicesTable{this};
 };
 
 extern RootSettings theSettings;
