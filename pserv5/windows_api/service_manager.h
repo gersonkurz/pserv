@@ -5,6 +5,8 @@
 
 namespace pserv {
 
+class ServiceInfo;  // Forward declaration
+
 class ServiceManager {
 private:
     wil::unique_schandle m_hScManager;
@@ -14,14 +16,8 @@ public:
     ~ServiceManager() = default;
 
     // Enumerate all services on the local machine
-    struct ServiceInfo {
-        std::string name;
-        std::string displayName;
-        DWORD currentState;
-        DWORD serviceType;
-    };
-
-    std::vector<ServiceInfo> EnumerateServices();
+    // Returns raw pointers - caller is responsible for cleanup
+    std::vector<ServiceInfo*> EnumerateServices();
 };
 
 } // namespace pserv

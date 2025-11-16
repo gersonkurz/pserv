@@ -2,12 +2,15 @@
 #include <Windows.h>
 #include <d3d11.h>
 #include <wrl/client.h>
+#include <vector>
 
 namespace pserv::config {
     class ConfigBackend;
 }
 
 namespace pserv {
+
+class ServiceInfo;  // Forward declaration
 
 class MainWindow {
 public:
@@ -41,11 +44,12 @@ private:
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
 
     // ImGui state
-    bool m_bShowDemoWindow{true};
     std::string m_activeTab{"Services"};
+    std::vector<ServiceInfo*> m_services;  // Cached service list
 
     // Helper methods
     void SaveWindowState();
+    void ClearServices();
 };
 
 } // namespace pserv

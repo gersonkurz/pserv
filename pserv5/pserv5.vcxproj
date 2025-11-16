@@ -183,6 +183,7 @@
     <ClInclude Include="core\data_object.h" />
     <ClInclude Include="core\data_object_column.h" />
     <ClInclude Include="core\data_controller.h" />
+    <ClInclude Include="models\service_info.h" />
     <ClInclude Include="windows_api\service_manager.h" />
     <ClInclude Include="..\imgui\imconfig.h" />
     <ClInclude Include="..\imgui\imgui.h" />
@@ -203,16 +204,11 @@
     <ClCompile Include="pserv5.cpp" />
     <ClCompile Include="main_window.cpp" />
     <ClCompile Include="utils\logging.cpp" />
+    <ClCompile Include="models\service_info.cpp" />
     <ClCompile Include="windows_api\service_manager.cpp" />
     <ClCompile Include="Config\section.cpp" />
     <ClCompile Include="Config\settings.cpp" />
     <ClCompile Include="..\imgui\imgui.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\imgui\imgui_demo.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

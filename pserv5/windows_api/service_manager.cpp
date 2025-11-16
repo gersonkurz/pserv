@@ -1,5 +1,6 @@
 #include "precomp.h"
 #include "service_manager.h"
+#include "../models/service_info.h"
 #include "../utils/string_utils.h"
 #include <spdlog/spdlog.h>
 
@@ -19,8 +20,8 @@ ServiceManager::ServiceManager() {
     }
 }
 
-std::vector<ServiceManager::ServiceInfo> ServiceManager::EnumerateServices() {
-    std::vector<ServiceInfo> services;
+std::vector<ServiceInfo*> ServiceManager::EnumerateServices() {
+    std::vector<ServiceInfo*> services;
 
     // First call to get required buffer size
     DWORD bytesNeeded = 0;
@@ -65,15 +66,17 @@ std::vector<ServiceManager::ServiceInfo> ServiceManager::EnumerateServices() {
         return services;
     }
 
-    // Convert to our ServiceInfo structure
+    // Convert to ServiceInfo objects
     services.reserve(servicesReturned);
     for (DWORD i = 0; i < servicesReturned; ++i) {
-        ServiceInfo info;
-        info.name = utils::WideToUtf8(pServices[i].lpServiceName);
-        info.displayName = utils::WideToUtf8(pServices[i].lpDisplayName);
-        info.currentState = pServices[i].ServiceStatusProcess.dwCurrentState;
-        info.serviceType = pServices[i].ServiceStatusProcess.dwServiceType;
-        services.push_back(std::move(info));
+        auto* info = new ServiceInfo(
+            utils::WideToUtf8(pServices[i].lpServiceName),
+            utils::WideToUtf8(pServices[i].lpDisplayName),
+            pServices[i].ServiceStatusProcess.dwCurrentState,
+            pServices[i].ServiceStatusProcess.dwServiceType
+        );
+        info->SetProcessId(pServices[i].ServiceStatusProcess.dwProcessId);
+        services.push_back(info);
     }
 
     spdlog::info("Enumerated {} services", services.size());

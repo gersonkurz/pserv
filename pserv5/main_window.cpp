@@ -4,6 +4,7 @@
 #include "Config/settings.h"
 #include "utils/win32_error.h"
 #include "windows_api/service_manager.h"
+#include "models/service_info.h"
 #include <dxgi.h>
 #include <imgui.h>
 #include <imgui_impl_win32.h>
@@ -20,11 +21,19 @@ namespace pserv {
 MainWindow::MainWindow() = default;
 
 MainWindow::~MainWindow() {
+    ClearServices();
     CleanupImGui();
     CleanupDirectX();
     if (m_hWnd) {
         DestroyWindow(m_hWnd);
     }
+}
+
+void MainWindow::ClearServices() {
+    for (auto* service : m_services) {
+        delete service;
+    }
+    m_services.clear();
 }
 
 bool MainWindow::Initialize(HINSTANCE hInstance) {
@@ -344,29 +353,37 @@ void MainWindow::Render() {
                     }
                 }
 
-                // Placeholder content
-                ImGui::Text("This is the %s view", tab);
-                ImGui::Text("Content will be implemented in future milestones");
-
-                // Test button for service enumeration (Milestone 10)
+                // Services view
                 if (std::string(tab) == "Services") {
                     ImGui::Separator();
-                    if (ImGui::Button("Test: Enumerate Services")) {
+                    if (ImGui::Button("Refresh Services")) {
                         try {
+                            ClearServices();
                             ServiceManager sm;
-                            auto services = sm.EnumerateServices();
-                            spdlog::info("Successfully enumerated {} services", services.size());
-                            for (size_t i = 0; i < std::min(services.size(), size_t(5)); ++i) {
-                                spdlog::info("  Service {}: {} ({})", i+1,
-                                    services[i].displayName, services[i].name);
-                            }
-                            if (services.size() > 5) {
-                                spdlog::info("  ... and {} more services", services.size() - 5);
-                            }
+                            m_services = sm.EnumerateServices();
+                            spdlog::info("Successfully enumerated {} services", m_services.size());
                         } catch (const std::exception& e) {
                             spdlog::error("Failed to enumerate services: {}", e.what());
                         }
                     }
+
+                    ImGui::Text("Services: %zu", m_services.size());
+                    ImGui::Separator();
+
+                    // Display services in a scrollable region
+                    ImGui::BeginChild("ServiceList", ImVec2(0, 0), true);
+                    for (const auto* service : m_services) {
+                        ImGui::Text("%s - %s [%s]",
+                            service->GetDisplayName().c_str(),
+                            service->GetStatusString().c_str(),
+                            service->GetName().c_str());
+                    }
+                    ImGui::EndChild();
+                }
+                // Other views
+                else {
+                    ImGui::Text("This is the %s view", tab);
+                    ImGui::Text("Content will be implemented in future milestones");
                 }
 
                 ImGui::EndTabItem();
@@ -378,11 +395,6 @@ void MainWindow::Render() {
     }
 
     ImGui::End();
-
-    // Show ImGui demo window for testing (optional)
-    if (m_bShowDemoWindow) {
-        ImGui::ShowDemoWindow(&m_bShowDemoWindow);
-    }
 
     // Rendering
     ImGui::Render();
