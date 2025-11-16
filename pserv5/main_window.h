@@ -54,6 +54,9 @@ private:
     bool m_bShowProgressDialog{false};
     ServicesDataController* m_pServicesController{nullptr};  // Services controller
     ImGuiTable* m_pServicesTable{nullptr};  // Cached pointer to services table
+    char m_filterText[256]{};  // Filter text for services view
+    std::vector<const ServiceInfo*> m_selectedServices;  // Selected services for multi-select
+    const ServiceInfo* m_lastClickedService{nullptr};  // For shift-click range selection
 
     // Helper methods
     void SaveWindowState();

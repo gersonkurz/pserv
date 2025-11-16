@@ -97,23 +97,24 @@ std::vector<ServiceAction> ServicesDataController::GetAvailableActions(const Ser
     actions.push_back(ServiceAction::CopyName);
     actions.push_back(ServiceAction::CopyDisplayName);
 
-    // Get service state
-    std::string status = service->GetProperty(2); // Status column
+    // Get service state and capabilities
+    DWORD currentState = service->GetCurrentState();
+    DWORD controlsAccepted = service->GetControlsAccepted();
 
     // State-dependent actions
-    if (status == "Stopped") {
+    if (currentState == SERVICE_STOPPED) {
         actions.push_back(ServiceAction::Start);
     }
-    else if (status == "Running") {
+    else if (currentState == SERVICE_RUNNING) {
         actions.push_back(ServiceAction::Stop);
         actions.push_back(ServiceAction::Restart);
 
-        // Check if service accepts pause/continue
-        // TODO: Query actual service capabilities
-        // For now, add pause/resume for all running services
-        actions.push_back(ServiceAction::Pause);
+        // Only offer Pause if service accepts pause/continue
+        if (controlsAccepted & SERVICE_ACCEPT_PAUSE_CONTINUE) {
+            actions.push_back(ServiceAction::Pause);
+        }
     }
-    else if (status == "Paused") {
+    else if (currentState == SERVICE_PAUSED) {
         actions.push_back(ServiceAction::Resume);
         actions.push_back(ServiceAction::Stop);
     }

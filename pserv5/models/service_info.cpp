@@ -11,6 +11,7 @@ ServiceInfo::ServiceInfo(std::string name, std::string displayName, DWORD curren
     , m_startType(0)
     , m_processId(0)
     , m_serviceType(serviceType)
+    , m_controlsAccepted(0)
 {
     // Update running state based on service state
     SetRunning(m_currentState == SERVICE_RUNNING);

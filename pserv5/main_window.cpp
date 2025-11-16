@@ -15,6 +15,7 @@
 #include <thread>
 #include <chrono>
 #include <sstream>
+#include <algorithm>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -436,9 +437,43 @@ void MainWindow::Render() {
                         }
                     }
 
-                    const auto& services = m_pServicesController->GetServices();
+                    // Filter input box
                     ImGui::SameLine();
-                    ImGui::Text("Services: %zu", services.size());
+                    ImGui::SetNextItemWidth(300.0f);
+                    ImGui::InputTextWithHint("##filter", "Filter services...", m_filterText, IM_ARRAYSIZE(m_filterText));
+
+                    // Filter services based on search text
+                    const auto& allServices = m_pServicesController->GetServices();
+                    std::vector<const ServiceInfo*> filteredServices;
+                    std::string filterLower;
+
+                    if (m_filterText[0] != '\0') {
+                        // Convert filter text to lowercase for case-insensitive search
+                        filterLower = m_filterText;
+                        std::transform(filterLower.begin(), filterLower.end(), filterLower.begin(),
+                            [](unsigned char c) { return std::tolower(c); });
+
+                        for (const auto* service : allServices) {
+                            // Search in display name and service name
+                            std::string displayName = service->GetDisplayName();
+                            std::string serviceName = service->GetName();
+                            std::transform(displayName.begin(), displayName.end(), displayName.begin(),
+                                [](unsigned char c) { return std::tolower(c); });
+                            std::transform(serviceName.begin(), serviceName.end(), serviceName.begin(),
+                                [](unsigned char c) { return std::tolower(c); });
+
+                            if (displayName.find(filterLower) != std::string::npos ||
+                                serviceName.find(filterLower) != std::string::npos) {
+                                filteredServices.push_back(service);
+                            }
+                        }
+                    } else {
+                        // No filter - show all services
+                        filteredServices.assign(allServices.begin(), allServices.end());
+                    }
+
+                    ImGui::SameLine();
+                    ImGui::Text("Services: %zu / %zu", filteredServices.size(), allServices.size());
                     ImGui::Separator();
 
                     // Display services in a table
@@ -546,7 +581,7 @@ void MainWindow::Render() {
                         }
 
                         // Display rows
-                        for (const auto* service : services) {
+                        for (const auto* service : filteredServices) {
                             ImGui::TableNextRow();
                             ImGui::PushID(service);
 
@@ -573,100 +608,315 @@ void MainWindow::Render() {
 
                                 // First column: use selectable to make row clickable
                                 if (i == 0) {
-                                    ImGui::Selectable(value.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+                                    // Check if this service is selected
+                                    bool isSelected = std::find(m_selectedServices.begin(), m_selectedServices.end(), service) != m_selectedServices.end();
 
-                                    // Context menu for this row
+                                    if (ImGui::Selectable(value.c_str(), isSelected, ImGuiSelectableFlags_SpanAllColumns)) {
+                                        // Handle selection logic
+                                        ImGuiIO& io = ImGui::GetIO();
+
+                                        if (io.KeyCtrl) {
+                                            // Ctrl+Click: toggle selection
+                                            if (isSelected) {
+                                                m_selectedServices.erase(std::remove(m_selectedServices.begin(), m_selectedServices.end(), service), m_selectedServices.end());
+                                            } else {
+                                                m_selectedServices.push_back(service);
+                                            }
+                                            m_lastClickedService = service;
+                                        } else if (io.KeyShift && m_lastClickedService != nullptr) {
+                                            // Shift+Click: range selection
+                                            // Find the range between last clicked and current
+                                            auto lastIt = std::find(filteredServices.begin(), filteredServices.end(), m_lastClickedService);
+                                            auto currentIt = std::find(filteredServices.begin(), filteredServices.end(), service);
+
+                                            if (lastIt != filteredServices.end() && currentIt != filteredServices.end()) {
+                                                // Clear selection first
+                                                m_selectedServices.clear();
+
+                                                // Select range
+                                                auto start = (lastIt < currentIt) ? lastIt : currentIt;
+                                                auto end = (lastIt < currentIt) ? currentIt : lastIt;
+
+                                                for (auto it = start; it <= end; ++it) {
+                                                    m_selectedServices.push_back(*it);
+                                                }
+                                            }
+                                        } else {
+                                            // Normal click: clear selection and select only this one
+                                            m_selectedServices.clear();
+                                            m_selectedServices.push_back(service);
+                                            m_lastClickedService = service;
+                                        }
+                                    }
+
+                                    // Context menu for selected services
                                     if (ImGui::BeginPopupContextItem()) {
+                                        // If right-clicked on non-selected item, select only that one
+                                        if (!isSelected) {
+                                            m_selectedServices.clear();
+                                            m_selectedServices.push_back(service);
+                                        }
+
+                                        // Get actions that are common to all selected services
                                         auto actions = m_pServicesController->GetAvailableActions(service);
                                         for (const auto& action : actions) {
                                             std::string actionName = ServicesDataController::GetActionName(action);
-                                            if (ImGui::MenuItem(actionName.c_str())) {
-                                                std::string serviceName = service->GetName(); // Actual service name
-                                                std::string displayName = service->GetDisplayName(); // Display name
-                                                spdlog::info("Action '{}' requested for service: {} ({})", actionName, displayName, serviceName);
 
+                                            // Show count if multiple services selected
+                                            std::string menuLabel = actionName;
+                                            if (m_selectedServices.size() > 1 &&
+                                                action != ServiceAction::CopyName &&
+                                                action != ServiceAction::CopyDisplayName) {
+                                                menuLabel += std::format(" ({} services)", m_selectedServices.size());
+                                            }
+
+                                            if (ImGui::MenuItem(menuLabel.c_str())) {
                                                 // Handle action
                                                 switch (action) {
                                                 case ServiceAction::CopyName:
-                                                    ImGui::SetClipboardText(serviceName.c_str());
-                                                    spdlog::debug("Copied service name to clipboard: {}", serviceName);
+                                                    // Copy actions only work on the clicked service
+                                                    {
+                                                        std::string serviceName = service->GetName();
+                                                        ImGui::SetClipboardText(serviceName.c_str());
+                                                        spdlog::debug("Copied service name to clipboard: {}", serviceName);
+                                                    }
                                                     break;
 
                                                 case ServiceAction::CopyDisplayName:
-                                                    ImGui::SetClipboardText(displayName.c_str());
-                                                    spdlog::debug("Copied service display name to clipboard: {}", displayName);
+                                                    // Copy actions only work on the clicked service
+                                                    {
+                                                        std::string displayName = service->GetDisplayName();
+                                                        ImGui::SetClipboardText(displayName.c_str());
+                                                        spdlog::debug("Copied service display name to clipboard: {}", displayName);
+                                                    }
                                                     break;
 
                                                 case ServiceAction::Start:
-                                                    // Start service asynchronously
-                                                    spdlog::info("Starting async operation: Start service '{}'", serviceName);
-
-                                                    // Clean up previous async operation if any
-                                                    if (m_pAsyncOp) {
-                                                        m_pAsyncOp->Wait();
-                                                        delete m_pAsyncOp;
-                                                    }
-
-                                                    // Create new async operation
-                                                    m_pAsyncOp = new AsyncOperation();
-                                                    m_bShowProgressDialog = true;
-
-                                                    // Start the service in a worker thread
-                                                    m_pAsyncOp->Start(m_hWnd, [serviceName](AsyncOperation* op) -> bool {
-                                                        try {
-                                                            op->ReportProgress(0.0f, std::format("Starting service '{}'...", serviceName));
-
-                                                            // Start service with progress callback
-                                                            ServiceManager::StartServiceByName(serviceName, [op](float progress, std::string message) {
-                                                                op->ReportProgress(progress, message);
-                                                            });
-
-                                                            op->ReportProgress(1.0f, "Service started successfully");
-                                                            return true;
-                                                        } catch (const std::exception& e) {
-                                                            spdlog::error("Failed to start service: {}", e.what());
-                                                            return false;
+                                                    // Start service(s) asynchronously
+                                                    {
+                                                        // Copy selected services list for async operation
+                                                        std::vector<std::string> serviceNames;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            serviceNames.push_back(svc->GetName());
                                                         }
-                                                    });
+
+                                                        spdlog::info("Starting async operation: Start {} service(s)", serviceNames.size());
+
+                                                        // Clean up previous async operation if any
+                                                        if (m_pAsyncOp) {
+                                                            m_pAsyncOp->Wait();
+                                                            delete m_pAsyncOp;
+                                                        }
+
+                                                        // Create new async operation
+                                                        m_pAsyncOp = new AsyncOperation();
+                                                        m_bShowProgressDialog = true;
+
+                                                        // Start the service(s) in a worker thread
+                                                        m_pAsyncOp->Start(m_hWnd, [serviceNames](AsyncOperation* op) -> bool {
+                                                            try {
+                                                                size_t total = serviceNames.size();
+                                                                for (size_t i = 0; i < total; ++i) {
+                                                                    const std::string& serviceName = serviceNames[i];
+                                                                    float baseProgress = static_cast<float>(i) / static_cast<float>(total);
+                                                                    float progressRange = 1.0f / static_cast<float>(total);
+
+                                                                    op->ReportProgress(baseProgress, std::format("Starting service '{}'... ({}/{})", serviceName, i + 1, total));
+
+                                                                    // Start service with progress callback
+                                                                    ServiceManager::StartServiceByName(serviceName, [op, baseProgress, progressRange](float progress, std::string message) {
+                                                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                                                    });
+                                                                }
+
+                                                                op->ReportProgress(1.0f, std::format("Started {} service(s) successfully", total));
+                                                                return true;
+                                                            } catch (const std::exception& e) {
+                                                                spdlog::error("Failed to start service: {}", e.what());
+                                                                return false;
+                                                            }
+                                                        });
+                                                    }
                                                     break;
 
                                                 case ServiceAction::Stop:
-                                                    // Stop service asynchronously
-                                                    spdlog::info("Starting async operation: Stop service '{}'", serviceName);
-
-                                                    // Clean up previous async operation if any
-                                                    if (m_pAsyncOp) {
-                                                        m_pAsyncOp->Wait();
-                                                        delete m_pAsyncOp;
-                                                    }
-
-                                                    // Create new async operation
-                                                    m_pAsyncOp = new AsyncOperation();
-                                                    m_bShowProgressDialog = true;
-
-                                                    // Stop the service in a worker thread
-                                                    m_pAsyncOp->Start(m_hWnd, [serviceName](AsyncOperation* op) -> bool {
-                                                        try {
-                                                            op->ReportProgress(0.0f, std::format("Stopping service '{}'...", serviceName));
-
-                                                            // Stop service with progress callback
-                                                            ServiceManager::StopServiceByName(serviceName, [op](float progress, std::string message) {
-                                                                op->ReportProgress(progress, message);
-                                                            });
-
-                                                            op->ReportProgress(1.0f, "Service stopped successfully");
-                                                            return true;
-                                                        } catch (const std::exception& e) {
-                                                            spdlog::error("Failed to stop service: {}", e.what());
-                                                            return false;
+                                                    // Stop service(s) asynchronously
+                                                    {
+                                                        // Copy selected services list for async operation
+                                                        std::vector<std::string> serviceNames;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            serviceNames.push_back(svc->GetName());
                                                         }
-                                                    });
+
+                                                        spdlog::info("Starting async operation: Stop {} service(s)", serviceNames.size());
+
+                                                        // Clean up previous async operation if any
+                                                        if (m_pAsyncOp) {
+                                                            m_pAsyncOp->Wait();
+                                                            delete m_pAsyncOp;
+                                                        }
+
+                                                        // Create new async operation
+                                                        m_pAsyncOp = new AsyncOperation();
+                                                        m_bShowProgressDialog = true;
+
+                                                        // Stop the service(s) in a worker thread
+                                                        m_pAsyncOp->Start(m_hWnd, [serviceNames](AsyncOperation* op) -> bool {
+                                                            try {
+                                                                size_t total = serviceNames.size();
+                                                                for (size_t i = 0; i < total; ++i) {
+                                                                    const std::string& serviceName = serviceNames[i];
+                                                                    float baseProgress = static_cast<float>(i) / static_cast<float>(total);
+                                                                    float progressRange = 1.0f / static_cast<float>(total);
+
+                                                                    op->ReportProgress(baseProgress, std::format("Stopping service '{}'... ({}/{})", serviceName, i + 1, total));
+
+                                                                    // Stop service with progress callback
+                                                                    ServiceManager::StopServiceByName(serviceName, [op, baseProgress, progressRange](float progress, std::string message) {
+                                                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                                                    });
+                                                                }
+
+                                                                op->ReportProgress(1.0f, std::format("Stopped {} service(s) successfully", total));
+                                                                return true;
+                                                            } catch (const std::exception& e) {
+                                                                spdlog::error("Failed to stop service: {}", e.what());
+                                                                return false;
+                                                            }
+                                                        });
+                                                    }
+                                                    break;
+
+                                                case ServiceAction::Pause:
+                                                    // Pause service(s) asynchronously
+                                                    {
+                                                        // Copy selected services list for async operation
+                                                        std::vector<std::string> serviceNames;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            serviceNames.push_back(svc->GetName());
+                                                        }
+
+                                                        spdlog::info("Starting async operation: Pause {} service(s)", serviceNames.size());
+
+                                                        if (m_pAsyncOp) {
+                                                            m_pAsyncOp->Wait();
+                                                            delete m_pAsyncOp;
+                                                        }
+
+                                                        m_pAsyncOp = new AsyncOperation();
+                                                        m_bShowProgressDialog = true;
+
+                                                        m_pAsyncOp->Start(m_hWnd, [serviceNames](AsyncOperation* op) -> bool {
+                                                            try {
+                                                                size_t total = serviceNames.size();
+                                                                for (size_t i = 0; i < total; ++i) {
+                                                                    const std::string& serviceName = serviceNames[i];
+                                                                    float baseProgress = static_cast<float>(i) / static_cast<float>(total);
+                                                                    float progressRange = 1.0f / static_cast<float>(total);
+
+                                                                    op->ReportProgress(baseProgress, std::format("Pausing service '{}'... ({}/{})", serviceName, i + 1, total));
+
+                                                                    ServiceManager::PauseServiceByName(serviceName, [op, baseProgress, progressRange](float progress, std::string message) {
+                                                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                                                    });
+                                                                }
+
+                                                                op->ReportProgress(1.0f, std::format("Paused {} service(s) successfully", total));
+                                                                return true;
+                                                            } catch (const std::exception& e) {
+                                                                spdlog::error("Failed to pause service: {}", e.what());
+                                                                return false;
+                                                            }
+                                                        });
+                                                    }
+                                                    break;
+
+                                                case ServiceAction::Resume:
+                                                    // Resume service(s) asynchronously
+                                                    {
+                                                        // Copy selected services list for async operation
+                                                        std::vector<std::string> serviceNames;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            serviceNames.push_back(svc->GetName());
+                                                        }
+
+                                                        spdlog::info("Starting async operation: Resume {} service(s)", serviceNames.size());
+
+                                                        if (m_pAsyncOp) {
+                                                            m_pAsyncOp->Wait();
+                                                            delete m_pAsyncOp;
+                                                        }
+
+                                                        m_pAsyncOp = new AsyncOperation();
+                                                        m_bShowProgressDialog = true;
+
+                                                        m_pAsyncOp->Start(m_hWnd, [serviceNames](AsyncOperation* op) -> bool {
+                                                            try {
+                                                                size_t total = serviceNames.size();
+                                                                for (size_t i = 0; i < total; ++i) {
+                                                                    const std::string& serviceName = serviceNames[i];
+                                                                    float baseProgress = static_cast<float>(i) / static_cast<float>(total);
+                                                                    float progressRange = 1.0f / static_cast<float>(total);
+
+                                                                    op->ReportProgress(baseProgress, std::format("Resuming service '{}'... ({}/{})", serviceName, i + 1, total));
+
+                                                                    ServiceManager::ResumeServiceByName(serviceName, [op, baseProgress, progressRange](float progress, std::string message) {
+                                                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                                                    });
+                                                                }
+
+                                                                op->ReportProgress(1.0f, std::format("Resumed {} service(s) successfully", total));
+                                                                return true;
+                                                            } catch (const std::exception& e) {
+                                                                spdlog::error("Failed to resume service: {}", e.what());
+                                                                return false;
+                                                            }
+                                                        });
+                                                    }
                                                     break;
 
                                                 case ServiceAction::Restart:
-                                                case ServiceAction::Pause:
-                                                case ServiceAction::Resume:
-                                                    spdlog::warn("Action '{}' not yet implemented", actionName);
+                                                    // Restart service(s) asynchronously
+                                                    {
+                                                        // Copy selected services list for async operation
+                                                        std::vector<std::string> serviceNames;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            serviceNames.push_back(svc->GetName());
+                                                        }
+
+                                                        spdlog::info("Starting async operation: Restart {} service(s)", serviceNames.size());
+
+                                                        if (m_pAsyncOp) {
+                                                            m_pAsyncOp->Wait();
+                                                            delete m_pAsyncOp;
+                                                        }
+
+                                                        m_pAsyncOp = new AsyncOperation();
+                                                        m_bShowProgressDialog = true;
+
+                                                        m_pAsyncOp->Start(m_hWnd, [serviceNames](AsyncOperation* op) -> bool {
+                                                            try {
+                                                                size_t total = serviceNames.size();
+                                                                for (size_t i = 0; i < total; ++i) {
+                                                                    const std::string& serviceName = serviceNames[i];
+                                                                    float baseProgress = static_cast<float>(i) / static_cast<float>(total);
+                                                                    float progressRange = 1.0f / static_cast<float>(total);
+
+                                                                    op->ReportProgress(baseProgress, std::format("Restarting service '{}'... ({}/{})", serviceName, i + 1, total));
+
+                                                                    ServiceManager::RestartServiceByName(serviceName, [op, baseProgress, progressRange](float progress, std::string message) {
+                                                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                                                    });
+                                                                }
+
+                                                                op->ReportProgress(1.0f, std::format("Restarted {} service(s) successfully", total));
+                                                                return true;
+                                                            } catch (const std::exception& e) {
+                                                                spdlog::error("Failed to restart service: {}", e.what());
+                                                                return false;
+                                                            }
+                                                        });
+                                                    }
                                                     break;
                                                 }
                                             }

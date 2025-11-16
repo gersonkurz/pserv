@@ -24,6 +24,7 @@ private:
     DWORD m_startType;
     DWORD m_processId;
     DWORD m_serviceType;
+    DWORD m_controlsAccepted;
     std::string m_binaryPathName;
     std::string m_description;
 
@@ -43,6 +44,7 @@ public:
     DWORD GetStartType() const { return m_startType; }
     DWORD GetProcessId() const { return m_processId; }
     DWORD GetServiceType() const { return m_serviceType; }
+    DWORD GetControlsAccepted() const { return m_controlsAccepted; }
     const std::string& GetBinaryPathName() const { return m_binaryPathName; }
     const std::string& GetDescription() const { return m_description; }
 
@@ -50,6 +52,7 @@ public:
     void SetCurrentState(DWORD state);
     void SetStartType(DWORD startType) { m_startType = startType; }
     void SetProcessId(DWORD pid) { m_processId = pid; }
+    void SetControlsAccepted(DWORD controls) { m_controlsAccepted = controls; }
     void SetBinaryPathName(const std::string& path) { m_binaryPathName = path; }
     void SetDescription(const std::string& desc) { m_description = desc; }
 

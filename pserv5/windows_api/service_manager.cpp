@@ -92,6 +92,7 @@ std::vector<ServiceInfo*> ServiceManager::EnumerateServices() {
             pServices[i].ServiceStatusProcess.dwServiceType
         );
         info->SetProcessId(pServices[i].ServiceStatusProcess.dwProcessId);
+        info->SetControlsAccepted(pServices[i].ServiceStatusProcess.dwControlsAccepted);
 
         // Query service configuration to get start type
         SC_HANDLE hService = OpenServiceW(
@@ -313,6 +314,213 @@ bool ServiceManager::StopServiceByName(const std::string& serviceName, std::func
     }
 
     spdlog::info("Service '{}' stopped successfully", serviceName);
+    return true;
+}
+
+bool ServiceManager::PauseServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback) {
+    spdlog::info("Pausing service: {}", serviceName);
+
+    // Open SCM
+    SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+    if (!hScManager) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to open Service Control Manager: error {}", error);
+        throw std::runtime_error(std::format("Failed to open SCM: error {}", error));
+    }
+
+    // Convert service name to wide string
+    std::wstring wServiceName = utils::Utf8ToWide(serviceName);
+
+    // Open service
+    SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_STATUS);
+    if (!hService) {
+        DWORD error = GetLastError();
+        CloseServiceHandle(hScManager);
+        spdlog::error("Failed to open service '{}': error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to open service: error {}", error));
+    }
+
+    // Pause the service
+    SERVICE_STATUS_PROCESS ssp;
+    BOOL result = ControlService(hService, SERVICE_CONTROL_PAUSE, (LPSERVICE_STATUS)&ssp);
+    DWORD error = GetLastError();
+
+    if (!result) {
+        CloseServiceHandle(hService);
+        CloseServiceHandle(hScManager);
+        spdlog::error("Failed to pause service '{}': error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to pause service: error {}", error));
+    }
+
+    // Wait for service to reach paused state
+    DWORD bytesNeeded;
+    const int maxWaitTime = 30000;
+    const int pollInterval = 1000;
+    int totalWait = 0;
+    DWORD estimatedWaitTime = 0;
+
+    while (totalWait < maxWaitTime) {
+        if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded)) {
+            error = GetLastError();
+            CloseServiceHandle(hService);
+            CloseServiceHandle(hScManager);
+            spdlog::error("Failed to query service status: error {}", error);
+            throw std::runtime_error(std::format("Failed to query service status: error {}", error));
+        }
+
+        std::string stateStr = GetServiceStateString(ssp.dwCurrentState);
+
+        if (ssp.dwWaitHint > 0) {
+            estimatedWaitTime = ssp.dwWaitHint + 5000;
+        } else {
+            estimatedWaitTime = maxWaitTime;
+        }
+
+        float progress = std::min(0.95f, static_cast<float>(totalWait) / static_cast<float>(estimatedWaitTime));
+
+        if (progressCallback) {
+            progressCallback(progress, std::format("Service state: {}", stateStr));
+        }
+
+        if (ssp.dwCurrentState == SERVICE_PAUSED) {
+            if (progressCallback) {
+                progressCallback(1.0f, "Service is paused");
+            }
+            break;
+        }
+
+        Sleep(pollInterval);
+        totalWait += pollInterval;
+    }
+
+    CloseServiceHandle(hService);
+    CloseServiceHandle(hScManager);
+
+    if (totalWait >= maxWaitTime) {
+        spdlog::warn("Service '{}' did not reach paused state within timeout", serviceName);
+        throw std::runtime_error("Service pause timed out");
+    }
+
+    spdlog::info("Service '{}' paused successfully", serviceName);
+    return true;
+}
+
+bool ServiceManager::ResumeServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback) {
+    spdlog::info("Resuming service: {}", serviceName);
+
+    // Open SCM
+    SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+    if (!hScManager) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to open Service Control Manager: error {}", error);
+        throw std::runtime_error(std::format("Failed to open SCM: error {}", error));
+    }
+
+    // Convert service name to wide string
+    std::wstring wServiceName = utils::Utf8ToWide(serviceName);
+
+    // Open service
+    SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_STATUS);
+    if (!hService) {
+        DWORD error = GetLastError();
+        CloseServiceHandle(hScManager);
+        spdlog::error("Failed to open service '{}': error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to open service: error {}", error));
+    }
+
+    // Resume the service
+    SERVICE_STATUS_PROCESS ssp;
+    BOOL result = ControlService(hService, SERVICE_CONTROL_CONTINUE, (LPSERVICE_STATUS)&ssp);
+    DWORD error = GetLastError();
+
+    if (!result) {
+        CloseServiceHandle(hService);
+        CloseServiceHandle(hScManager);
+        spdlog::error("Failed to resume service '{}': error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to resume service: error {}", error));
+    }
+
+    // Wait for service to reach running state
+    DWORD bytesNeeded;
+    const int maxWaitTime = 30000;
+    const int pollInterval = 1000;
+    int totalWait = 0;
+    DWORD estimatedWaitTime = 0;
+
+    while (totalWait < maxWaitTime) {
+        if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded)) {
+            error = GetLastError();
+            CloseServiceHandle(hService);
+            CloseServiceHandle(hScManager);
+            spdlog::error("Failed to query service status: error {}", error);
+            throw std::runtime_error(std::format("Failed to query service status: error {}", error));
+        }
+
+        std::string stateStr = GetServiceStateString(ssp.dwCurrentState);
+
+        if (ssp.dwWaitHint > 0) {
+            estimatedWaitTime = ssp.dwWaitHint + 5000;
+        } else {
+            estimatedWaitTime = maxWaitTime;
+        }
+
+        float progress = std::min(0.95f, static_cast<float>(totalWait) / static_cast<float>(estimatedWaitTime));
+
+        if (progressCallback) {
+            progressCallback(progress, std::format("Service state: {}", stateStr));
+        }
+
+        if (ssp.dwCurrentState == SERVICE_RUNNING) {
+            if (progressCallback) {
+                progressCallback(1.0f, "Service is running");
+            }
+            break;
+        }
+
+        Sleep(pollInterval);
+        totalWait += pollInterval;
+    }
+
+    CloseServiceHandle(hService);
+    CloseServiceHandle(hScManager);
+
+    if (totalWait >= maxWaitTime) {
+        spdlog::warn("Service '{}' did not reach running state within timeout", serviceName);
+        throw std::runtime_error("Service resume timed out");
+    }
+
+    spdlog::info("Service '{}' resumed successfully", serviceName);
+    return true;
+}
+
+bool ServiceManager::RestartServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback) {
+    spdlog::info("Restarting service: {}", serviceName);
+
+    // Stop the service (0-50% progress)
+    if (progressCallback) {
+        progressCallback(0.0f, "Stopping service...");
+    }
+
+    StopServiceByName(serviceName, [progressCallback](float progress, std::string message) {
+        if (progressCallback) {
+            // Map 0-100% to 0-50%
+            progressCallback(progress * 0.5f, message);
+        }
+    });
+
+    // Start the service (50-100% progress)
+    if (progressCallback) {
+        progressCallback(0.5f, "Starting service...");
+    }
+
+    StartServiceByName(serviceName, [progressCallback](float progress, std::string message) {
+        if (progressCallback) {
+            // Map 0-100% to 50-100%
+            progressCallback(0.5f + progress * 0.5f, message);
+        }
+    });
+
+    spdlog::info("Service '{}' restarted successfully", serviceName);
     return true;
 }
 
