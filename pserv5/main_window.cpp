@@ -693,29 +693,41 @@ void MainWindow::Render() {
                                                 // Handle action
                                                 switch (action) {
                                                 case ServiceAction::CopyName:
-                                                    // Copy actions only work on the clicked service
+                                                    // Copy names of all selected services
                                                     {
-                                                        std::string serviceName = service->GetName();
-                                                        ImGui::SetClipboardText(serviceName.c_str());
-                                                        spdlog::debug("Copied service name to clipboard: {}", serviceName);
+                                                        std::string result;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            if (!result.empty()) result += "\n";
+                                                            result += svc->GetName();
+                                                        }
+                                                        ImGui::SetClipboardText(result.c_str());
+                                                        spdlog::debug("Copied {} service name(s) to clipboard", m_selectedServices.size());
                                                     }
                                                     break;
 
                                                 case ServiceAction::CopyDisplayName:
-                                                    // Copy actions only work on the clicked service
+                                                    // Copy display names of all selected services
                                                     {
-                                                        std::string displayName = service->GetDisplayName();
-                                                        ImGui::SetClipboardText(displayName.c_str());
-                                                        spdlog::debug("Copied service display name to clipboard: {}", displayName);
+                                                        std::string result;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            if (!result.empty()) result += "\n";
+                                                            result += svc->GetDisplayName();
+                                                        }
+                                                        ImGui::SetClipboardText(result.c_str());
+                                                        spdlog::debug("Copied {} service display name(s) to clipboard", m_selectedServices.size());
                                                     }
                                                     break;
 
                                                 case ServiceAction::CopyBinaryPath:
-                                                    // Copy actions only work on the clicked service
+                                                    // Copy binary paths of all selected services
                                                     {
-                                                        std::string binaryPath = service->GetBinaryPathName();
-                                                        ImGui::SetClipboardText(binaryPath.c_str());
-                                                        spdlog::debug("Copied service binary path to clipboard: {}", binaryPath);
+                                                        std::string result;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            if (!result.empty()) result += "\n";
+                                                            result += svc->GetBinaryPathName();
+                                                        }
+                                                        ImGui::SetClipboardText(result.c_str());
+                                                        spdlog::debug("Copied {} service binary path(s) to clipboard", m_selectedServices.size());
                                                     }
                                                     break;
 
