@@ -21,6 +21,11 @@ public:
         TypedValue<int32_t> positionY{this, "PositionY", 100};
         TypedValue<bool> maximized{this, "Maximized", false};
     } window{this};
+
+    struct ApplicationSettings : public Section {
+        ApplicationSettings(Section* pParent) : Section{pParent, "Application"} {}
+        TypedValue<std::string> activeView{this, "ActiveView", "Services"};
+    } application{this};
 };
 
 extern RootSettings theSettings;

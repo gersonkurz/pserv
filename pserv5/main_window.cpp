@@ -90,6 +90,11 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
         return false;
     }
 
+    // Load active tab from settings
+    auto& appSettings = config::theSettings.application;
+    m_activeTab = appSettings.activeView.get();
+    spdlog::info("Loaded active tab: {}", m_activeTab);
+
     spdlog::info("Main window initialized successfully");
     return true;
 }
@@ -238,6 +243,40 @@ bool MainWindow::InitializeImGui() {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
+    // Load custom font - try Segoe UI first (Windows standard), fall back to Arial
+    wchar_t windowsDir[MAX_PATH];
+    if (GetWindowsDirectoryW(windowsDir, MAX_PATH) == 0) {
+        spdlog::warn("GetWindowsDirectory failed, using default font");
+        io.Fonts->AddFontDefault();
+    } else {
+        std::wstring fontsDir = std::wstring(windowsDir) + L"\\Fonts\\";
+        const wchar_t* fontFiles[] = {
+            L"segoeui.ttf",  // Segoe UI (modern, clean)
+            L"arial.ttf"     // Arial (fallback)
+        };
+
+        bool fontLoaded = false;
+        for (const wchar_t* fontFile : fontFiles) {
+            std::wstring fontPath = fontsDir + fontFile;
+            // Convert to narrow string for ImGui
+            int size = WideCharToMultiByte(CP_UTF8, 0, fontPath.c_str(), -1, nullptr, 0, nullptr, nullptr);
+            std::string narrowPath(size, 0);
+            WideCharToMultiByte(CP_UTF8, 0, fontPath.c_str(), -1, &narrowPath[0], size, nullptr, nullptr);
+            narrowPath.resize(size - 1); // Remove null terminator
+
+            if (io.Fonts->AddFontFromFileTTF(narrowPath.c_str(), 16.0f)) {
+                spdlog::info("Loaded font: {}", narrowPath);
+                fontLoaded = true;
+                break;
+            }
+        }
+
+        if (!fontLoaded) {
+            spdlog::warn("Could not load custom font, using default");
+            io.Fonts->AddFontDefault();
+        }
+    }
+
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
 
@@ -267,7 +306,58 @@ void MainWindow::Render() {
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
-    // Show ImGui demo window for testing
+    // Create fullscreen window for tab bar
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration |
+                                    ImGuiWindowFlags_NoMove |
+                                    ImGuiWindowFlags_NoResize |
+                                    ImGuiWindowFlags_NoSavedSettings |
+                                    ImGuiWindowFlags_NoBringToFrontOnFocus;
+
+    ImGui::Begin("MainWindow", nullptr, window_flags);
+
+    // Create tab bar with placeholder tabs
+    if (ImGui::BeginTabBar("MainTabBar", ImGuiTabBarFlags_None)) {
+        const char* tabs[] = {"Services", "Devices", "Processes", "Windows", "Modules", "Uninstaller"};
+        static bool firstFrame = true;
+
+        for (const char* tab : tabs) {
+            // Set the initially active tab on first frame
+            ImGuiTabItemFlags flags = ImGuiTabItemFlags_None;
+            if (firstFrame && m_activeTab == tab) {
+                flags |= ImGuiTabItemFlags_SetSelected;
+            }
+
+            if (ImGui::BeginTabItem(tab, nullptr, flags)) {
+                // Check if active tab changed
+                if (m_activeTab != tab) {
+                    m_activeTab = tab;
+                    auto& appSettings = config::theSettings.application;
+                    appSettings.activeView.set(m_activeTab);
+                    if (m_pConfigBackend) {
+                        appSettings.save(*m_pConfigBackend);
+                        spdlog::debug("Active tab changed to: {}", m_activeTab);
+                    }
+                }
+
+                // Placeholder content
+                ImGui::Text("This is the %s view", tab);
+                ImGui::Text("Content will be implemented in future milestones");
+
+                ImGui::EndTabItem();
+            }
+        }
+
+        firstFrame = false;
+        ImGui::EndTabBar();
+    }
+
+    ImGui::End();
+
+    // Show ImGui demo window for testing (optional)
     if (m_bShowDemoWindow) {
         ImGui::ShowDemoWindow(&m_bShowDemoWindow);
     }

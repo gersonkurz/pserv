@@ -42,6 +42,7 @@ private:
 
     // ImGui state
     bool m_bShowDemoWindow{true};
+    std::string m_activeTab{"Services"};
 
     // Helper methods
     void SaveWindowState();
