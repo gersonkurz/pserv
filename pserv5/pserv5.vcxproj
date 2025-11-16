@@ -162,6 +162,10 @@
     <ClInclude Include="Config\typed_value.h" />
     <ClInclude Include="Config\typed_vector_value.h" />
     <ClInclude Include="Config\value_interface.h" />
+    <ClInclude Include="core\IRefCounted.h" />
+    <ClInclude Include="core\data_object.h" />
+    <ClInclude Include="core\data_object_column.h" />
+    <ClInclude Include="core\data_controller.h" />
     <ClInclude Include="..\imgui\imconfig.h" />
     <ClInclude Include="..\imgui\imgui.h" />
     <ClInclude Include="..\imgui\imgui_internal.h" />
