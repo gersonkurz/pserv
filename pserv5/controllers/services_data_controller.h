@@ -26,6 +26,8 @@ enum class VisualState {
 class ServicesDataController : public DataController {
 private:
     std::vector<ServiceInfo*> m_services;
+    int m_lastSortColumn{-1};
+    bool m_lastSortAscending{true};
 
 public:
     ServicesDataController();

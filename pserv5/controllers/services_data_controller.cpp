@@ -35,6 +35,11 @@ void ServicesDataController::Refresh() {
         m_services = sm.EnumerateServices();
 
         spdlog::info("Successfully refreshed {} services", m_services.size());
+
+        // Re-apply last sort order if any
+        if (m_lastSortColumn >= 0) {
+            Sort(m_lastSortColumn, m_lastSortAscending);
+        }
     } catch (const std::exception& e) {
         spdlog::error("Failed to refresh services: {}", e.what());
         throw;
@@ -50,6 +55,10 @@ void ServicesDataController::Sort(int columnIndex, bool ascending) {
         spdlog::warn("Invalid column index for sorting: {}", columnIndex);
         return;
     }
+
+    // Remember last sort for refresh
+    m_lastSortColumn = columnIndex;
+    m_lastSortAscending = ascending;
 
     spdlog::debug("Sorting by column {} ({})", columnIndex, ascending ? "ascending" : "descending");
 

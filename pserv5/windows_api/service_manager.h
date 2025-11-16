@@ -18,6 +18,16 @@ public:
     // Enumerate all services on the local machine
     // Returns raw pointers - caller is responsible for cleanup
     std::vector<ServiceInfo*> EnumerateServices();
+
+    // Start a service and wait for it to reach running state
+    // progressCallback is called periodically with progress (0.0-1.0) and status message
+    // Returns true on success, throws exception on failure
+    static bool StartServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
+
+    // Stop a service and wait for it to reach stopped state
+    // progressCallback is called periodically with progress (0.0-1.0) and status message
+    // Returns true on success, throws exception on failure
+    static bool StopServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
 };
 
 } // namespace pserv

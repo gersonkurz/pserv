@@ -192,6 +192,10 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
                 auto status = pWindow->m_pAsyncOp->GetStatus();
                 if (status == AsyncStatus::Completed) {
                     spdlog::info("Async operation completed successfully");
+                    // Refresh services to show updated state
+                    if (pWindow->m_pServicesController) {
+                        pWindow->m_pServicesController->Refresh();
+                    }
                 } else if (status == AsyncStatus::Cancelled) {
                     spdlog::info("Async operation was cancelled");
                 } else if (status == AsyncStatus::Failed) {
@@ -577,9 +581,9 @@ void MainWindow::Render() {
                                         for (const auto& action : actions) {
                                             std::string actionName = ServicesDataController::GetActionName(action);
                                             if (ImGui::MenuItem(actionName.c_str())) {
-                                                std::string serviceName = service->GetProperty(1); // Name column
-                                                std::string displayName = service->GetProperty(0); // Display Name column
-                                                spdlog::info("Action '{}' requested for service: {}", actionName, serviceName);
+                                                std::string serviceName = service->GetName(); // Actual service name
+                                                std::string displayName = service->GetDisplayName(); // Display name
+                                                spdlog::info("Action '{}' requested for service: {} ({})", actionName, displayName, serviceName);
 
                                                 // Handle action
                                                 switch (action) {
@@ -596,10 +600,69 @@ void MainWindow::Render() {
                                                 case ServiceAction::Start:
                                                     // Start service asynchronously
                                                     spdlog::info("Starting async operation: Start service '{}'", serviceName);
-                                                    // TODO: Implement async start
+
+                                                    // Clean up previous async operation if any
+                                                    if (m_pAsyncOp) {
+                                                        m_pAsyncOp->Wait();
+                                                        delete m_pAsyncOp;
+                                                    }
+
+                                                    // Create new async operation
+                                                    m_pAsyncOp = new AsyncOperation();
+                                                    m_bShowProgressDialog = true;
+
+                                                    // Start the service in a worker thread
+                                                    m_pAsyncOp->Start(m_hWnd, [serviceName](AsyncOperation* op) -> bool {
+                                                        try {
+                                                            op->ReportProgress(0.0f, std::format("Starting service '{}'...", serviceName));
+
+                                                            // Start service with progress callback
+                                                            ServiceManager::StartServiceByName(serviceName, [op](float progress, std::string message) {
+                                                                op->ReportProgress(progress, message);
+                                                            });
+
+                                                            op->ReportProgress(1.0f, "Service started successfully");
+                                                            return true;
+                                                        } catch (const std::exception& e) {
+                                                            spdlog::error("Failed to start service: {}", e.what());
+                                                            return false;
+                                                        }
+                                                    });
                                                     break;
 
                                                 case ServiceAction::Stop:
+                                                    // Stop service asynchronously
+                                                    spdlog::info("Starting async operation: Stop service '{}'", serviceName);
+
+                                                    // Clean up previous async operation if any
+                                                    if (m_pAsyncOp) {
+                                                        m_pAsyncOp->Wait();
+                                                        delete m_pAsyncOp;
+                                                    }
+
+                                                    // Create new async operation
+                                                    m_pAsyncOp = new AsyncOperation();
+                                                    m_bShowProgressDialog = true;
+
+                                                    // Stop the service in a worker thread
+                                                    m_pAsyncOp->Start(m_hWnd, [serviceName](AsyncOperation* op) -> bool {
+                                                        try {
+                                                            op->ReportProgress(0.0f, std::format("Stopping service '{}'...", serviceName));
+
+                                                            // Stop service with progress callback
+                                                            ServiceManager::StopServiceByName(serviceName, [op](float progress, std::string message) {
+                                                                op->ReportProgress(progress, message);
+                                                            });
+
+                                                            op->ReportProgress(1.0f, "Service stopped successfully");
+                                                            return true;
+                                                        } catch (const std::exception& e) {
+                                                            spdlog::error("Failed to stop service: {}", e.what());
+                                                            return false;
+                                                        }
+                                                    });
+                                                    break;
+
                                                 case ServiceAction::Restart:
                                                 case ServiceAction::Pause:
                                                 case ServiceAction::Resume:
