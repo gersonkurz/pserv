@@ -121,6 +121,19 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
         return false;
     }
 
+    // Query Windows accent color for title bar
+    DWORD accentColor = 0;
+    BOOL opaque = FALSE;
+    HRESULT hr = DwmGetColorizationColor(&accentColor, &opaque);
+    if (SUCCEEDED(hr)) {
+        m_accentColor = accentColor;
+        spdlog::debug("Windows accent color: 0x{:08X}", accentColor);
+    } else {
+        // Default to a neutral blue if we can't get the accent color
+        m_accentColor = RGB(0, 120, 212);
+        spdlog::warn("Failed to get Windows accent color, using default");
+    }
+
     // Load active tab from settings
     auto& appSettings = config::theSettings.application;
     m_activeTab = appSettings.activeView.get();
@@ -171,6 +184,12 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
     MainWindow* pWindow = reinterpret_cast<MainWindow*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
     switch (message) {
+    case WM_ACTIVATE:
+        if (pWindow) {
+            pWindow->m_bWindowFocused = (LOWORD(wParam) != WA_INACTIVE);
+        }
+        return 0;
+
     case WM_SIZE:
         if (pWindow && pWindow->m_pDevice && wParam != SIZE_MINIMIZED) {
             pWindow->CleanupRenderTarget();
@@ -1511,6 +1530,23 @@ void MainWindow::RenderTitleBar() {
     ImVec2 titleBarMin = ImGui::GetCursorScreenPos();
     ImVec2 titleBarMax = ImVec2(titleBarMin.x + ImGui::GetContentRegionAvail().x, titleBarMin.y + titleBarHeight);
 
+    // Draw title bar background with accent color when focused
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec4 titleBarColor;
+
+    if (m_bWindowFocused) {
+        // Use Windows accent color when focused
+        float r = GetRValue(m_accentColor) / 255.0f;
+        float g = GetGValue(m_accentColor) / 255.0f;
+        float b = GetBValue(m_accentColor) / 255.0f;
+        titleBarColor = ImVec4(r, g, b, 1.0f);
+    } else {
+        // Use neutral gray when unfocused
+        titleBarColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+    }
+
+    drawList->AddRectFilled(titleBarMin, titleBarMax, ImGui::ColorConvertFloat4ToU32(titleBarColor));
+
     // Handle window dragging
     ImVec2 mousePos = io.MousePos;
     bool mouseInTitleBar = mousePos.x >= titleBarMin.x && mousePos.x <= titleBarMax.x &&
@@ -1534,19 +1570,19 @@ void MainWindow::RenderTitleBar() {
     // Window control buttons (right side)
     ImVec2 buttonPos = ImVec2(titleBarMax.x - buttonWidth * 3, titleBarMin.y);
 
-    // Minimize button
+    // Minimize button - using horizontal line symbol
     ImGui::SetCursorScreenPos(buttonPos);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
 
-    if (ImGui::Button("_##minimize", ImVec2(buttonWidth, buttonHeight))) {
+    if (ImGui::Button("\xE2\x80\x94##minimize", ImVec2(buttonWidth, buttonHeight))) {  // EM DASH (UTF-8)
         ShowWindow(m_hWnd, SW_MINIMIZE);
     }
 
     ImGui::PopStyleColor(3);
 
-    // Maximize/Restore button
+    // Maximize/Restore button - using square symbols
     buttonPos.x += buttonWidth;
     ImGui::SetCursorScreenPos(buttonPos);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -1554,7 +1590,7 @@ void MainWindow::RenderTitleBar() {
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
 
     bool isMaximized = IsWindowMaximized();
-    const char* maxButtonLabel = isMaximized ? "[]##restore" : "[]##maximize";
+    const char* maxButtonLabel = isMaximized ? "\xE2\x9D\x8F##restore" : "\xE2\x96\xA1##maximize";  // SHADOWED SQUARE / WHITE SQUARE (UTF-8)
 
     if (ImGui::Button(maxButtonLabel, ImVec2(buttonWidth, buttonHeight))) {
         ShowWindow(m_hWnd, isMaximized ? SW_RESTORE : SW_MAXIMIZE);
@@ -1562,18 +1598,19 @@ void MainWindow::RenderTitleBar() {
 
     ImGui::PopStyleColor(3);
 
-    // Close button (red hover)
+    // Close button - using X symbol with red hover
     buttonPos.x += buttonWidth;
     ImGui::SetCursorScreenPos(buttonPos);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));  // White text
 
     if (ImGui::Button("X##close", ImVec2(buttonWidth, buttonHeight))) {
         DestroyWindow(m_hWnd);
     }
 
-    ImGui::PopStyleColor(3);
+    ImGui::PopStyleColor(4);
 }
 
 void MainWindow::RenderMenuBar() {

@@ -61,6 +61,8 @@ private:
     const ServiceInfo* m_lastClickedService{nullptr};  // For shift-click range selection
     ServicePropertiesDialog* m_pPropertiesDialog{nullptr};  // Service properties dialog
     float m_pendingFontSize{0.0f};  // Pending font size change (0 = no change pending)
+    bool m_bWindowFocused{true};  // Track window focus state for title bar styling
+    COLORREF m_accentColor{0};  // Windows accent color
 
     // Helper methods
     void SaveWindowState();
