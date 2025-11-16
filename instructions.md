@@ -2030,8 +2030,8 @@ This section provides a detailed, milestone-based implementation plan. Each step
 
 ---
 
-### Milestone 17: Complete Services View
-**Goal**: All service operations working
+### Milestone 17: Complete Basic Service Operations
+**Goal**: All basic service operations working with filtering and multi-select
 
 **Steps:**
 1. Implement remaining actions (Stop, Pause, Restart, etc.)
@@ -2039,13 +2039,145 @@ This section provides a detailed, milestone-based implementation plan. Each step
 3. Add multi-select
 4. **Compile and test**: Test all service operations
 
-**Acceptance**: Full feature parity with pserv4 Services view
+**Acceptance**: Start, Stop, Pause, Resume, Restart working with multi-select and filtering
 
-**Commit Point**: "Complete Services view implementation"
+**Commit Point**: "Complete Services view implementation (Milestone 17)"
 
 ---
 
-**After Milestone 17**: Continue with Devices, Processes, Windows, Modules, Uninstaller views following similar patterns.
+### Milestone 18: Add Complete Service Data Model
+**Goal**: Expand ServiceInfo to include all service configuration data
+
+**Steps:**
+1. Add missing fields to ServiceInfo:
+   - User/ServiceStartName (account service runs under)
+   - LoadOrderGroup
+   - ErrorControl
+   - TagId
+   - Win32ExitCode, ServiceSpecificExitCode
+   - CheckPoint, WaitHint, ServiceFlags
+2. Update ServiceManager::EnumerateServices() to populate new fields using QueryServiceConfig
+3. Add getters for all new fields
+4. **Compile and test**: Verify all data populates correctly
+
+**Acceptance**: ServiceInfo contains all service configuration data from pserv4
+
+**Commit Point**: "Add complete service data model (Milestone 18)"
+
+---
+
+### Milestone 19: Add All Service Columns
+**Goal**: Add all missing columns to Services view
+
+**Steps:**
+1. Add columns to ServicesDataController:
+   - User
+   - Service Type (localized string)
+   - Binary Path Name
+   - Load Order Group
+   - Error Control
+   - Tag ID
+   - Description
+   - Win32 Exit Code
+   - Service Specific Exit Code
+   - Check Point
+   - Wait Hint
+   - Service Flags
+   - Controls Accepted (detailed string)
+   - Install Location (derived from BinaryPathName)
+2. Update GetProperty() in ServiceInfo to return all column values
+3. Add helper methods for string conversions (ServiceTypeString, ErrorControlString, etc.)
+4. Update column configuration persistence to handle new columns
+5. **Compile and test**: Verify all columns display correctly, can be reordered/resized
+
+**Acceptance**: All pserv4 service columns available and working
+
+**Commit Point**: "Add all service columns (Milestone 19)"
+
+---
+
+### Milestone 20: Add Startup Type Configuration
+**Goal**: Add context menu actions to change service startup type
+
+**Steps:**
+1. Add ServiceAction enum values: SetStartupAutomatic, SetStartupManual, SetStartupDisabled
+2. Add ServiceManager methods:
+   - ChangeServiceStartType(serviceName, startType)
+3. Add context menu items to show startup type actions
+4. Implement async operations for startup type changes
+5. Support multi-select for batch startup type changes
+6. **Compile and test**: Change startup types, verify persistence across restarts
+
+**Acceptance**: Can change startup type for single or multiple services
+
+**Commit Point**: "Add startup type configuration (Milestone 20)"
+
+---
+
+### Milestone 21: Add File System Integration Actions
+**Goal**: Add context menu actions for Registry Editor, Explorer, and Terminal
+
+**Steps:**
+1. Add ServiceAction enum values: OpenInRegistryEditor, OpenInExplorer, OpenTerminalHere
+2. Add InstallLocation property to ServiceInfo (extract directory from BinaryPathName)
+3. Implement actions in MainWindow:
+   - OpenInRegistryEditor: Launch regedit with service registry key selected
+   - OpenInExplorer: Open install location in Windows Explorer
+   - OpenTerminalHere: Open CMD/PowerShell in install location
+4. Add to context menu (always available, not state-dependent)
+5. **Compile and test**: Verify each action opens correct location
+
+**Acceptance**: Registry, Explorer, and Terminal integration working
+
+**Commit Point**: "Add file system integration actions (Milestone 21)"
+
+---
+
+### Milestone 22: Add Service Deletion Actions
+**Goal**: Add context menu actions to uninstall services and delete registry keys
+
+**Steps:**
+1. Add ServiceAction enum values: UninstallService, DeleteRegistryKey
+2. Add ServiceManager methods:
+   - DeleteService(serviceName) - calls DeleteService Win32 API
+3. Implement actions with confirmation dialogs:
+   - UninstallService: Confirm, then delete service, then remove from list
+   - DeleteRegistryKey: Confirm, then delete HKLM\SYSTEM\CurrentControlSet\Services\<name>
+4. Support multi-select with Yes/No/Cancel for each service
+5. **Compile and test**: Test service deletion, verify orphaned registry cleanup
+
+**Acceptance**: Can uninstall services and clean up orphaned registry entries
+
+**Commit Point**: "Add service deletion actions (Milestone 22)"
+
+---
+
+### Milestone 23: Add Service Properties Dialog
+**Goal**: Add detailed properties/configuration dialog for services
+
+**Steps:**
+1. Create ServicePropertiesDialog class (ImGui modal window)
+2. Show all service fields in read-only sections:
+   - General: Display Name, Service Name, Description, Path, Status
+   - Configuration: Startup Type, Service Type, Error Control, User Account
+   - Details: PID, Exit Codes, Checkpoint, Wait Hint, Controls Accepted
+   - Dependencies: Load Order Group, Tag ID
+3. Add editable fields:
+   - Display Name
+   - Description
+   - Startup Type (dropdown)
+   - Binary Path Name
+4. Add "Apply" button that calls ServiceManager::ChangeServiceConfig()
+5. Add "Properties" action to context menu
+6. **Compile and test**: Edit service properties, verify changes persist
+
+**Acceptance**: Properties dialog shows all service data and allows editing key fields
+
+**Commit Point**: "Add service properties dialog (Milestone 23)"
+
+---
+
+**After Milestone 23**: Services view has full feature parity with pserv4. Continue with Devices, Processes, Windows, Modules, Uninstaller views following similar patterns.
 
 ---
 
