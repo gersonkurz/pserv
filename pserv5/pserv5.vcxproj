@@ -180,6 +180,7 @@
     <ClInclude Include="Config\typed_vector_value.h" />
     <ClInclude Include="Config\value_interface.h" />
     <ClInclude Include="core\IRefCounted.h" />
+    <ClInclude Include="core\async_operation.h" />
     <ClInclude Include="core\data_object.h" />
     <ClInclude Include="core\data_object_column.h" />
     <ClInclude Include="core\data_controller.h" />
@@ -204,6 +205,7 @@
     <ClCompile Include="pserv5.cpp" />
     <ClCompile Include="main_window.cpp" />
     <ClCompile Include="utils\logging.cpp" />
+    <ClCompile Include="core\async_operation.cpp" />
     <ClCompile Include="models\service_info.cpp" />
     <ClCompile Include="windows_api\service_manager.cpp" />
     <ClCompile Include="Config\section.cpp" />

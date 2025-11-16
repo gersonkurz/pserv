@@ -5,10 +5,12 @@
 #include "utils/win32_error.h"
 #include "windows_api/service_manager.h"
 #include "models/service_info.h"
+#include "core/async_operation.h"
 #include <dxgi.h>
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
+#include <thread>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -21,6 +23,11 @@ namespace pserv {
 MainWindow::MainWindow() = default;
 
 MainWindow::~MainWindow() {
+    if (m_pAsyncOp) {
+        m_pAsyncOp->RequestCancel();
+        m_pAsyncOp->Wait();
+        delete m_pAsyncOp;
+    }
     ClearServices();
     CleanupImGui();
     CleanupDirectX();
@@ -162,6 +169,22 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
             }
         }
         break;
+
+    case WM_ASYNC_OPERATION_COMPLETE:
+        if (pWindow) {
+            pWindow->m_bShowProgressDialog = false;
+            if (pWindow->m_pAsyncOp) {
+                auto status = pWindow->m_pAsyncOp->GetStatus();
+                if (status == AsyncStatus::Completed) {
+                    spdlog::info("Async operation completed successfully");
+                } else if (status == AsyncStatus::Cancelled) {
+                    spdlog::info("Async operation was cancelled");
+                } else if (status == AsyncStatus::Failed) {
+                    spdlog::error("Async operation failed: {}", pWindow->m_pAsyncOp->GetErrorMessage());
+                }
+            }
+        }
+        return 0;
 
     case WM_DESTROY:
         if (pWindow) {
@@ -306,6 +329,35 @@ void MainWindow::CleanupImGui() {
     }
 }
 
+void MainWindow::RenderProgressDialog() {
+    if (!m_bShowProgressDialog || !m_pAsyncOp) {
+        return;
+    }
+
+    ImGui::OpenPopup("Operation in Progress");
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (ImGui::BeginPopupModal("Operation in Progress", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        float progress = m_pAsyncOp->GetProgress();
+        std::string message = m_pAsyncOp->GetProgressMessage();
+
+        ImGui::Text("%s", message.c_str());
+        ImGui::ProgressBar(progress, ImVec2(400, 0));
+        ImGui::Text("%.1f%%", progress * 100.0f);
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            m_pAsyncOp->RequestCancel();
+            spdlog::info("User requested cancellation");
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
 void MainWindow::Render() {
     if (!m_pDeviceContext || !m_pRenderTargetView) {
         return;
@@ -367,6 +419,30 @@ void MainWindow::Render() {
                         }
                     }
 
+                    ImGui::SameLine();
+                    if (ImGui::Button("Test Async Operation")) {
+                        if (m_pAsyncOp) {
+                            delete m_pAsyncOp;
+                        }
+                        m_pAsyncOp = new AsyncOperation();
+                        m_bShowProgressDialog = true;
+
+                        m_pAsyncOp->Start(m_hWnd, [](AsyncOperation* op) -> bool {
+                            // Simulate 5-second operation with progress updates
+                            for (int i = 0; i <= 10 && !op->IsCancelRequested(); ++i) {
+                                float progress = i / 10.0f;
+                                op->ReportProgress(progress, std::format("Processing step {} of 10...", i));
+                                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                            }
+
+                            if (op->IsCancelRequested()) {
+                                return false;
+                            }
+
+                            return true;
+                        });
+                    }
+
                     ImGui::Text("Services: %zu", m_services.size());
                     ImGui::Separator();
 
@@ -395,6 +471,9 @@ void MainWindow::Render() {
     }
 
     ImGui::End();
+
+    // Render progress dialog if active
+    RenderProgressDialog();
 
     // Rendering
     ImGui::Render();

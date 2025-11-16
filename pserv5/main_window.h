@@ -11,6 +11,7 @@ namespace pserv::config {
 namespace pserv {
 
 class ServiceInfo;  // Forward declaration
+class AsyncOperation;  // Forward declaration
 
 class MainWindow {
 public:
@@ -46,10 +47,13 @@ private:
     // ImGui state
     std::string m_activeTab{"Services"};
     std::vector<ServiceInfo*> m_services;  // Cached service list
+    AsyncOperation* m_pAsyncOp{nullptr};  // Current async operation
+    bool m_bShowProgressDialog{false};
 
     // Helper methods
     void SaveWindowState();
     void ClearServices();
+    void RenderProgressDialog();
 };
 
 } // namespace pserv
