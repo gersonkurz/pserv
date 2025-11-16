@@ -1386,6 +1386,156 @@ void MainWindow::Render() {
                     ImGui::Text("%zu selected", selectedCount);
                     ImGui::EndGroup();
                 }
+                // Devices view (same as Services, but using devices controller)
+                else if (std::string(tab) == "Devices") {
+                    ImGui::Separator();
+                    if (ImGui::Button("Refresh Devices")) {
+                        try {
+                            m_pDevicesController->Refresh();
+                        } catch (const std::exception& e) {
+                            spdlog::error("Failed to refresh devices: {}", e.what());
+                        }
+                    }
+
+                    // Filter input box
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(300.0f);
+                    ImGui::InputTextWithHint("##filter_devices", "Filter devices...", m_filterText, IM_ARRAYSIZE(m_filterText));
+
+                    // Filter devices based on search text
+                    const auto& allDevices = m_pDevicesController->GetServices();
+                    std::vector<const ServiceInfo*> filteredDevices;
+                    std::string filterLower;
+
+                    if (m_filterText[0] != '\0') {
+                        // Convert filter text to lowercase for case-insensitive search
+                        filterLower = m_filterText;
+                        std::transform(filterLower.begin(), filterLower.end(), filterLower.begin(),
+                            [](unsigned char c) { return std::tolower(c); });
+
+                        for (const auto* device : allDevices) {
+                            // Search in display name and device name
+                            std::string displayName = device->GetDisplayName();
+                            std::string deviceName = device->GetName();
+                            std::transform(displayName.begin(), displayName.end(), displayName.begin(),
+                                [](unsigned char c) { return std::tolower(c); });
+                            std::transform(deviceName.begin(), deviceName.end(), deviceName.begin(),
+                                [](unsigned char c) { return std::tolower(c); });
+
+                            if (displayName.find(filterLower) != std::string::npos ||
+                                deviceName.find(filterLower) != std::string::npos) {
+                                filteredDevices.push_back(device);
+                            }
+                        }
+                    } else {
+                        // No filter - show all devices
+                        filteredDevices.assign(allDevices.begin(), allDevices.end());
+                    }
+
+                    ImGui::SameLine();
+                    ImGui::Text("Devices: %zu / %zu", filteredDevices.size(), allDevices.size());
+                    ImGui::Separator();
+
+                    // Display devices in a table (reusing services table rendering logic)
+                    const auto& columns = m_pDevicesController->GetColumns();
+                    ImGuiTableFlags flags = ImGuiTableFlags_Sortable |
+                                           ImGuiTableFlags_RowBg |
+                                           ImGuiTableFlags_Borders |
+                                           ImGuiTableFlags_Resizable |
+                                           ImGuiTableFlags_Reorderable |
+                                           ImGuiTableFlags_Hideable |
+                                           ImGuiTableFlags_ScrollX |
+                                           ImGuiTableFlags_ScrollY |
+                                           ImGuiTableFlags_SizingFixedFit;
+
+                    // Reserve space for status bar
+                    float statusBarHeight = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+                    float tableHeight = ImGui::GetContentRegionAvail().y - statusBarHeight;
+                    ImVec2 tableSize(0.0f, tableHeight);
+
+                    if (ImGui::BeginTable("DevicesTable", static_cast<int>(columns.size()), flags, tableSize)) {
+                        // Setup columns
+                        for (size_t i = 0; i < columns.size(); ++i) {
+                            ImGui::TableSetupColumn(columns[i].DisplayName.c_str(), ImGuiTableColumnFlags_None);
+                        }
+                        ImGui::TableHeadersRow();
+
+                        // Render rows
+                        for (const auto* device : filteredDevices) {
+                            ImGui::TableNextRow();
+                            ImGui::PushID(device);
+
+                            // Visual state for row coloring
+                            VisualState visualState = m_pDevicesController->GetVisualState(device);
+                            if (visualState == VisualState::Disabled) {
+                                // Gray out disabled items
+                                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                            } else if (visualState == VisualState::Highlighted) {
+                                // Highlight special items (blue-ish, theme-aware)
+                                ImVec4 highlightColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+                                highlightColor.x *= 0.6f; // Reduce red
+                                highlightColor.y *= 0.8f; // Reduce green
+                                highlightColor.z = 1.0f;  // Full blue
+                                ImGui::PushStyleColor(ImGuiCol_Text, highlightColor);
+                            }
+
+                            // Render columns
+                            for (size_t colIdx = 0; colIdx < columns.size(); ++colIdx) {
+                                ImGui::TableSetColumnIndex(static_cast<int>(colIdx));
+                                std::string value = device->GetProperty(static_cast<int>(colIdx));
+                                ImGui::Text("%s", value.c_str());
+                            }
+
+                            if (visualState != VisualState::Normal) {
+                                ImGui::PopStyleColor();
+                            }
+
+                            ImGui::PopID();
+                        }
+
+                        ImGui::EndTable();
+                    }
+
+                    // Status bar for Devices view
+                    ImGui::Separator();
+
+                    // Calculate statistics
+                    size_t visibleCount = filteredDevices.size();
+                    size_t totalCount = allDevices.size();
+                    size_t highlightedCount = 0;
+                    size_t disabledCount = 0;
+                    size_t filteredCount = totalCount - visibleCount;
+
+                    for (const auto* device : allDevices) {
+                        VisualState state = m_pDevicesController->GetVisualState(device);
+                        if (state == VisualState::Highlighted) {
+                            highlightedCount++;
+                        } else if (state == VisualState::Disabled) {
+                            disabledCount++;
+                        }
+                    }
+
+                    // Display status bar
+                    ImGui::BeginGroup();
+                    ImGui::Text("%zu visible", visibleCount);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("|");
+                    ImGui::SameLine();
+                    ImGui::Text("%zu highlighted", highlightedCount);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("|");
+                    ImGui::SameLine();
+                    ImGui::Text("%zu disabled", disabledCount);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("|");
+                    ImGui::SameLine();
+                    ImGui::Text("%zu filtered", filteredCount);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("|");
+                    ImGui::SameLine();
+                    ImGui::Text("%zu total", totalCount);
+                    ImGui::EndGroup();
+                }
                 // Other views
                 else {
                     ImGui::Text("This is the %s view", tab);
