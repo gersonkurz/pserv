@@ -2,6 +2,7 @@
 #include "services_data_controller.h"
 #include "../windows_api/service_manager.h"
 #include <spdlog/spdlog.h>
+#include <algorithm>
 
 namespace pserv {
 
@@ -42,6 +43,31 @@ void ServicesDataController::Refresh() {
 
 const std::vector<DataObjectColumn>& ServicesDataController::GetColumns() const {
     return m_columns;
+}
+
+void ServicesDataController::Sort(int columnIndex, bool ascending) {
+    if (columnIndex < 0 || columnIndex >= static_cast<int>(m_columns.size())) {
+        spdlog::warn("Invalid column index for sorting: {}", columnIndex);
+        return;
+    }
+
+    spdlog::debug("Sorting by column {} ({})", columnIndex, ascending ? "ascending" : "descending");
+
+    std::sort(m_services.begin(), m_services.end(), [columnIndex, ascending](const ServiceInfo* a, const ServiceInfo* b) {
+        std::string valA = a->GetProperty(columnIndex);
+        std::string valB = b->GetProperty(columnIndex);
+
+        // For numeric columns (Process ID), do numeric comparison
+        if (columnIndex == 4) { // Process ID column
+            int numA = valA.empty() ? 0 : std::stoi(valA);
+            int numB = valB.empty() ? 0 : std::stoi(valB);
+            return ascending ? (numA < numB) : (numA > numB);
+        }
+
+        // String comparison for other columns
+        int cmp = valA.compare(valB);
+        return ascending ? (cmp < 0) : (cmp > 0);
+    });
 }
 
 void ServicesDataController::Clear() {

@@ -17,6 +17,7 @@ public:
     // DataController interface
     void Refresh() override;
     const std::vector<DataObjectColumn>& GetColumns() const override;
+    void Sort(int columnIndex, bool ascending) override;
 
     // Get service objects
     const std::vector<ServiceInfo*>& GetServices() const { return m_services; }

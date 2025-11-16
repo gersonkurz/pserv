@@ -5,8 +5,8 @@ ActiveView = 'Services'
 LogLevel = 'debug'
 
 [Window]
-Height = 720
+Height = 988
 Maximized = false
-PositionX = 861
-PositionY = 571
-Width = 1280
+PositionX = 393
+PositionY = 266
+Width = 1930

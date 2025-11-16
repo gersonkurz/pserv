@@ -23,6 +23,7 @@ namespace pserv {
         // Core abstract methods
         virtual void Refresh() = 0;
         virtual const std::vector<DataObjectColumn>& GetColumns() const = 0;
+        virtual void Sort(int columnIndex, bool ascending) = 0;
 
         const std::string& GetControllerName() const { return m_controllerName; }
         const std::string& GetItemName() const { return m_itemName; }

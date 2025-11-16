@@ -433,15 +433,55 @@ void MainWindow::Render() {
                     ImGui::Text("Services: %zu", services.size());
                     ImGui::Separator();
 
-                    // Display services in a scrollable region
-                    ImGui::BeginChild("ServiceList", ImVec2(0, 0), true);
-                    for (const auto* service : services) {
-                        ImGui::Text("%s - %s [%s]",
-                            service->GetDisplayName().c_str(),
-                            service->GetStatusString().c_str(),
-                            service->GetName().c_str());
+                    // Display services in a table
+                    const auto& columns = m_pServicesController->GetColumns();
+                    ImGuiTableFlags flags = ImGuiTableFlags_Sortable |
+                                           ImGuiTableFlags_RowBg |
+                                           ImGuiTableFlags_Borders |
+                                           ImGuiTableFlags_Resizable |
+                                           ImGuiTableFlags_Reorderable |
+                                           ImGuiTableFlags_Hideable |
+                                           ImGuiTableFlags_ScrollX |
+                                           ImGuiTableFlags_ScrollY |
+                                           ImGuiTableFlags_SizingFixedFit;
+
+                    if (ImGui::BeginTable("ServicesTable", static_cast<int>(columns.size()), flags)) {
+                        // Setup columns with initial widths - all fixed so resizing triggers horizontal scroll
+                        ImGui::TableSetupColumn(columns[0].DisplayName.c_str(), ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, 300.0f, 0);
+                        ImGui::TableSetupColumn(columns[1].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, 200.0f, 1);
+                        ImGui::TableSetupColumn(columns[2].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, 80.0f, 2);
+                        ImGui::TableSetupColumn(columns[3].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, 100.0f, 3);
+                        ImGui::TableSetupColumn(columns[4].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, 80.0f, 4);
+                        ImGui::TableSetupScrollFreeze(0, 1); // Freeze header row
+                        ImGui::TableHeadersRow();
+
+                        // Check for sorting
+                        if (ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs()) {
+                            if (sortSpecs->SpecsDirty) {
+                                // Sort is requested
+                                if (sortSpecs->SpecsCount > 0) {
+                                    const ImGuiTableColumnSortSpecs& spec = sortSpecs->Specs[0];
+                                    int columnIndex = spec.ColumnIndex;
+                                    bool ascending = (spec.SortDirection == ImGuiSortDirection_Ascending);
+
+                                    m_pServicesController->Sort(columnIndex, ascending);
+                                }
+                                sortSpecs->SpecsDirty = false;
+                            }
+                        }
+
+                        // Display rows
+                        for (const auto* service : services) {
+                            ImGui::TableNextRow();
+                            for (size_t i = 0; i < columns.size(); ++i) {
+                                ImGui::TableSetColumnIndex(static_cast<int>(i));
+                                std::string value = service->GetProperty(static_cast<int>(i));
+                                ImGui::TextUnformatted(value.c_str());
+                            }
+                        }
+
+                        ImGui::EndTable();
                     }
-                    ImGui::EndChild();
                 }
                 // Other views
                 else {
