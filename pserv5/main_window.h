@@ -12,6 +12,7 @@ namespace pserv {
 
 class ServiceInfo;  // Forward declaration
 class AsyncOperation;  // Forward declaration
+class ServicesDataController;  // Forward declaration
 
 class MainWindow {
 public:
@@ -46,9 +47,10 @@ private:
 
     // ImGui state
     std::string m_activeTab{"Services"};
-    std::vector<ServiceInfo*> m_services;  // Cached service list
+    std::vector<ServiceInfo*> m_services;  // Cached service list (legacy, will be removed)
     AsyncOperation* m_pAsyncOp{nullptr};  // Current async operation
     bool m_bShowProgressDialog{false};
+    ServicesDataController* m_pServicesController{nullptr};  // Services controller
 
     // Helper methods
     void SaveWindowState();

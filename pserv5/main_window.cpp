@@ -6,6 +6,7 @@
 #include "windows_api/service_manager.h"
 #include "models/service_info.h"
 #include "core/async_operation.h"
+#include "controllers/services_data_controller.h"
 #include <dxgi.h>
 #include <imgui.h>
 #include <imgui_impl_win32.h>
@@ -20,7 +21,9 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 namespace pserv {
 
-MainWindow::MainWindow() = default;
+MainWindow::MainWindow() {
+    m_pServicesController = new ServicesDataController();
+}
 
 MainWindow::~MainWindow() {
     if (m_pAsyncOp) {
@@ -28,6 +31,7 @@ MainWindow::~MainWindow() {
         m_pAsyncOp->Wait();
         delete m_pAsyncOp;
     }
+    delete m_pServicesController;
     ClearServices();
     CleanupImGui();
     CleanupDirectX();
@@ -111,6 +115,14 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
     auto& appSettings = config::theSettings.application;
     m_activeTab = appSettings.activeView.get();
     spdlog::info("Loaded active tab: {}", m_activeTab);
+
+    // Initial refresh of services
+    try {
+        m_pServicesController->Refresh();
+        spdlog::info("Initial services refresh completed");
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to refresh services on startup: {}", e.what());
+    }
 
     spdlog::info("Main window initialized successfully");
     return true;
@@ -410,45 +422,20 @@ void MainWindow::Render() {
                     ImGui::Separator();
                     if (ImGui::Button("Refresh Services")) {
                         try {
-                            ClearServices();
-                            ServiceManager sm;
-                            m_services = sm.EnumerateServices();
-                            spdlog::info("Successfully enumerated {} services", m_services.size());
+                            m_pServicesController->Refresh();
                         } catch (const std::exception& e) {
-                            spdlog::error("Failed to enumerate services: {}", e.what());
+                            spdlog::error("Failed to refresh services: {}", e.what());
                         }
                     }
 
+                    const auto& services = m_pServicesController->GetServices();
                     ImGui::SameLine();
-                    if (ImGui::Button("Test Async Operation")) {
-                        if (m_pAsyncOp) {
-                            delete m_pAsyncOp;
-                        }
-                        m_pAsyncOp = new AsyncOperation();
-                        m_bShowProgressDialog = true;
-
-                        m_pAsyncOp->Start(m_hWnd, [](AsyncOperation* op) -> bool {
-                            // Simulate 5-second operation with progress updates
-                            for (int i = 0; i <= 10 && !op->IsCancelRequested(); ++i) {
-                                float progress = i / 10.0f;
-                                op->ReportProgress(progress, std::format("Processing step {} of 10...", i));
-                                std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                            }
-
-                            if (op->IsCancelRequested()) {
-                                return false;
-                            }
-
-                            return true;
-                        });
-                    }
-
-                    ImGui::Text("Services: %zu", m_services.size());
+                    ImGui::Text("Services: %zu", services.size());
                     ImGui::Separator();
 
                     // Display services in a scrollable region
                     ImGui::BeginChild("ServiceList", ImVec2(0, 0), true);
-                    for (const auto* service : m_services) {
+                    for (const auto* service : services) {
                         ImGui::Text("%s - %s [%s]",
                             service->GetDisplayName().c_str(),
                             service->GetStatusString().c_str(),

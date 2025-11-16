@@ -184,6 +184,7 @@
     <ClInclude Include="core\data_object.h" />
     <ClInclude Include="core\data_object_column.h" />
     <ClInclude Include="core\data_controller.h" />
+    <ClInclude Include="controllers\services_data_controller.h" />
     <ClInclude Include="models\service_info.h" />
     <ClInclude Include="windows_api\service_manager.h" />
     <ClInclude Include="..\imgui\imconfig.h" />
@@ -206,6 +207,7 @@
     <ClCompile Include="main_window.cpp" />
     <ClCompile Include="utils\logging.cpp" />
     <ClCompile Include="core\async_operation.cpp" />
+    <ClCompile Include="controllers\services_data_controller.cpp" />
     <ClCompile Include="models\service_info.cpp" />
     <ClCompile Include="windows_api\service_manager.cpp" />
     <ClCompile Include="Config\section.cpp" />
