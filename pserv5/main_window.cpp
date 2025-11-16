@@ -669,14 +669,23 @@ void MainWindow::Render() {
 
                                         // Get actions that are common to all selected services
                                         auto actions = m_pServicesController->GetAvailableActions(service);
-                                        for (const auto& action : actions) {
+                                        for (size_t i = 0; i < actions.size(); ++i) {
+                                            const auto& action = actions[i];
+
+                                            // Handle separator
+                                            if (action == ServiceAction::Separator) {
+                                                ImGui::Separator();
+                                                continue;
+                                            }
+
                                             std::string actionName = ServicesDataController::GetActionName(action);
 
                                             // Show count if multiple services selected
                                             std::string menuLabel = actionName;
                                             if (m_selectedServices.size() > 1 &&
                                                 action != ServiceAction::CopyName &&
-                                                action != ServiceAction::CopyDisplayName) {
+                                                action != ServiceAction::CopyDisplayName &&
+                                                action != ServiceAction::CopyBinaryPath) {
                                                 menuLabel += std::format(" ({} services)", m_selectedServices.size());
                                             }
 
@@ -698,6 +707,15 @@ void MainWindow::Render() {
                                                         std::string displayName = service->GetDisplayName();
                                                         ImGui::SetClipboardText(displayName.c_str());
                                                         spdlog::debug("Copied service display name to clipboard: {}", displayName);
+                                                    }
+                                                    break;
+
+                                                case ServiceAction::CopyBinaryPath:
+                                                    // Copy actions only work on the clicked service
+                                                    {
+                                                        std::string binaryPath = service->GetBinaryPathName();
+                                                        ImGui::SetClipboardText(binaryPath.c_str());
+                                                        spdlog::debug("Copied service binary path to clipboard: {}", binaryPath);
                                                     }
                                                     break;
 
@@ -923,6 +941,66 @@ void MainWindow::Render() {
                                                                 return true;
                                                             } catch (const std::exception& e) {
                                                                 spdlog::error("Failed to restart service: {}", e.what());
+                                                                return false;
+                                                            }
+                                                        });
+                                                    }
+                                                    break;
+
+                                                case ServiceAction::SetStartupAutomatic:
+                                                case ServiceAction::SetStartupManual:
+                                                case ServiceAction::SetStartupDisabled:
+                                                    // Change startup type for selected service(s)
+                                                    {
+                                                        // Determine the target startup type
+                                                        DWORD startType;
+                                                        std::string startTypeName;
+                                                        if (action == ServiceAction::SetStartupAutomatic) {
+                                                            startType = SERVICE_AUTO_START;
+                                                            startTypeName = "Automatic";
+                                                        } else if (action == ServiceAction::SetStartupManual) {
+                                                            startType = SERVICE_DEMAND_START;
+                                                            startTypeName = "Manual";
+                                                        } else {
+                                                            startType = SERVICE_DISABLED;
+                                                            startTypeName = "Disabled";
+                                                        }
+
+                                                        // Copy selected services list for async operation
+                                                        std::vector<std::string> serviceNames;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            serviceNames.push_back(svc->GetName());
+                                                        }
+
+                                                        spdlog::info("Starting async operation: Set startup type to {} for {} service(s)",
+                                                            startTypeName, serviceNames.size());
+
+                                                        if (m_pAsyncOp) {
+                                                            m_pAsyncOp->Wait();
+                                                            delete m_pAsyncOp;
+                                                        }
+
+                                                        m_pAsyncOp = new AsyncOperation();
+                                                        m_bShowProgressDialog = true;
+
+                                                        m_pAsyncOp->Start(m_hWnd, [serviceNames, startType, startTypeName](AsyncOperation* op) -> bool {
+                                                            try {
+                                                                size_t total = serviceNames.size();
+                                                                for (size_t i = 0; i < total; ++i) {
+                                                                    const std::string& serviceName = serviceNames[i];
+                                                                    float progress = static_cast<float>(i) / static_cast<float>(total);
+
+                                                                    op->ReportProgress(progress, std::format("Setting startup type for '{}'... ({}/{})",
+                                                                        serviceName, i + 1, total));
+
+                                                                    ServiceManager::ChangeServiceStartType(serviceName, startType);
+                                                                }
+
+                                                                op->ReportProgress(1.0f, std::format("Set startup type to {} for {} service(s)",
+                                                                    startTypeName, total));
+                                                                return true;
+                                                            } catch (const std::exception& e) {
+                                                                spdlog::error("Failed to change startup type: {}", e.what());
                                                                 return false;
                                                             }
                                                         });

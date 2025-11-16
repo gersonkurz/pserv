@@ -113,15 +113,11 @@ std::vector<ServiceAction> ServicesDataController::GetAvailableActions(const Ser
         return actions;
     }
 
-    // Always available actions
-    actions.push_back(ServiceAction::CopyName);
-    actions.push_back(ServiceAction::CopyDisplayName);
-
     // Get service state and capabilities
     DWORD currentState = service->GetCurrentState();
     DWORD controlsAccepted = service->GetControlsAccepted();
 
-    // State-dependent actions
+    // State-dependent actions first
     if (currentState == SERVICE_STOPPED) {
         actions.push_back(ServiceAction::Start);
     }
@@ -138,6 +134,24 @@ std::vector<ServiceAction> ServicesDataController::GetAvailableActions(const Ser
         actions.push_back(ServiceAction::Resume);
         actions.push_back(ServiceAction::Stop);
     }
+
+    // Separator after state-dependent actions
+    if (!actions.empty()) {
+        actions.push_back(ServiceAction::Separator);
+    }
+
+    // Copy actions (always available)
+    actions.push_back(ServiceAction::CopyName);
+    actions.push_back(ServiceAction::CopyDisplayName);
+    actions.push_back(ServiceAction::CopyBinaryPath);
+
+    // Separator before startup type actions
+    actions.push_back(ServiceAction::Separator);
+
+    // Startup type actions (always available)
+    actions.push_back(ServiceAction::SetStartupAutomatic);
+    actions.push_back(ServiceAction::SetStartupManual);
+    actions.push_back(ServiceAction::SetStartupDisabled);
 
     return actions;
 }
@@ -178,6 +192,14 @@ std::string ServicesDataController::GetActionName(ServiceAction action) {
         return "Copy Name";
     case ServiceAction::CopyDisplayName:
         return "Copy Display Name";
+    case ServiceAction::CopyBinaryPath:
+        return "Copy Binary Path";
+    case ServiceAction::SetStartupAutomatic:
+        return "Set Startup: Automatic";
+    case ServiceAction::SetStartupManual:
+        return "Set Startup: Manual";
+    case ServiceAction::SetStartupDisabled:
+        return "Set Startup: Disabled";
     default:
         return "Unknown Action";
     }

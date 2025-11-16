@@ -556,4 +556,54 @@ bool ServiceManager::RestartServiceByName(const std::string& serviceName, std::f
     return true;
 }
 
+bool ServiceManager::ChangeServiceStartType(const std::string& serviceName, DWORD startType) {
+    spdlog::info("Changing startup type for service '{}' to {}", serviceName, startType);
+
+    // Convert service name to wide string
+    std::wstring wServiceName = utils::Utf8ToWide(serviceName);
+
+    // Open SC Manager
+    wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
+    if (!hScManager) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to open SC Manager: error {}", error);
+        throw std::runtime_error(std::format("Failed to open SC Manager: error {}", error));
+    }
+
+    // Open the service with change config access
+    wil::unique_schandle hService(OpenServiceW(
+        hScManager.get(),
+        wServiceName.c_str(),
+        SERVICE_CHANGE_CONFIG | SERVICE_QUERY_CONFIG
+    ));
+
+    if (!hService) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to open service '{}': error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to open service '{}': error {}", serviceName, error));
+    }
+
+    // Change the service configuration
+    if (!ChangeServiceConfigW(
+        hService.get(),
+        SERVICE_NO_CHANGE,  // dwServiceType
+        startType,          // dwStartType
+        SERVICE_NO_CHANGE,  // dwErrorControl
+        nullptr,            // lpBinaryPathName
+        nullptr,            // lpLoadOrderGroup
+        nullptr,            // lpdwTagId
+        nullptr,            // lpDependencies
+        nullptr,            // lpServiceStartName
+        nullptr,            // lpPassword
+        nullptr             // lpDisplayName
+    )) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to change service '{}' start type: error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to change service start type: error {}", error));
+    }
+
+    spdlog::info("Service '{}' startup type changed successfully", serviceName);
+    return true;
+}
+
 } // namespace pserv

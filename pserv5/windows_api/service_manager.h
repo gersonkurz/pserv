@@ -43,6 +43,11 @@ public:
     // progressCallback is called periodically with progress (0.0-1.0) and status message
     // Returns true on success, throws exception on failure
     static bool RestartServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
+
+    // Change service startup type
+    // startType: SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, etc.
+    // Returns true on success, throws exception on failure
+    static bool ChangeServiceStartType(const std::string& serviceName, DWORD startType);
 };
 
 } // namespace pserv

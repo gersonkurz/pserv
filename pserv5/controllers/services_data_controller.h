@@ -14,7 +14,12 @@ enum class ServiceAction {
     Pause,
     Resume,
     CopyName,
-    CopyDisplayName
+    CopyDisplayName,
+    CopyBinaryPath,
+    SetStartupAutomatic,
+    SetStartupManual,
+    SetStartupDisabled,
+    Separator = -1  // Special marker for menu separators
 };
 
 enum class VisualState {
