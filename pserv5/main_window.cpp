@@ -504,7 +504,7 @@ void MainWindow::Render() {
 
                                 for (size_t i = 0; i < displayOrder.size(); ++i) {
                                     if (i < table->ColumnsCount) {
-                                        table->Columns[i].DisplayOrder = static_cast<ImGuiTableColumnIdx>(displayOrder[i]);
+                                        table->Columns[static_cast<int>(i)].DisplayOrder = static_cast<ImGuiTableColumnIdx>(displayOrder[i]);
                                     }
                                 }
 
@@ -544,11 +544,84 @@ void MainWindow::Render() {
                         // Display rows
                         for (const auto* service : services) {
                             ImGui::TableNextRow();
+                            ImGui::PushID(service);
+
+                            // Get visual state from controller
+                            VisualState visualState = m_pServicesController->GetVisualState(service);
+
+                            // Apply text color based on visual state
+                            if (visualState == VisualState::Disabled) {
+                                // Gray out disabled items
+                                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                            } else if (visualState == VisualState::Highlighted) {
+                                // Highlight special items (blue-ish, theme-aware)
+                                ImVec4 highlightColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+                                highlightColor.x *= 0.6f; // Reduce red
+                                highlightColor.y *= 0.8f; // Reduce green
+                                highlightColor.z = 1.0f;  // Full blue
+                                ImGui::PushStyleColor(ImGuiCol_Text, highlightColor);
+                            }
+
+                            // Display columns with context menu on right-click
                             for (size_t i = 0; i < columns.size(); ++i) {
                                 ImGui::TableSetColumnIndex(static_cast<int>(i));
                                 std::string value = service->GetProperty(static_cast<int>(i));
-                                ImGui::TextUnformatted(value.c_str());
+
+                                // First column: use selectable to make row clickable
+                                if (i == 0) {
+                                    ImGui::Selectable(value.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+
+                                    // Context menu for this row
+                                    if (ImGui::BeginPopupContextItem()) {
+                                        auto actions = m_pServicesController->GetAvailableActions(service);
+                                        for (const auto& action : actions) {
+                                            std::string actionName = ServicesDataController::GetActionName(action);
+                                            if (ImGui::MenuItem(actionName.c_str())) {
+                                                std::string serviceName = service->GetProperty(1); // Name column
+                                                std::string displayName = service->GetProperty(0); // Display Name column
+                                                spdlog::info("Action '{}' requested for service: {}", actionName, serviceName);
+
+                                                // Handle action
+                                                switch (action) {
+                                                case ServiceAction::CopyName:
+                                                    ImGui::SetClipboardText(serviceName.c_str());
+                                                    spdlog::debug("Copied service name to clipboard: {}", serviceName);
+                                                    break;
+
+                                                case ServiceAction::CopyDisplayName:
+                                                    ImGui::SetClipboardText(displayName.c_str());
+                                                    spdlog::debug("Copied service display name to clipboard: {}", displayName);
+                                                    break;
+
+                                                case ServiceAction::Start:
+                                                    // Start service asynchronously
+                                                    spdlog::info("Starting async operation: Start service '{}'", serviceName);
+                                                    // TODO: Implement async start
+                                                    break;
+
+                                                case ServiceAction::Stop:
+                                                case ServiceAction::Restart:
+                                                case ServiceAction::Pause:
+                                                case ServiceAction::Resume:
+                                                    spdlog::warn("Action '{}' not yet implemented", actionName);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        ImGui::EndPopup();
+                                    }
+                                } else {
+                                    // Other columns: just display text
+                                    ImGui::TextUnformatted(value.c_str());
+                                }
                             }
+
+                            // Pop text color if we pushed one
+                            if (visualState != VisualState::Normal) {
+                                ImGui::PopStyleColor();
+                            }
+
+                            ImGui::PopID();
                         }
 
                         ImGui::EndTable();

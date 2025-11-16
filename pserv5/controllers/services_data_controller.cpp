@@ -77,4 +77,80 @@ void ServicesDataController::Clear() {
     m_services.clear();
 }
 
+std::vector<ServiceAction> ServicesDataController::GetAvailableActions(const ServiceInfo* service) const {
+    std::vector<ServiceAction> actions;
+
+    if (!service) {
+        return actions;
+    }
+
+    // Always available actions
+    actions.push_back(ServiceAction::CopyName);
+    actions.push_back(ServiceAction::CopyDisplayName);
+
+    // Get service state
+    std::string status = service->GetProperty(2); // Status column
+
+    // State-dependent actions
+    if (status == "Stopped") {
+        actions.push_back(ServiceAction::Start);
+    }
+    else if (status == "Running") {
+        actions.push_back(ServiceAction::Stop);
+        actions.push_back(ServiceAction::Restart);
+
+        // Check if service accepts pause/continue
+        // TODO: Query actual service capabilities
+        // For now, add pause/resume for all running services
+        actions.push_back(ServiceAction::Pause);
+    }
+    else if (status == "Paused") {
+        actions.push_back(ServiceAction::Resume);
+        actions.push_back(ServiceAction::Stop);
+    }
+
+    return actions;
+}
+
+VisualState ServicesDataController::GetVisualState(const ServiceInfo* service) const {
+    if (!service) {
+        return VisualState::Normal;
+    }
+
+    // Check if service is disabled
+    DWORD startType = service->GetStartType();
+    if (startType == SERVICE_DISABLED) {
+        return VisualState::Disabled;
+    }
+
+    // Check if service is running
+    DWORD currentState = service->GetCurrentState();
+    if (currentState == SERVICE_RUNNING) {
+        return VisualState::Highlighted;
+    }
+
+    return VisualState::Normal;
+}
+
+std::string ServicesDataController::GetActionName(ServiceAction action) {
+    switch (action) {
+    case ServiceAction::Start:
+        return "Start Service";
+    case ServiceAction::Stop:
+        return "Stop Service";
+    case ServiceAction::Restart:
+        return "Restart Service";
+    case ServiceAction::Pause:
+        return "Pause Service";
+    case ServiceAction::Resume:
+        return "Resume Service";
+    case ServiceAction::CopyName:
+        return "Copy Name";
+    case ServiceAction::CopyDisplayName:
+        return "Copy Display Name";
+    default:
+        return "Unknown Action";
+    }
+}
+
 } // namespace pserv

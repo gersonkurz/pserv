@@ -76,6 +76,30 @@ std::vector<ServiceInfo*> ServiceManager::EnumerateServices() {
             pServices[i].ServiceStatusProcess.dwServiceType
         );
         info->SetProcessId(pServices[i].ServiceStatusProcess.dwProcessId);
+
+        // Query service configuration to get start type
+        SC_HANDLE hService = OpenServiceW(
+            m_hScManager.get(),
+            pServices[i].lpServiceName,
+            SERVICE_QUERY_CONFIG
+        );
+
+        if (hService) {
+            DWORD bytesNeeded = 0;
+            QueryServiceConfigW(hService, nullptr, 0, &bytesNeeded);
+
+            if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+                std::vector<BYTE> configBuffer(bytesNeeded);
+                auto* pConfig = reinterpret_cast<QUERY_SERVICE_CONFIGW*>(configBuffer.data());
+
+                if (QueryServiceConfigW(hService, pConfig, bytesNeeded, &bytesNeeded)) {
+                    info->SetStartType(pConfig->dwStartType);
+                }
+            }
+
+            CloseServiceHandle(hService);
+        }
+
         services.push_back(info);
     }
 
