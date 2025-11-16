@@ -12,6 +12,13 @@ ServiceInfo::ServiceInfo(std::string name, std::string displayName, DWORD curren
     , m_processId(0)
     , m_serviceType(serviceType)
     , m_controlsAccepted(0)
+    , m_errorControl(0)
+    , m_tagId(0)
+    , m_win32ExitCode(0)
+    , m_serviceSpecificExitCode(0)
+    , m_checkPoint(0)
+    , m_waitHint(0)
+    , m_serviceFlags(0)
 {
     // Update running state based on service state
     SetRunning(m_currentState == SERVICE_RUNNING);
@@ -33,6 +40,16 @@ void ServiceInfo::Update(const DataObject& other) {
     m_serviceType = otherService->m_serviceType;
     m_binaryPathName = otherService->m_binaryPathName;
     m_description = otherService->m_description;
+    m_controlsAccepted = otherService->m_controlsAccepted;
+    m_user = otherService->m_user;
+    m_loadOrderGroup = otherService->m_loadOrderGroup;
+    m_errorControl = otherService->m_errorControl;
+    m_tagId = otherService->m_tagId;
+    m_win32ExitCode = otherService->m_win32ExitCode;
+    m_serviceSpecificExitCode = otherService->m_serviceSpecificExitCode;
+    m_checkPoint = otherService->m_checkPoint;
+    m_waitHint = otherService->m_waitHint;
+    m_serviceFlags = otherService->m_serviceFlags;
 }
 
 std::string ServiceInfo::GetProperty(int propertyId) const {
@@ -48,11 +65,31 @@ std::string ServiceInfo::GetProperty(int propertyId) const {
         case ServiceProperty::ProcessId:
             return m_processId > 0 ? std::to_string(m_processId) : "";
         case ServiceProperty::ServiceType:
-            return std::to_string(m_serviceType);
+            return GetServiceTypeString();
         case ServiceProperty::BinaryPathName:
             return m_binaryPathName;
         case ServiceProperty::Description:
             return m_description;
+        case ServiceProperty::User:
+            return m_user;
+        case ServiceProperty::LoadOrderGroup:
+            return m_loadOrderGroup;
+        case ServiceProperty::ErrorControl:
+            return GetErrorControlString();
+        case ServiceProperty::TagId:
+            return m_tagId > 0 ? std::to_string(m_tagId) : "";
+        case ServiceProperty::Win32ExitCode:
+            return std::to_string(m_win32ExitCode);
+        case ServiceProperty::ServiceSpecificExitCode:
+            return std::to_string(m_serviceSpecificExitCode);
+        case ServiceProperty::CheckPoint:
+            return std::to_string(m_checkPoint);
+        case ServiceProperty::WaitHint:
+            return std::to_string(m_waitHint);
+        case ServiceProperty::ServiceFlags:
+            return std::to_string(m_serviceFlags);
+        case ServiceProperty::ControlsAccepted:
+            return GetControlsAcceptedString();
         default:
             return "";
     }
@@ -80,6 +117,84 @@ std::string ServiceInfo::GetStartTypeString() const {
         case SERVICE_SYSTEM_START: return "System";
         default: return std::format("Unknown ({})", m_startType);
     }
+}
+
+std::string ServiceInfo::GetServiceTypeString() const {
+    std::string result;
+
+    if (m_serviceType & SERVICE_KERNEL_DRIVER) {
+        result += "Kernel Driver";
+    }
+    if (m_serviceType & SERVICE_FILE_SYSTEM_DRIVER) {
+        if (!result.empty()) result += " | ";
+        result += "File System Driver";
+    }
+    if (m_serviceType & SERVICE_WIN32_OWN_PROCESS) {
+        if (!result.empty()) result += " | ";
+        result += "Win32 Own Process";
+    }
+    if (m_serviceType & SERVICE_WIN32_SHARE_PROCESS) {
+        if (!result.empty()) result += " | ";
+        result += "Win32 Share Process";
+    }
+    if (m_serviceType & SERVICE_INTERACTIVE_PROCESS) {
+        if (!result.empty()) result += " | ";
+        result += "Interactive";
+    }
+
+    return result.empty() ? std::format("Unknown (0x{:X})", m_serviceType) : result;
+}
+
+std::string ServiceInfo::GetErrorControlString() const {
+    switch (m_errorControl) {
+        case SERVICE_ERROR_IGNORE: return "Ignore";
+        case SERVICE_ERROR_NORMAL: return "Normal";
+        case SERVICE_ERROR_SEVERE: return "Severe";
+        case SERVICE_ERROR_CRITICAL: return "Critical";
+        default: return std::format("Unknown ({})", m_errorControl);
+    }
+}
+
+std::string ServiceInfo::GetControlsAcceptedString() const {
+    if (m_controlsAccepted == 0) {
+        return "None";
+    }
+
+    std::string result;
+
+    if (m_controlsAccepted & SERVICE_ACCEPT_STOP) {
+        result += "Stop";
+    }
+    if (m_controlsAccepted & SERVICE_ACCEPT_PAUSE_CONTINUE) {
+        if (!result.empty()) result += " | ";
+        result += "Pause/Continue";
+    }
+    if (m_controlsAccepted & SERVICE_ACCEPT_SHUTDOWN) {
+        if (!result.empty()) result += " | ";
+        result += "Shutdown";
+    }
+    if (m_controlsAccepted & SERVICE_ACCEPT_PARAMCHANGE) {
+        if (!result.empty()) result += " | ";
+        result += "Param Change";
+    }
+    if (m_controlsAccepted & SERVICE_ACCEPT_NETBINDCHANGE) {
+        if (!result.empty()) result += " | ";
+        result += "Net Bind Change";
+    }
+    if (m_controlsAccepted & SERVICE_ACCEPT_HARDWAREPROFILECHANGE) {
+        if (!result.empty()) result += " | ";
+        result += "Hardware Profile Change";
+    }
+    if (m_controlsAccepted & SERVICE_ACCEPT_POWEREVENT) {
+        if (!result.empty()) result += " | ";
+        result += "Power Event";
+    }
+    if (m_controlsAccepted & SERVICE_ACCEPT_SESSIONCHANGE) {
+        if (!result.empty()) result += " | ";
+        result += "Session Change";
+    }
+
+    return result;
 }
 
 } // namespace pserv

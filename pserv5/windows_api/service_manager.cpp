@@ -93,8 +93,13 @@ std::vector<ServiceInfo*> ServiceManager::EnumerateServices() {
         );
         info->SetProcessId(pServices[i].ServiceStatusProcess.dwProcessId);
         info->SetControlsAccepted(pServices[i].ServiceStatusProcess.dwControlsAccepted);
+        info->SetWin32ExitCode(pServices[i].ServiceStatusProcess.dwWin32ExitCode);
+        info->SetServiceSpecificExitCode(pServices[i].ServiceStatusProcess.dwServiceSpecificExitCode);
+        info->SetCheckPoint(pServices[i].ServiceStatusProcess.dwCheckPoint);
+        info->SetWaitHint(pServices[i].ServiceStatusProcess.dwWaitHint);
+        info->SetServiceFlags(pServices[i].ServiceStatusProcess.dwServiceFlags);
 
-        // Query service configuration to get start type
+        // Query service configuration to get additional details
         SC_HANDLE hService = OpenServiceW(
             m_hScManager.get(),
             pServices[i].lpServiceName,
@@ -111,6 +116,33 @@ std::vector<ServiceInfo*> ServiceManager::EnumerateServices() {
 
                 if (QueryServiceConfigW(hService, pConfig, bytesNeeded, &bytesNeeded)) {
                     info->SetStartType(pConfig->dwStartType);
+                    info->SetErrorControl(pConfig->dwErrorControl);
+                    info->SetTagId(pConfig->dwTagId);
+
+                    if (pConfig->lpBinaryPathName) {
+                        info->SetBinaryPathName(utils::WideToUtf8(pConfig->lpBinaryPathName));
+                    }
+                    if (pConfig->lpLoadOrderGroup) {
+                        info->SetLoadOrderGroup(utils::WideToUtf8(pConfig->lpLoadOrderGroup));
+                    }
+                    if (pConfig->lpServiceStartName) {
+                        info->SetUser(utils::WideToUtf8(pConfig->lpServiceStartName));
+                    }
+                }
+            }
+
+            // Query service description
+            bytesNeeded = 0;
+            QueryServiceConfig2W(hService, SERVICE_CONFIG_DESCRIPTION, nullptr, 0, &bytesNeeded);
+
+            if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+                std::vector<BYTE> descBuffer(bytesNeeded);
+                auto* pDesc = reinterpret_cast<SERVICE_DESCRIPTIONW*>(descBuffer.data());
+
+                if (QueryServiceConfig2W(hService, SERVICE_CONFIG_DESCRIPTION, descBuffer.data(), bytesNeeded, &bytesNeeded)) {
+                    if (pDesc->lpDescription) {
+                        info->SetDescription(utils::WideToUtf8(pDesc->lpDescription));
+                    }
                 }
             }
 

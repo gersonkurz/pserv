@@ -1013,8 +1013,6 @@ void MainWindow::SaveWindowState() {
 }
 
 void MainWindow::SaveServicesTableState(bool force) {
-    spdlog::debug("SaveServicesTableState called: force={}, pConfigBackend={}, pServicesTable={}",
-        force, (void*)m_pConfigBackend, (void*)m_pServicesTable);
 
     if (!m_pConfigBackend) {
         spdlog::warn("Cannot save services table state: pConfigBackend is null");

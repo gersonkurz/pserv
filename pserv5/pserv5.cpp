@@ -34,29 +34,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     logger->set_level(spdlog::level::from_str(logLevel));
     logger->info("Log level set to: {}", logLevel);
 
-    // Step 4: Test UTF-8 conversion utilities
-    logger->info("Testing UTF-8 conversion utilities...");
-    {
-        // Test basic ASCII
-        std::string utf8Test = "Hello World";
-        std::wstring wide = pserv::utils::Utf8ToWide(utf8Test);
-        std::string utf8Back = pserv::utils::WideToUtf8(wide);
-        logger->info("ASCII test: '{}' -> wide -> '{}'", utf8Test, utf8Back);
-
-        // Test with special characters
-        std::string utf8Special = "Café, Ñoño, 日本語";
-        std::wstring wideSpecial = pserv::utils::Utf8ToWide(utf8Special);
-        std::string utf8SpecialBack = pserv::utils::WideToUtf8(wideSpecial);
-        logger->info("Special chars test: '{}' -> wide -> '{}'", utf8Special, utf8SpecialBack);
-
-        // Test empty string
-        std::string empty = "";
-        std::wstring wideEmpty = pserv::utils::Utf8ToWide(empty);
-        std::string emptyBack = pserv::utils::WideToUtf8(wideEmpty);
-        logger->info("Empty string test: empty={}, conversion_worked={}", empty.empty(), emptyBack.empty());
-    }
-    logger->info("UTF-8 conversion utilities test completed");
-
     // Initialize main window
     pserv::MainWindow mainWindow;
     mainWindow.SetConfigBackend(&backend);
