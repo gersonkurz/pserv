@@ -29,8 +29,9 @@ public:
 
     struct ServicesTableSettings : public Section {
         ServicesTableSettings(Section* pParent) : Section{pParent, "ServicesTable"} {}
-        TypedValue<std::string> columnWidths{this, "ColumnWidths", "300,200,80,100,80"};
-        TypedValue<std::string> columnOrder{this, "ColumnOrder", "0,1,2,3,4"};
+        // Default widths for 18 columns: DisplayName, Name, Status, StartType, ProcessId, ServiceType, BinaryPathName, Description, User, LoadOrderGroup, ErrorControl, TagId, Win32ExitCode, ServiceSpecificExitCode, CheckPoint, WaitHint, ServiceFlags, ControlsAccepted
+        TypedValue<std::string> columnWidths{this, "ColumnWidths", "250,180,120,100,80,200,400,300,150,120,80,60,100,150,80,80,80,200"};
+        TypedValue<std::string> columnOrder{this, "ColumnOrder", "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17"};
         TypedValue<int32_t> sortColumn{this, "SortColumn", -1};
         TypedValue<bool> sortAscending{this, "SortAscending", true};
     } servicesTable{this};

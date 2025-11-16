@@ -9,13 +9,26 @@ namespace pserv {
 ServicesDataController::ServicesDataController()
     : DataController("Services", "Service")
 {
-    // Define columns
+    // Define columns - order matches ServiceProperty enum
     m_columns = {
         DataObjectColumn("Display Name", "DisplayName"),
         DataObjectColumn("Name", "Name"),
         DataObjectColumn("Status", "Status"),
         DataObjectColumn("Start Type", "StartType"),
-        DataObjectColumn("Process ID", "ProcessId")
+        DataObjectColumn("Process ID", "ProcessId"),
+        DataObjectColumn("Service Type", "ServiceType"),
+        DataObjectColumn("Binary Path Name", "BinaryPathName"),
+        DataObjectColumn("Description", "Description"),
+        DataObjectColumn("User", "User"),
+        DataObjectColumn("Load Order Group", "LoadOrderGroup"),
+        DataObjectColumn("Error Control", "ErrorControl"),
+        DataObjectColumn("Tag ID", "TagId"),
+        DataObjectColumn("Win32 Exit Code", "Win32ExitCode"),
+        DataObjectColumn("Service Specific Exit Code", "ServiceSpecificExitCode"),
+        DataObjectColumn("Check Point", "CheckPoint"),
+        DataObjectColumn("Wait Hint", "WaitHint"),
+        DataObjectColumn("Service Flags", "ServiceFlags"),
+        DataObjectColumn("Controls Accepted", "ControlsAccepted")
     };
 }
 
@@ -66,11 +79,18 @@ void ServicesDataController::Sort(int columnIndex, bool ascending) {
         std::string valA = a->GetProperty(columnIndex);
         std::string valB = b->GetProperty(columnIndex);
 
-        // For numeric columns (Process ID), do numeric comparison
-        if (columnIndex == 4) { // Process ID column
-            int numA = valA.empty() ? 0 : std::stoi(valA);
-            int numB = valB.empty() ? 0 : std::stoi(valB);
-            return ascending ? (numA < numB) : (numA > numB);
+        // For numeric columns, do numeric comparison
+        // Numeric columns: ProcessId(4), TagId(11), Win32ExitCode(12), ServiceSpecificExitCode(13), CheckPoint(14), WaitHint(15), ServiceFlags(16)
+        if (columnIndex == 4 || columnIndex == 11 || (columnIndex >= 12 && columnIndex <= 16)) {
+            try {
+                long long numA = valA.empty() ? 0 : std::stoll(valA);
+                long long numB = valB.empty() ? 0 : std::stoll(valB);
+                return ascending ? (numA < numB) : (numA > numB);
+            } catch (...) {
+                // Fall back to string comparison if parsing fails
+                int cmp = valA.compare(valB);
+                return ascending ? (cmp < 0) : (cmp > 0);
+            }
         }
 
         // String comparison for other columns

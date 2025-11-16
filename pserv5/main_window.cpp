@@ -512,12 +512,22 @@ void MainWindow::Render() {
                             columnWidths.push_back(100.0f);
                         }
 
-                        // Setup columns with loaded widths - must be in storage order (0,1,2,3,4)
-                        ImGui::TableSetupColumn(columns[0].DisplayName.c_str(), ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, columnWidths[0], 0);
-                        ImGui::TableSetupColumn(columns[1].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, columnWidths[1], 1);
-                        ImGui::TableSetupColumn(columns[2].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, columnWidths[2], 2);
-                        ImGui::TableSetupColumn(columns[3].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, columnWidths[3], 3);
-                        ImGui::TableSetupColumn(columns[4].DisplayName.c_str(), ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthFixed, columnWidths[4], 4);
+                        // Setup columns with loaded widths dynamically
+                        for (size_t i = 0; i < columns.size(); ++i) {
+                            ImGuiTableColumnFlags columnFlags = ImGuiTableColumnFlags_WidthFixed;
+
+                            // First column gets DefaultSort flag
+                            if (i == 0) {
+                                columnFlags |= ImGuiTableColumnFlags_DefaultSort;
+                            }
+
+                            ImGui::TableSetupColumn(
+                                columns[i].DisplayName.c_str(),
+                                columnFlags,
+                                columnWidths[i],
+                                static_cast<ImGuiID>(i)
+                            );
+                        }
 
                         // Apply saved column order AFTER TableSetupColumn but BEFORE TableHeadersRow
                         static bool orderApplied = false;
