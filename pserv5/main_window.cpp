@@ -8,6 +8,7 @@
 #include "models/service_info.h"
 #include "core/async_operation.h"
 #include "controllers/services_data_controller.h"
+#include "dialogs/service_properties_dialog.h"
 #include <dxgi.h>
 #include <imgui.h>
 #include <imgui_impl_win32.h>
@@ -29,6 +30,7 @@ namespace pserv {
 
 MainWindow::MainWindow() {
     m_pServicesController = new ServicesDataController();
+    m_pPropertiesDialog = new ServicePropertiesDialog();
 }
 
 MainWindow::~MainWindow() {
@@ -38,6 +40,7 @@ MainWindow::~MainWindow() {
         delete m_pAsyncOp;
     }
     delete m_pServicesController;
+    delete m_pPropertiesDialog;
     ClearServices();
     CleanupImGui();
     CleanupDirectX();
@@ -1180,6 +1183,17 @@ void MainWindow::Render() {
                                                         }
                                                     }
                                                     break;
+
+                                                case ServiceAction::Properties:
+                                                    // Open properties dialog for first selected service
+                                                    {
+                                                        if (!m_selectedServices.empty()) {
+                                                            // Cast away const - the dialog needs non-const pointer for editing
+                                                            ServiceInfo* service = const_cast<ServiceInfo*>(m_selectedServices[0]);
+                                                            m_pPropertiesDialog->Open(service);
+                                                        }
+                                                    }
+                                                    break;
                                                 }
                                             }
                                         }
@@ -1223,6 +1237,15 @@ void MainWindow::Render() {
 
     // Render progress dialog if active
     RenderProgressDialog();
+
+    // Render service properties dialog if open
+    if (m_pPropertiesDialog && m_pPropertiesDialog->IsOpen()) {
+        bool changesApplied = m_pPropertiesDialog->Render();
+        if (changesApplied) {
+            // Refresh services list to show updated data
+            m_pServicesController->Refresh();
+        }
+    }
 
     // Rendering
     ImGui::Render();

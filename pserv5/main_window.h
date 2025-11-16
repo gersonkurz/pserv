@@ -15,6 +15,7 @@ namespace pserv {
 class ServiceInfo;  // Forward declaration
 class AsyncOperation;  // Forward declaration
 class ServicesDataController;  // Forward declaration
+class ServicePropertiesDialog;  // Forward declaration
 
 class MainWindow {
 public:
@@ -57,6 +58,7 @@ private:
     char m_filterText[256]{};  // Filter text for services view
     std::vector<const ServiceInfo*> m_selectedServices;  // Selected services for multi-select
     const ServiceInfo* m_lastClickedService{nullptr};  // For shift-click range selection
+    ServicePropertiesDialog* m_pPropertiesDialog{nullptr};  // Service properties dialog
 
     // Helper methods
     void SaveWindowState();

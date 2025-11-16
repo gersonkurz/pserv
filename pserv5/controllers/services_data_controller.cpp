@@ -113,6 +113,10 @@ std::vector<ServiceAction> ServicesDataController::GetAvailableActions(const Ser
         return actions;
     }
 
+    // Properties action (always available, at the top)
+    actions.push_back(ServiceAction::Properties);
+    actions.push_back(ServiceAction::Separator);
+
     // Get service state and capabilities
     DWORD currentState = service->GetCurrentState();
     DWORD controlsAccepted = service->GetControlsAccepted();
@@ -225,6 +229,8 @@ std::string ServicesDataController::GetActionName(ServiceAction action) {
         return "Uninstall Service";
     case ServiceAction::DeleteRegistryKey:
         return "Delete Registry Key";
+    case ServiceAction::Properties:
+        return "Properties...";
     default:
         return "Unknown Action";
     }

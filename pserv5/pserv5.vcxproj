@@ -187,6 +187,7 @@
     <ClInclude Include="controllers\services_data_controller.h" />
     <ClInclude Include="models\service_info.h" />
     <ClInclude Include="windows_api\service_manager.h" />
+    <ClInclude Include="dialogs\service_properties_dialog.h" />
     <ClInclude Include="..\imgui\imconfig.h" />
     <ClInclude Include="..\imgui\imgui.h" />
     <ClInclude Include="..\imgui\imgui_internal.h" />
@@ -210,6 +211,7 @@
     <ClCompile Include="controllers\services_data_controller.cpp" />
     <ClCompile Include="models\service_info.cpp" />
     <ClCompile Include="windows_api\service_manager.cpp" />
+    <ClCompile Include="dialogs\service_properties_dialog.cpp" />
     <ClCompile Include="Config\section.cpp" />
     <ClCompile Include="Config\settings.cpp" />
     <ClCompile Include="..\imgui\imgui.cpp">

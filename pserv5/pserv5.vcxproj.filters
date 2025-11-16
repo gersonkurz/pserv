@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="dialogs">
+      <UniqueIdentifier>{F5E1A4B2-8D3C-4E6F-9A7B-1C2D3E4F5A6B}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -27,10 +30,16 @@
     <ClInclude Include="pserv5.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dialogs\service_properties_dialog.h">
+      <Filter>dialogs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pserv5.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dialogs\service_properties_dialog.cpp">
+      <Filter>dialogs</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

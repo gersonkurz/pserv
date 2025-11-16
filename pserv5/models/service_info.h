@@ -80,6 +80,7 @@ public:
 
     // Setters
     void SetCurrentState(DWORD state);
+    void SetDisplayName(const std::string& displayName) { m_displayName = displayName; }
     void SetStartType(DWORD startType) { m_startType = startType; }
     void SetProcessId(DWORD pid) { m_processId = pid; }
     void SetControlsAccepted(DWORD controls) { m_controlsAccepted = controls; }

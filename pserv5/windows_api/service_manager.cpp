@@ -584,7 +584,7 @@ bool ServiceManager::ChangeServiceStartType(const std::string& serviceName, DWOR
     }
 
     // Change the service configuration
-    if (!ChangeServiceConfigW(
+    if (!::ChangeServiceConfigW(
         hService.get(),
         SERVICE_NO_CHANGE,  // dwServiceType
         startType,          // dwStartType
@@ -641,6 +641,77 @@ bool ServiceManager::DeleteService(const std::string& serviceName) {
     }
 
     spdlog::info("Service '{}' deleted successfully", serviceName);
+    return true;
+}
+
+bool ServiceManager::ChangeServiceConfig(
+    const std::string& serviceName,
+    const std::string& displayName,
+    const std::string& description,
+    DWORD startType,
+    const std::string& binaryPathName
+) {
+    spdlog::info("Changing configuration for service '{}'", serviceName);
+
+    // Convert strings to wide strings
+    std::wstring wServiceName = utils::Utf8ToWide(serviceName);
+    std::wstring wDisplayName = utils::Utf8ToWide(displayName);
+    std::wstring wDescription = utils::Utf8ToWide(description);
+    std::wstring wBinaryPathName = utils::Utf8ToWide(binaryPathName);
+
+    // Open SC Manager
+    wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
+    if (!hScManager) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to open SC Manager: error {}", error);
+        throw std::runtime_error(std::format("Failed to open SC Manager: error {}", error));
+    }
+
+    // Open the service with change config access
+    wil::unique_schandle hService(OpenServiceW(
+        hScManager.get(),
+        wServiceName.c_str(),
+        SERVICE_CHANGE_CONFIG | SERVICE_QUERY_CONFIG
+    ));
+
+    if (!hService) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to open service '{}': error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to open service '{}': error {}", serviceName, error));
+    }
+
+    // Change the service configuration
+    if (!::ChangeServiceConfigW(
+        hService.get(),
+        SERVICE_NO_CHANGE,                              // dwServiceType
+        startType,                                      // dwStartType
+        SERVICE_NO_CHANGE,                              // dwErrorControl
+        wBinaryPathName.empty() ? nullptr : wBinaryPathName.c_str(),  // lpBinaryPathName
+        nullptr,                                        // lpLoadOrderGroup
+        nullptr,                                        // lpdwTagId
+        nullptr,                                        // lpDependencies
+        nullptr,                                        // lpServiceStartName
+        nullptr,                                        // lpPassword
+        wDisplayName.empty() ? nullptr : wDisplayName.c_str()  // lpDisplayName
+    )) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to change service '{}' configuration: error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to change service configuration: error {}", error));
+    }
+
+    // Update description using ChangeServiceConfig2W
+    if (!description.empty()) {
+        SERVICE_DESCRIPTIONW sd;
+        sd.lpDescription = const_cast<wchar_t*>(wDescription.c_str());
+
+        if (!::ChangeServiceConfig2W(hService.get(), SERVICE_CONFIG_DESCRIPTION, &sd)) {
+            DWORD error = GetLastError();
+            spdlog::warn("Failed to update service '{}' description: error {}", serviceName, error);
+            // Don't throw - description update is not critical
+        }
+    }
+
+    spdlog::info("Service '{}' configuration changed successfully", serviceName);
     return true;
 }
 

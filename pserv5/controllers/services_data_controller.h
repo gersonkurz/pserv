@@ -24,6 +24,7 @@ enum class ServiceAction {
     OpenTerminalHere,
     UninstallService,
     DeleteRegistryKey,
+    Properties,
     Separator = -1  // Special marker for menu separators
 };
 

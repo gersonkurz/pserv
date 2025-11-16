@@ -53,6 +53,16 @@ public:
     // The service must be stopped before it can be deleted
     // Returns true on success, throws exception on failure
     static bool DeleteService(const std::string& serviceName);
+
+    // Change service configuration (display name, description, startup type, binary path)
+    // Returns true on success, throws exception on failure
+    static bool ChangeServiceConfig(
+        const std::string& serviceName,
+        const std::string& displayName,
+        const std::string& description,
+        DWORD startType,
+        const std::string& binaryPathName
+    );
 };
 
 } // namespace pserv
