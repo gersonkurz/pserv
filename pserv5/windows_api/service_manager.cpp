@@ -36,7 +36,7 @@ ServiceManager::ServiceManager() {
     }
 }
 
-std::vector<ServiceInfo*> ServiceManager::EnumerateServices() {
+std::vector<ServiceInfo*> ServiceManager::EnumerateServices(DWORD serviceType) {
     std::vector<ServiceInfo*> services;
 
     // First call to get required buffer size
@@ -47,7 +47,7 @@ std::vector<ServiceInfo*> ServiceManager::EnumerateServices() {
     EnumServicesStatusExW(
         m_hScManager.get(),
         SC_ENUM_PROCESS_INFO,
-        SERVICE_WIN32,
+        serviceType,  // Use the specified service type filter
         SERVICE_STATE_ALL,
         nullptr,
         0,
@@ -69,7 +69,7 @@ std::vector<ServiceInfo*> ServiceManager::EnumerateServices() {
     if (!EnumServicesStatusExW(
         m_hScManager.get(),
         SC_ENUM_PROCESS_INFO,
-        SERVICE_WIN32,
+        serviceType,  // Use the specified service type filter
         SERVICE_STATE_ALL,
         buffer.data(),
         bytesNeeded,

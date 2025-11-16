@@ -8,6 +8,7 @@
 #include "models/service_info.h"
 #include "core/async_operation.h"
 #include "controllers/services_data_controller.h"
+#include "controllers/devices_data_controller.h"
 #include "dialogs/service_properties_dialog.h"
 #include <dxgi.h>
 #include <imgui.h>
@@ -30,6 +31,7 @@ namespace pserv {
 
 MainWindow::MainWindow() {
     m_pServicesController = new ServicesDataController();
+    m_pDevicesController = new DevicesDataController();
     m_pPropertiesDialog = new ServicePropertiesDialog();
 }
 
@@ -40,6 +42,7 @@ MainWindow::~MainWindow() {
         delete m_pAsyncOp;
     }
     delete m_pServicesController;
+    delete m_pDevicesController;
     delete m_pPropertiesDialog;
     ClearServices();
     CleanupImGui();
@@ -139,12 +142,14 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
     m_activeTab = appSettings.activeView.get();
     spdlog::info("Loaded active tab: {}", m_activeTab);
 
-    // Initial refresh of services
+    // Initial refresh of services and devices
     try {
         m_pServicesController->Refresh();
         spdlog::info("Initial services refresh completed");
+        m_pDevicesController->Refresh();
+        spdlog::info("Initial devices refresh completed");
     } catch (const std::exception& e) {
-        spdlog::error("Failed to refresh services on startup: {}", e.what());
+        spdlog::error("Failed to refresh on startup: {}", e.what());
     }
 
     spdlog::info("Main window initialized successfully");

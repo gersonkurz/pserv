@@ -7,7 +7,33 @@
 namespace pserv {
 
 ServicesDataController::ServicesDataController()
-    : DataController("Services", "Service")
+    : DataController("Services", "Service"), m_serviceType(SERVICE_WIN32)  // Default: only Win32 services
+{
+    // Define columns - order matches ServiceProperty enum
+    m_columns = {
+        DataObjectColumn("Display Name", "DisplayName"),
+        DataObjectColumn("Name", "Name"),
+        DataObjectColumn("Status", "Status"),
+        DataObjectColumn("Start Type", "StartType"),
+        DataObjectColumn("Process ID", "ProcessId"),
+        DataObjectColumn("Service Type", "ServiceType"),
+        DataObjectColumn("Binary Path Name", "BinaryPathName"),
+        DataObjectColumn("Description", "Description"),
+        DataObjectColumn("User", "User"),
+        DataObjectColumn("Load Order Group", "LoadOrderGroup"),
+        DataObjectColumn("Error Control", "ErrorControl"),
+        DataObjectColumn("Tag ID", "TagId"),
+        DataObjectColumn("Win32 Exit Code", "Win32ExitCode"),
+        DataObjectColumn("Service Specific Exit Code", "ServiceSpecificExitCode"),
+        DataObjectColumn("Check Point", "CheckPoint"),
+        DataObjectColumn("Wait Hint", "WaitHint"),
+        DataObjectColumn("Service Flags", "ServiceFlags"),
+        DataObjectColumn("Controls Accepted", "ControlsAccepted")
+    };
+}
+
+ServicesDataController::ServicesDataController(DWORD serviceType, const char* viewName, const char* itemName)
+    : DataController(viewName, itemName), m_serviceType(serviceType)
 {
     // Define columns - order matches ServiceProperty enum
     m_columns = {
@@ -43,9 +69,9 @@ void ServicesDataController::Refresh() {
     Clear();
 
     try {
-        // Enumerate services
+        // Enumerate services with the configured service type filter
         ServiceManager sm;
-        m_services = sm.EnumerateServices();
+        m_services = sm.EnumerateServices(m_serviceType);
 
         spdlog::info("Successfully refreshed {} services", m_services.size());
 

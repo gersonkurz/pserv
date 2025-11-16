@@ -39,9 +39,11 @@ private:
     std::vector<ServiceInfo*> m_services;
     int m_lastSortColumn{-1};
     bool m_lastSortAscending{true};
+    DWORD m_serviceType{SERVICE_WIN32 | SERVICE_DRIVER};  // Default: all services
 
 public:
     ServicesDataController();
+    ServicesDataController(DWORD serviceType, const char* viewName, const char* itemName);
     ~ServicesDataController() override;
 
     // DataController interface
