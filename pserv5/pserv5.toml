@@ -5,14 +5,14 @@ ActiveView = 'Services'
 LogLevel = 'debug'
 
 [ServicesTable]
-ColumnOrder = '4,2,3,1,0'
-ColumnWidths = '300,822,406,100,80'
+ColumnOrder = '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17'
+ColumnWidths = '300,822,406,100,80,100,100,334,100,100,100,100,100,100,100,100,100,100'
 SortAscending = true
 SortColumn = -1
 
 [Window]
 Height = 1128
 Maximized = false
-PositionX = 393
-PositionY = 266
+PositionX = 259
+PositionY = 360
 Width = 2164

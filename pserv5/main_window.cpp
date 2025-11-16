@@ -1069,6 +1069,117 @@ void MainWindow::Render() {
                                                         }
                                                     }
                                                     break;
+
+                                                case ServiceAction::UninstallService:
+                                                    // Delete selected service(s) with confirmation
+                                                    {
+                                                        // Copy selected services list
+                                                        std::vector<std::string> serviceNames;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            serviceNames.push_back(svc->GetName());
+                                                        }
+
+                                                        // Show confirmation dialog
+                                                        std::string confirmMsg;
+                                                        if (serviceNames.size() == 1) {
+                                                            confirmMsg = std::format("Are you sure you want to delete the service '{}'?\n\nThis will remove the service from the system.", serviceNames[0]);
+                                                        } else {
+                                                            confirmMsg = std::format("Are you sure you want to delete {} services?\n\nThis will remove all selected services from the system.", serviceNames.size());
+                                                        }
+
+                                                        int result = MessageBoxA(m_hWnd, confirmMsg.c_str(), "Confirm Service Deletion", MB_YESNO | MB_ICONWARNING);
+                                                        if (result == IDYES) {
+                                                            spdlog::info("Starting async operation: Delete {} service(s)", serviceNames.size());
+
+                                                            if (m_pAsyncOp) {
+                                                                m_pAsyncOp->Wait();
+                                                                delete m_pAsyncOp;
+                                                            }
+
+                                                            m_pAsyncOp = new AsyncOperation();
+                                                            m_bShowProgressDialog = true;
+
+                                                            m_pAsyncOp->Start(m_hWnd, [serviceNames](AsyncOperation* op) -> bool {
+                                                                try {
+                                                                    size_t total = serviceNames.size();
+                                                                    for (size_t i = 0; i < total; ++i) {
+                                                                        const std::string& serviceName = serviceNames[i];
+                                                                        float progress = static_cast<float>(i) / static_cast<float>(total);
+
+                                                                        op->ReportProgress(progress, std::format("Deleting service '{}'... ({}/{})", serviceName, i + 1, total));
+
+                                                                        ServiceManager::DeleteService(serviceName);
+                                                                    }
+
+                                                                    op->ReportProgress(1.0f, std::format("Deleted {} service(s) successfully", total));
+                                                                    return true;
+                                                                } catch (const std::exception& e) {
+                                                                    spdlog::error("Failed to delete service: {}", e.what());
+                                                                    return false;
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+                                                    break;
+
+                                                case ServiceAction::DeleteRegistryKey:
+                                                    // Delete registry key for selected service(s) with confirmation
+                                                    {
+                                                        // Copy selected services list
+                                                        std::vector<std::string> serviceNames;
+                                                        for (const auto* svc : m_selectedServices) {
+                                                            serviceNames.push_back(svc->GetName());
+                                                        }
+
+                                                        // Show confirmation dialog
+                                                        std::string confirmMsg;
+                                                        if (serviceNames.size() == 1) {
+                                                            confirmMsg = std::format("Are you sure you want to delete the registry key for service '{}'?\n\nThis will remove: HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\{}\n\nThis is typically used to clean up orphaned service registry entries.", serviceNames[0], serviceNames[0]);
+                                                        } else {
+                                                            confirmMsg = std::format("Are you sure you want to delete the registry keys for {} services?\n\nThis will remove the registry entries under HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\", serviceNames.size());
+                                                        }
+
+                                                        int result = MessageBoxA(m_hWnd, confirmMsg.c_str(), "Confirm Registry Key Deletion", MB_YESNO | MB_ICONWARNING);
+                                                        if (result == IDYES) {
+                                                            spdlog::info("Starting async operation: Delete registry keys for {} service(s)", serviceNames.size());
+
+                                                            if (m_pAsyncOp) {
+                                                                m_pAsyncOp->Wait();
+                                                                delete m_pAsyncOp;
+                                                            }
+
+                                                            m_pAsyncOp = new AsyncOperation();
+                                                            m_bShowProgressDialog = true;
+
+                                                            m_pAsyncOp->Start(m_hWnd, [serviceNames](AsyncOperation* op) -> bool {
+                                                                try {
+                                                                    size_t total = serviceNames.size();
+                                                                    for (size_t i = 0; i < total; ++i) {
+                                                                        const std::string& serviceName = serviceNames[i];
+                                                                        float progress = static_cast<float>(i) / static_cast<float>(total);
+
+                                                                        op->ReportProgress(progress, std::format("Deleting registry key for '{}'... ({}/{})", serviceName, i + 1, total));
+
+                                                                        // Delete the registry key
+                                                                        std::wstring wServiceName = utils::Utf8ToWide(serviceName);
+                                                                        std::wstring keyPath = std::format(L"SYSTEM\\CurrentControlSet\\Services\\{}", wServiceName);
+
+                                                                        LSTATUS result = RegDeleteTreeW(HKEY_LOCAL_MACHINE, keyPath.c_str());
+                                                                        if (result != ERROR_SUCCESS && result != ERROR_FILE_NOT_FOUND) {
+                                                                            throw std::runtime_error(std::format("Failed to delete registry key for '{}': error {}", serviceName, result));
+                                                                        }
+                                                                    }
+
+                                                                    op->ReportProgress(1.0f, std::format("Deleted registry keys for {} service(s) successfully", total));
+                                                                    return true;
+                                                                } catch (const std::exception& e) {
+                                                                    spdlog::error("Failed to delete registry key: {}", e.what());
+                                                                    return false;
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+                                                    break;
                                                 }
                                             }
                                         }

@@ -48,6 +48,11 @@ public:
     // startType: SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, etc.
     // Returns true on success, throws exception on failure
     static bool ChangeServiceStartType(const std::string& serviceName, DWORD startType);
+
+    // Delete a service
+    // The service must be stopped before it can be deleted
+    // Returns true on success, throws exception on failure
+    static bool DeleteService(const std::string& serviceName);
 };
 
 } // namespace pserv

@@ -606,4 +606,42 @@ bool ServiceManager::ChangeServiceStartType(const std::string& serviceName, DWOR
     return true;
 }
 
+bool ServiceManager::DeleteService(const std::string& serviceName) {
+    spdlog::info("Deleting service '{}'", serviceName);
+
+    // Convert service name to wide string
+    std::wstring wServiceName = utils::Utf8ToWide(serviceName);
+
+    // Open SC Manager
+    wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
+    if (!hScManager) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to open SC Manager: error {}", error);
+        throw std::runtime_error(std::format("Failed to open SC Manager: error {}", error));
+    }
+
+    // Open the service with delete access
+    wil::unique_schandle hService(OpenServiceW(
+        hScManager.get(),
+        wServiceName.c_str(),
+        DELETE
+    ));
+
+    if (!hService) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to open service '{}': error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to open service '{}': error {}", serviceName, error));
+    }
+
+    // Delete the service
+    if (!::DeleteService(hService.get())) {
+        DWORD error = GetLastError();
+        spdlog::error("Failed to delete service '{}': error {}", serviceName, error);
+        throw std::runtime_error(std::format("Failed to delete service: error {}", error));
+    }
+
+    spdlog::info("Service '{}' deleted successfully", serviceName);
+    return true;
+}
+
 } // namespace pserv

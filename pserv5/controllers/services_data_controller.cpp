@@ -161,6 +161,13 @@ std::vector<ServiceAction> ServicesDataController::GetAvailableActions(const Ser
     actions.push_back(ServiceAction::OpenInExplorer);
     actions.push_back(ServiceAction::OpenTerminalHere);
 
+    // Separator before deletion actions
+    actions.push_back(ServiceAction::Separator);
+
+    // Deletion actions (always available)
+    actions.push_back(ServiceAction::UninstallService);
+    actions.push_back(ServiceAction::DeleteRegistryKey);
+
     return actions;
 }
 
@@ -214,6 +221,10 @@ std::string ServicesDataController::GetActionName(ServiceAction action) {
         return "Open in Explorer";
     case ServiceAction::OpenTerminalHere:
         return "Open Terminal Here";
+    case ServiceAction::UninstallService:
+        return "Uninstall Service";
+    case ServiceAction::DeleteRegistryKey:
+        return "Delete Registry Key";
     default:
         return "Unknown Action";
     }
