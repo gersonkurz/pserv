@@ -7,24 +7,25 @@ namespace pserv {
 
 class ServicePropertiesDialog {
 private:
+    struct ServiceEditorState {
+        ServiceInfo* pService{nullptr};
+        char displayName[256]{};
+        char description[1024]{};
+        char binaryPathName[1024]{};
+        int startupType{0};  // 0=Automatic, 1=Manual, 2=Disabled
+        bool bDirty{false};
+    };
+
     bool m_bOpen{false};
-    ServiceInfo* m_pService{nullptr};
-
-    // Editable fields
-    char m_displayName[256]{};
-    char m_description[1024]{};
-    char m_binaryPathName[1024]{};
-    int m_startupType{0};  // 0=Automatic, 1=Manual, 2=Disabled
-
-    // Track if any changes were made
-    bool m_bDirty{false};
+    std::vector<ServiceEditorState> m_serviceStates;
+    int m_activeTabIndex{0};
 
 public:
     ServicePropertiesDialog() = default;
     ~ServicePropertiesDialog() = default;
 
-    // Open the dialog for a specific service
-    void Open(ServiceInfo* service);
+    // Open the dialog for multiple services
+    void Open(const std::vector<ServiceInfo*>& services);
 
     // Close the dialog
     void Close();
@@ -37,11 +38,14 @@ public:
     bool Render();
 
 private:
-    // Apply changes to the service
-    bool ApplyChanges();
+    // Apply changes to a specific service
+    bool ApplyChanges(ServiceEditorState& state);
 
     // Initialize editable fields from service
-    void InitializeFields();
+    void InitializeFields(ServiceEditorState& state);
+
+    // Render the content for a single service
+    void RenderServiceContent(ServiceEditorState& state);
 
     // Map startup type enum to combo index
     int GetStartupTypeIndex(DWORD startType) const;

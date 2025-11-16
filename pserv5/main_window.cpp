@@ -1252,12 +1252,15 @@ void MainWindow::Render() {
                                                     break;
 
                                                 case ServiceAction::Properties:
-                                                    // Open properties dialog for first selected service
+                                                    // Open properties dialog for all selected services
                                                     {
                                                         if (!m_selectedServices.empty()) {
-                                                            // Cast away const - the dialog needs non-const pointer for editing
-                                                            ServiceInfo* service = const_cast<ServiceInfo*>(m_selectedServices[0]);
-                                                            m_pPropertiesDialog->Open(service);
+                                                            // Cast away const - the dialog needs non-const pointers for editing
+                                                            std::vector<ServiceInfo*> services;
+                                                            for (const auto* svc : m_selectedServices) {
+                                                                services.push_back(const_cast<ServiceInfo*>(svc));
+                                                            }
+                                                            m_pPropertiesDialog->Open(services);
                                                         }
                                                     }
                                                     break;
