@@ -197,4 +197,34 @@ std::string ServiceInfo::GetControlsAcceptedString() const {
     return result;
 }
 
+std::string ServiceInfo::GetInstallLocation() const {
+    if (m_binaryPathName.empty()) {
+        return "";
+    }
+
+    std::string path = m_binaryPathName;
+
+    // Remove quotes if present
+    if (path.front() == '"') {
+        size_t endQuote = path.find('"', 1);
+        if (endQuote != std::string::npos) {
+            path = path.substr(1, endQuote - 1);
+        }
+    } else {
+        // No quotes - path might have arguments, take everything before first space
+        size_t spacePos = path.find(' ');
+        if (spacePos != std::string::npos) {
+            path = path.substr(0, spacePos);
+        }
+    }
+
+    // Extract directory
+    size_t lastSlash = path.find_last_of("\\/");
+    if (lastSlash != std::string::npos) {
+        return path.substr(0, lastSlash);
+    }
+
+    return path;
+}
+
 } // namespace pserv

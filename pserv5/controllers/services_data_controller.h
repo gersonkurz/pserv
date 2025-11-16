@@ -19,6 +19,9 @@ enum class ServiceAction {
     SetStartupAutomatic,
     SetStartupManual,
     SetStartupDisabled,
+    OpenInRegistryEditor,
+    OpenInExplorer,
+    OpenTerminalHere,
     Separator = -1  // Special marker for menu separators
 };
 

@@ -153,6 +153,14 @@ std::vector<ServiceAction> ServicesDataController::GetAvailableActions(const Ser
     actions.push_back(ServiceAction::SetStartupManual);
     actions.push_back(ServiceAction::SetStartupDisabled);
 
+    // Separator before file system integration actions
+    actions.push_back(ServiceAction::Separator);
+
+    // File system integration actions (always available)
+    actions.push_back(ServiceAction::OpenInRegistryEditor);
+    actions.push_back(ServiceAction::OpenInExplorer);
+    actions.push_back(ServiceAction::OpenTerminalHere);
+
     return actions;
 }
 
@@ -200,6 +208,12 @@ std::string ServicesDataController::GetActionName(ServiceAction action) {
         return "Set Startup: Manual";
     case ServiceAction::SetStartupDisabled:
         return "Set Startup: Disabled";
+    case ServiceAction::OpenInRegistryEditor:
+        return "Open in Registry Editor";
+    case ServiceAction::OpenInExplorer:
+        return "Open in Explorer";
+    case ServiceAction::OpenTerminalHere:
+        return "Open Terminal Here";
     default:
         return "Unknown Action";
     }

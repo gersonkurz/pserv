@@ -101,6 +101,7 @@ public:
     std::string GetServiceTypeString() const;
     std::string GetErrorControlString() const;
     std::string GetControlsAcceptedString() const;
+    std::string GetInstallLocation() const;  // Extract directory from binary path
 };
 
 } // namespace pserv

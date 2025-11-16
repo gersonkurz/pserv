@@ -3,6 +3,7 @@
 #include "Resource.h"
 #include "Config/settings.h"
 #include "utils/win32_error.h"
+#include "utils/string_utils.h"
 #include "windows_api/service_manager.h"
 #include "models/service_info.h"
 #include "core/async_operation.h"
@@ -12,6 +13,7 @@
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
 #include <imgui_internal.h>
+#include <shellapi.h>
 #include <thread>
 #include <chrono>
 #include <sstream>
@@ -680,12 +682,15 @@ void MainWindow::Render() {
 
                                             std::string actionName = ServicesDataController::GetActionName(action);
 
-                                            // Show count if multiple services selected
+                                            // Show count if multiple services selected (except for copy and file system actions)
                                             std::string menuLabel = actionName;
                                             if (m_selectedServices.size() > 1 &&
                                                 action != ServiceAction::CopyName &&
                                                 action != ServiceAction::CopyDisplayName &&
-                                                action != ServiceAction::CopyBinaryPath) {
+                                                action != ServiceAction::CopyBinaryPath &&
+                                                action != ServiceAction::OpenInRegistryEditor &&
+                                                action != ServiceAction::OpenInExplorer &&
+                                                action != ServiceAction::OpenTerminalHere) {
                                                 menuLabel += std::format(" ({} services)", m_selectedServices.size());
                                             }
 
@@ -1016,6 +1021,52 @@ void MainWindow::Render() {
                                                                 return false;
                                                             }
                                                         });
+                                                    }
+                                                    break;
+
+                                                case ServiceAction::OpenInRegistryEditor:
+                                                    // Open registry editor and navigate to service key
+                                                    {
+                                                        std::string serviceName = m_selectedServices[0]->GetName();
+                                                        // Set last key in registry so regedit opens to this location
+                                                        std::string regPath = std::format("SYSTEM\\CurrentControlSet\\Services\\{}", serviceName);
+                                                        HKEY hKey;
+                                                        if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit",
+                                                            0, NULL, 0, KEY_SET_VALUE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
+                                                            std::wstring fullPath = utils::Utf8ToWide(std::format("HKEY_LOCAL_MACHINE\\{}", regPath));
+                                                            RegSetValueExW(hKey, L"LastKey", 0, REG_SZ, (const BYTE*)fullPath.c_str(), (DWORD)(fullPath.length() + 1) * sizeof(wchar_t));
+                                                            RegCloseKey(hKey);
+                                                        }
+                                                        spdlog::info("Opening registry editor for: {}", serviceName);
+                                                        ShellExecuteW(NULL, L"open", L"regedit.exe", NULL, NULL, SW_SHOW);
+                                                    }
+                                                    break;
+
+                                                case ServiceAction::OpenInExplorer:
+                                                    // Open explorer for first selected service's install location
+                                                    {
+                                                        std::string installLocation = m_selectedServices[0]->GetInstallLocation();
+                                                        if (!installLocation.empty()) {
+                                                            spdlog::info("Opening explorer: {}", installLocation);
+                                                            std::wstring wInstallLocation = utils::Utf8ToWide(installLocation);
+                                                            ShellExecuteW(NULL, L"open", wInstallLocation.c_str(), NULL, NULL, SW_SHOW);
+                                                        } else {
+                                                            spdlog::warn("No install location available for this service");
+                                                        }
+                                                    }
+                                                    break;
+
+                                                case ServiceAction::OpenTerminalHere:
+                                                    // Open terminal in first selected service's install location
+                                                    {
+                                                        std::string installLocation = m_selectedServices[0]->GetInstallLocation();
+                                                        if (!installLocation.empty()) {
+                                                            spdlog::info("Opening terminal in: {}", installLocation);
+                                                            std::wstring wInstallLocation = utils::Utf8ToWide(installLocation);
+                                                            ShellExecuteW(NULL, L"open", L"cmd.exe", NULL, wInstallLocation.c_str(), SW_SHOW);
+                                                        } else {
+                                                            spdlog::warn("No install location available for this service");
+                                                        }
                                                     }
                                                     break;
                                                 }
