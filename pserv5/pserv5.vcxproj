@@ -154,6 +154,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="main_window.h" />
     <ClInclude Include="utils\logging.h" />
+    <ClInclude Include="utils\string_utils.h" />
     <ClInclude Include="utils\win32_error.h" />
     <ClInclude Include="Config\config_backend.h" />
     <ClInclude Include="Config\section.h" />
