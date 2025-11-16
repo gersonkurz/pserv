@@ -81,7 +81,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -89,7 +89,11 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles>$(ProjectDir)pserv5.manifest</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -100,7 +104,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -108,7 +112,11 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles>$(ProjectDir)pserv5.manifest</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -117,7 +125,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -125,7 +133,11 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles>$(ProjectDir)pserv5.manifest</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -136,7 +148,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -144,7 +156,11 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles>$(ProjectDir)pserv5.manifest</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="precomp.h" />
@@ -167,6 +183,7 @@
     <ClInclude Include="core\data_object.h" />
     <ClInclude Include="core\data_object_column.h" />
     <ClInclude Include="core\data_controller.h" />
+    <ClInclude Include="windows_api\service_manager.h" />
     <ClInclude Include="..\imgui\imconfig.h" />
     <ClInclude Include="..\imgui\imgui.h" />
     <ClInclude Include="..\imgui\imgui_internal.h" />
@@ -186,6 +203,7 @@
     <ClCompile Include="pserv5.cpp" />
     <ClCompile Include="main_window.cpp" />
     <ClCompile Include="utils\logging.cpp" />
+    <ClCompile Include="windows_api\service_manager.cpp" />
     <ClCompile Include="Config\section.cpp" />
     <ClCompile Include="Config\settings.cpp" />
     <ClCompile Include="..\imgui\imgui.cpp">
@@ -237,6 +255,9 @@
   <ItemGroup>
     <Image Include="pserv5.ico" />
     <Image Include="small.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="pserv5.manifest" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -3,6 +3,7 @@
 #include "Resource.h"
 #include "Config/settings.h"
 #include "utils/win32_error.h"
+#include "windows_api/service_manager.h"
 #include <dxgi.h>
 #include <imgui.h>
 #include <imgui_impl_win32.h>
@@ -346,6 +347,27 @@ void MainWindow::Render() {
                 // Placeholder content
                 ImGui::Text("This is the %s view", tab);
                 ImGui::Text("Content will be implemented in future milestones");
+
+                // Test button for service enumeration (Milestone 10)
+                if (std::string(tab) == "Services") {
+                    ImGui::Separator();
+                    if (ImGui::Button("Test: Enumerate Services")) {
+                        try {
+                            ServiceManager sm;
+                            auto services = sm.EnumerateServices();
+                            spdlog::info("Successfully enumerated {} services", services.size());
+                            for (size_t i = 0; i < std::min(services.size(), size_t(5)); ++i) {
+                                spdlog::info("  Service {}: {} ({})", i+1,
+                                    services[i].displayName, services[i].name);
+                            }
+                            if (services.size() > 5) {
+                                spdlog::info("  ... and {} more services", services.size() - 5);
+                            }
+                        } catch (const std::exception& e) {
+                            spdlog::error("Failed to enumerate services: {}", e.what());
+                        }
+                    }
+                }
 
                 ImGui::EndTabItem();
             }

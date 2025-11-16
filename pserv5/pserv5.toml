@@ -1,0 +1,12 @@
+[Application]
+ActiveView = 'Services'
+
+[Logging]
+LogLevel = 'debug'
+
+[Window]
+Height = 720
+Maximized = false
+PositionX = 861
+PositionY = 571
+Width = 1280
