@@ -543,6 +543,10 @@ void MainWindow::Render() {
                     ImGui::Text("Services: %zu / %zu", filteredServices.size(), allServices.size());
                     ImGui::Separator();
 
+                    // Reserve space for status bar at the bottom (one line of text + padding)
+                    float statusBarHeight = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+                    float tableHeight = ImGui::GetContentRegionAvail().y - statusBarHeight;
+
                     // Display services in a table
                     const auto& columns = m_pServicesController->GetColumns();
                     ImGuiTableFlags flags = ImGuiTableFlags_Sortable |
@@ -555,7 +559,8 @@ void MainWindow::Render() {
                                            ImGuiTableFlags_ScrollY |
                                            ImGuiTableFlags_SizingFixedFit;
 
-                    if (ImGui::BeginTable("ServicesTable", static_cast<int>(columns.size()), flags)) {
+                    ImVec2 tableSize(0.0f, tableHeight);
+                    if (ImGui::BeginTable("ServicesTable", static_cast<int>(columns.size()), flags, tableSize)) {
                         // Cache the table pointer for saving state later
                         m_pServicesTable = ImGui::GetCurrentTable();
 
@@ -1280,6 +1285,51 @@ void MainWindow::Render() {
                         // Save table state periodically (throttled inside the method)
                         SaveServicesTableState();
                     }
+
+                    // Status bar for Services view
+                    ImGui::Separator();
+
+                    // Calculate statistics
+                    size_t visibleCount = filteredServices.size();
+                    size_t totalCount = allServices.size();
+                    size_t selectedCount = m_selectedServices.size();
+                    size_t highlightedCount = 0;
+                    size_t disabledCount = 0;
+                    size_t filteredCount = totalCount - visibleCount;
+
+                    for (const auto* service : allServices) {
+                        VisualState state = m_pServicesController->GetVisualState(service);
+                        if (state == VisualState::Highlighted) {
+                            highlightedCount++;
+                        } else if (state == VisualState::Disabled) {
+                            disabledCount++;
+                        }
+                    }
+
+                    // Display status bar with statistics in compartment style
+                    ImGui::BeginGroup();
+                    ImGui::Text("%zu visible", visibleCount);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("|");
+                    ImGui::SameLine();
+                    ImGui::Text("%zu highlighted", highlightedCount);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("|");
+                    ImGui::SameLine();
+                    ImGui::Text("%zu disabled", disabledCount);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("|");
+                    ImGui::SameLine();
+                    ImGui::Text("%zu filtered", filteredCount);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("|");
+                    ImGui::SameLine();
+                    ImGui::Text("%zu total", totalCount);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("|");
+                    ImGui::SameLine();
+                    ImGui::Text("%zu selected", selectedCount);
+                    ImGui::EndGroup();
                 }
                 // Other views
                 else {
