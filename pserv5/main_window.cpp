@@ -448,6 +448,9 @@ void MainWindow::Render() {
 
     ImGui::Begin("MainWindow", nullptr, window_flags);
 
+    // Render custom title bar
+    RenderTitleBar();
+
     // Handle Ctrl+Mousewheel for font size changes
     ImGuiIO& io = ImGui::GetIO();
     if (io.KeyCtrl && io.MouseWheel != 0.0f) {
@@ -1462,6 +1465,99 @@ void MainWindow::SaveServicesTableState(bool force) {
 
     spdlog::info("Services table state saved: widths={}, order={}",
         widthsStream.str(), orderStream.str());
+}
+
+bool MainWindow::IsWindowMaximized() const {
+    if (!m_hWnd) return false;
+
+    WINDOWPLACEMENT wp{};
+    wp.length = sizeof(WINDOWPLACEMENT);
+    if (GetWindowPlacement(m_hWnd, &wp)) {
+        return wp.showCmd == SW_SHOWMAXIMIZED;
+    }
+    return false;
+}
+
+void MainWindow::RenderTitleBar() {
+    const float titleBarHeight = static_cast<float>(GetSystemMetrics(SM_CYCAPTION));
+    const float buttonWidth = 46.0f;
+    const float buttonHeight = titleBarHeight;
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 titleBarMin = ImGui::GetCursorScreenPos();
+    ImVec2 titleBarMax = ImVec2(titleBarMin.x + ImGui::GetContentRegionAvail().x, titleBarMin.y + titleBarHeight);
+
+    // Draw title bar background
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImU32 titleBarColor = ImGui::ColorConvertFloat4ToU32(ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+    drawList->AddRectFilled(titleBarMin, titleBarMax, titleBarColor);
+
+    // Reserve space for title bar
+    ImGui::Dummy(ImVec2(0.0f, titleBarHeight));
+
+    // Handle window dragging
+    ImVec2 mousePos = io.MousePos;
+    bool mouseInTitleBar = mousePos.x >= titleBarMin.x && mousePos.x <= titleBarMax.x &&
+                          mousePos.y >= titleBarMin.y && mousePos.y <= titleBarMax.y;
+
+    // Check if mouse is NOT over window control buttons (rightmost 3 buttons)
+    float buttonsAreaStart = titleBarMax.x - (buttonWidth * 3);
+    bool mouseInButtons = mousePos.x >= buttonsAreaStart && mousePos.x <= titleBarMax.x &&
+                         mousePos.y >= titleBarMin.y && mousePos.y <= titleBarMax.y;
+
+    if (mouseInTitleBar && !mouseInButtons && ImGui::IsMouseClicked(0)) {
+        // Send WM_NCLBUTTONDOWN to enable native window dragging and snapping
+        ReleaseCapture();
+        SendMessageW(m_hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+    }
+
+    // Draw window title on the left
+    ImGui::SetCursorScreenPos(ImVec2(titleBarMin.x + 10.0f, titleBarMin.y + (titleBarHeight - ImGui::GetTextLineHeight()) * 0.5f));
+    ImGui::Text("pserv5");
+
+    // Window control buttons (right side)
+    ImVec2 buttonPos = ImVec2(titleBarMax.x - buttonWidth * 3, titleBarMin.y);
+
+    // Minimize button
+    ImGui::SetCursorScreenPos(buttonPos);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+
+    if (ImGui::Button("_##minimize", ImVec2(buttonWidth, buttonHeight))) {
+        ShowWindow(m_hWnd, SW_MINIMIZE);
+    }
+
+    ImGui::PopStyleColor(3);
+
+    // Maximize/Restore button
+    buttonPos.x += buttonWidth;
+    ImGui::SetCursorScreenPos(buttonPos);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+
+    bool isMaximized = IsWindowMaximized();
+    const char* maxButtonLabel = isMaximized ? "[]##restore" : "[]##maximize";
+
+    if (ImGui::Button(maxButtonLabel, ImVec2(buttonWidth, buttonHeight))) {
+        ShowWindow(m_hWnd, isMaximized ? SW_RESTORE : SW_MAXIMIZE);
+    }
+
+    ImGui::PopStyleColor(3);
+
+    // Close button (red hover)
+    buttonPos.x += buttonWidth;
+    ImGui::SetCursorScreenPos(buttonPos);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
+
+    if (ImGui::Button("X##close", ImVec2(buttonWidth, buttonHeight))) {
+        DestroyWindow(m_hWnd);
+    }
+
+    ImGui::PopStyleColor(3);
 }
 
 } // namespace pserv

@@ -67,6 +67,8 @@ private:
     void SaveServicesTableState(bool force = false);
     void ClearServices();
     void RenderProgressDialog();
+    void RenderTitleBar();
+    bool IsWindowMaximized() const;
 };
 
 } // namespace pserv
