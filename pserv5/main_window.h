@@ -34,6 +34,7 @@ private:
     void CleanupDirectX();
     bool InitializeImGui();
     void CleanupImGui();
+    void RebuildFontAtlas(float fontSize);
     void CreateRenderTarget();
     void CleanupRenderTarget();
     void Render();
@@ -59,6 +60,7 @@ private:
     std::vector<const ServiceInfo*> m_selectedServices;  // Selected services for multi-select
     const ServiceInfo* m_lastClickedService{nullptr};  // For shift-click range selection
     ServicePropertiesDialog* m_pPropertiesDialog{nullptr};  // Service properties dialog
+    float m_pendingFontSize{0.0f};  // Pending font size change (0 = no change pending)
 
     // Helper methods
     void SaveWindowState();

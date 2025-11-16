@@ -302,6 +302,36 @@ bool MainWindow::InitializeImGui() {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends first
+    ImGui_ImplWin32_Init(m_hWnd);
+    ImGui_ImplDX11_Init(m_pDevice.Get(), m_pDeviceContext.Get());
+
+    // Load font with size from settings (scaled by 100) - after backends are initialized
+    int32_t fontSizeScaled = config::theSettings.application.fontSizeScaled.get();
+    float fontSize = fontSizeScaled / 100.0f;
+    RebuildFontAtlas(fontSize);
+
+    spdlog::info("ImGui initialized successfully");
+    return true;
+}
+
+void MainWindow::CleanupImGui() {
+    if (ImGui::GetCurrentContext()) {
+        ImGui_ImplDX11_Shutdown();
+        ImGui_ImplWin32_Shutdown();
+        ImGui::DestroyContext();
+    }
+}
+
+void MainWindow::RebuildFontAtlas(float fontSize) {
+    ImGuiIO& io = ImGui::GetIO();
+
+    // Clear existing fonts
+    io.Fonts->Clear();
+
     // Load custom font - try Segoe UI first (Windows standard), fall back to Arial
     wchar_t windowsDir[MAX_PATH];
     if (GetWindowsDirectoryW(windowsDir, MAX_PATH) == 0) {
@@ -323,8 +353,8 @@ bool MainWindow::InitializeImGui() {
             WideCharToMultiByte(CP_UTF8, 0, fontPath.c_str(), -1, &narrowPath[0], size, nullptr, nullptr);
             narrowPath.resize(size - 1); // Remove null terminator
 
-            if (io.Fonts->AddFontFromFileTTF(narrowPath.c_str(), 16.0f)) {
-                spdlog::info("Loaded font: {}", narrowPath);
+            if (io.Fonts->AddFontFromFileTTF(narrowPath.c_str(), fontSize)) {
+                spdlog::info("Loaded font: {} at size {}", narrowPath, fontSize);
                 fontLoaded = true;
                 break;
             }
@@ -336,22 +366,26 @@ bool MainWindow::InitializeImGui() {
         }
     }
 
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
+    // Rebuild font texture
+    io.Fonts->Build();
 
-    // Setup Platform/Renderer backends
-    ImGui_ImplWin32_Init(m_hWnd);
-    ImGui_ImplDX11_Init(m_pDevice.Get(), m_pDeviceContext.Get());
+    // Set the new font as default
+    if (io.Fonts->Fonts.Size > 0) {
+        io.FontDefault = io.Fonts->Fonts[0];
 
-    spdlog::info("ImGui initialized successfully");
-    return true;
-}
+        // CRITICAL: Update ImGui's FontSizeBase so it renders at the new size
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.FontSizeBase = fontSize;
+    } else {
+        spdlog::error("No fonts available after rebuild!");
+    }
 
-void MainWindow::CleanupImGui() {
-    if (ImGui::GetCurrentContext()) {
-        ImGui_ImplDX11_Shutdown();
-        ImGui_ImplWin32_Shutdown();
-        ImGui::DestroyContext();
+    // Notify ImGui backends to update their font texture
+    if (m_pDevice && m_pDeviceContext) {
+        ImGui_ImplDX11_InvalidateDeviceObjects();
+        ImGui_ImplDX11_CreateDeviceObjects();
+    } else {
+        spdlog::error("Device or context is null, cannot update font texture!");
     }
 }
 
@@ -389,6 +423,12 @@ void MainWindow::Render() {
         return;
     }
 
+    // Apply pending font size change BEFORE starting any ImGui frame
+    if (m_pendingFontSize > 0.0f) {
+        RebuildFontAtlas(m_pendingFontSize);
+        m_pendingFontSize = 0.0f;  // Reset pending flag
+    }
+
     // Start the Dear ImGui frame
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -406,6 +446,28 @@ void MainWindow::Render() {
                                     ImGuiWindowFlags_NoBringToFrontOnFocus;
 
     ImGui::Begin("MainWindow", nullptr, window_flags);
+
+    // Handle Ctrl+Mousewheel for font size changes
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.KeyCtrl && io.MouseWheel != 0.0f) {
+        auto& appSettings = config::theSettings.application;
+        int32_t currentSizeScaled = appSettings.fontSizeScaled.get();
+        float currentSize = currentSizeScaled / 100.0f;
+        float newSize = currentSize + io.MouseWheel * 1.0f;  // Change by 1 pixel per wheel notch
+
+        // Clamp font size between 8 and 32
+        newSize = std::max(8.0f, std::min(32.0f, newSize));
+
+        if (newSize != currentSize) {
+            int32_t newSizeScaled = static_cast<int32_t>(newSize * 100.0f);
+            appSettings.fontSizeScaled.set(newSizeScaled);
+            if (m_pConfigBackend) {
+                appSettings.save(*m_pConfigBackend);
+            }
+            // Defer font rebuild until after frame is complete
+            m_pendingFontSize = newSize;
+        }
+    }
 
     // Create tab bar with placeholder tabs
     if (ImGui::BeginTabBar("MainTabBar", ImGuiTabBarFlags_None)) {
