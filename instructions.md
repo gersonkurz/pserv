@@ -3064,3 +3064,201 @@ After reviewing pserv4's architecture and discussing improvements, we've refined
 - Removed incorrect separation of ViewController and DataController
 - Added concrete implementation examples
 - Updated project structure
+
+---
+
+## UI Modernization Milestones
+
+### Overview
+Transform pserv5's UI from Win32 style (classic title bar + menu bar) to modern Windows app style (borderless window with custom chrome). This matches the aesthetic of modern Windows apps like Calculator, Store, Settings, etc.
+
+### Milestone 24: Remove Win32 Title Bar and Menu
+**Goal**: Convert window to borderless style while maintaining all functionality.
+
+**Tasks**:
+1. Change window style from `WS_OVERLAPPEDWINDOW` to `WS_POPUP | WS_THICKFRAME`
+   - This removes title bar and system menu
+   - Keeps window resizable via borders
+   - Requires manual implementation of window controls
+
+2. Remove Win32 menu resource
+   - Remove `lpszMenuName` from window class registration
+   - Remove menu resource references (IDC_PSERV5)
+
+3. Test window resizing still works
+   - Verify borders are visible and functional
+   - Verify window can be resized from all edges
+
+**Acceptance Criteria**:
+- [ ] Window has no title bar
+- [ ] Window has no classic menu bar
+- [ ] Window is still resizable via borders
+- [ ] Window state persistence still works
+
+**Implementation Notes**:
+- This milestone intentionally breaks window dragging and close button
+- These will be fixed in subsequent milestones
+- User can still close via Alt+F4 or taskbar
+
+---
+
+### Milestone 25: Custom Title Bar with Window Controls
+**Goal**: Add custom title bar with dragging support and window control buttons.
+
+**Tasks**:
+1. Create custom title bar in ImGui
+   - Reserve space at top of window (before main content)
+   - Draw background with appropriate styling
+   - Add app icon and "pserv5" title text
+
+2. Implement window dragging
+   - Detect mouse down on title bar area
+   - Send `WM_NCLBUTTONDOWN` with `HTCAPTION` to enable Windows drag behavior
+   - This automatically handles dragging and window snapping
+
+3. Add window control buttons (minimize/maximize/close)
+   - Draw buttons on right side of title bar
+   - Implement click handlers:
+     - Minimize: `ShowWindow(m_hWnd, SW_MINIMIZE)`
+     - Maximize/Restore: `ShowWindow(m_hWnd, IsMaximized() ? SW_RESTORE : SW_MAXIMIZE)`
+     - Close: `DestroyWindow(m_hWnd)`
+   - Add hover states for visual feedback
+
+4. Handle maximize state
+   - Detect maximize state changes
+   - Adjust window margins when maximized (to account for invisible borders)
+   - Update maximize button icon (maximize vs restore)
+
+**Acceptance Criteria**:
+- [ ] Custom title bar is visible at top of window
+- [ ] Clicking and dragging title bar moves window
+- [ ] Window snaps to screen edges during drag
+- [ ] Minimize button minimizes window
+- [ ] Maximize button toggles between maximized/restored
+- [ ] Close button closes window
+- [ ] Maximize button icon changes based on state
+- [ ] All buttons have visible hover effects
+
+**Implementation Notes**:
+- Use `ImGui::GetIO().MousePos` to detect clicks on title bar
+- Title bar height should be approximately `GetSystemMetrics(SM_CYCAPTION)`
+- When maximized, need to call `DwmExtendFrameIntoClientArea` to handle borders properly
+
+---
+
+### Milestone 26: Modern Menu Bar
+**Goal**: Replace Win32 menu with modern ImGui menu bar integrated into the UI.
+
+**Tasks**:
+1. Add menu bar below title bar
+   - Use `ImGui::BeginMenuBar()` / `ImGui::EndMenuBar()`
+   - Position directly below custom title bar
+   - Style to match modern aesthetic
+
+2. Implement File menu
+   - "Refresh" (F5) - calls current controller's Refresh()
+   - "Export to XML..." - TBD in future milestone
+   - Separator
+   - "Exit" (Alt+F4) - closes window
+
+3. Implement View menu
+   - Radio buttons for each view (Services, Devices, Processes, etc.)
+   - Checkmark on currently active view
+   - Keyboard shortcuts (Ctrl+1 through Ctrl+6)
+
+4. Implement Tools menu (placeholder for now)
+   - "Options..." - TBD in future milestone
+   - "Connect to Remote Machine..." - TBD in future milestone
+
+5. Implement Themes menu
+   - Radio buttons for theme selection
+   - Options: "Dark", "Light", "Classic"
+   - Save theme preference to config
+
+6. Implement Help menu
+   - "About pserv5..." - shows version info dialog
+   - "Documentation" - opens web browser to documentation URL
+   - Separator
+   - "Check for Updates..." - TBD in future milestone
+
+**Acceptance Criteria**:
+- [ ] Menu bar is visible below title bar
+- [ ] All menu items are functional
+- [ ] Keyboard shortcuts work
+- [ ] Theme selection changes UI colors
+- [ ] About dialog shows version and copyright info
+- [ ] Menu has modern styling (no classic Win32 look)
+
+**Implementation Notes**:
+- For styling, adjust ImGui colors: `ImGuiCol_MenuBarBg`, `ImGuiCol_PopupBg`, etc.
+- Theme implementation may use `ImGui::StyleColorsDark()`, `ImGui::StyleColorsLight()`, etc.
+- About dialog can be a simple `ImGui::OpenPopup()` modal
+
+---
+
+### Milestone 27: Title Bar Styling and Polish
+**Goal**: Refine title bar appearance to match Windows 11 aesthetic.
+
+**Tasks**:
+1. Add accent color support
+   - Query Windows accent color via `DwmGetColorizationColor`
+   - Apply to title bar when window is focused
+   - Use neutral color when unfocused
+
+2. Improve button styling
+   - Use appropriate button sizes (46x32 pixels is Windows 11 standard)
+   - Add proper icon glyphs using Segoe Fluent Icons font
+   - Implement hover animations (smooth color transitions)
+   - Red background for close button on hover
+
+3. Add window icon
+   - Load app icon from resources
+   - Render at proper DPI scaling
+   - Position on left side of title bar
+
+4. Handle DPI changes
+   - Recalculate title bar height on DPI change
+   - Reload icon at new DPI
+   - Adjust button sizes
+
+5. Test on different Windows versions
+   - Verify on Windows 10
+   - Verify on Windows 11
+   - Handle differences gracefully
+
+**Acceptance Criteria**:
+- [ ] Title bar uses Windows accent color when focused
+- [ ] Title bar grays out when window loses focus
+- [ ] Buttons have proper sizing and spacing
+- [ ] Buttons use icon glyphs instead of text
+- [ ] Close button shows red background on hover
+- [ ] App icon is visible and properly scaled
+- [ ] UI adapts correctly to DPI changes
+- [ ] Works correctly on Windows 10 and 11
+
+**Implementation Notes**:
+- Segoe Fluent Icons font provides glyphs for minimize (U+E921), maximize (U+E922), restore (U+E923), close (U+E8BB)
+- May need to load custom font using `ImGui::GetIO().Fonts->AddFontFromFileTTF()`
+- For DPI handling, listen for `WM_DPICHANGED` message
+
+---
+
+### Implementation Strategy
+
+**Order of execution**:
+1. Start with Milestone 24 (simplest - just window style changes)
+2. Then Milestone 25 (restore window functionality with custom controls)
+3. Then Milestone 26 (add menu functionality)
+4. Finally Milestone 27 (polish and refinement)
+
+**Testing approach**:
+- After each milestone, verify all previous functionality still works
+- Test window state persistence after each change
+- Test on multi-monitor setups
+- Test with different DPI settings
+
+**Rollback strategy**:
+- Each milestone is a separate commit
+- Can revert individual milestones if issues arise
+- Keep Win32 menu resource code in archive until all milestones complete
+
