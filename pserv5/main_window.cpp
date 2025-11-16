@@ -435,21 +435,45 @@ void MainWindow::Render() {
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
-    // Create fullscreen window for tab bar
     ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(viewport->WorkPos);
-    ImGui::SetNextWindowSize(viewport->WorkSize);
+    const float titleBarHeight = static_cast<float>(GetSystemMetrics(SM_CYCAPTION));
+
+    // Render custom title bar in a separate window at the very top
+    {
+        ImGui::SetNextWindowPos(viewport->Pos);  // Use Pos instead of WorkPos to start at 0,0
+        ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, titleBarHeight));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));  // No padding
+        ImGuiWindowFlags titleBarFlags = ImGuiWindowFlags_NoDecoration |
+                                         ImGuiWindowFlags_NoMove |
+                                         ImGuiWindowFlags_NoResize |
+                                         ImGuiWindowFlags_NoSavedSettings |
+                                         ImGuiWindowFlags_NoBringToFrontOnFocus;
+        ImGui::Begin("TitleBar", nullptr, titleBarFlags);
+        RenderTitleBar();
+        ImGui::End();
+        ImGui::PopStyleVar();
+    }
+
+    // Create main window below title bar for menu and content
+    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + titleBarHeight));
+    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, viewport->Size.y - titleBarHeight));
+
+    // Add some vertical padding for the menu bar
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 6));  // Add vertical padding
 
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration |
                                     ImGuiWindowFlags_NoMove |
                                     ImGuiWindowFlags_NoResize |
                                     ImGuiWindowFlags_NoSavedSettings |
-                                    ImGuiWindowFlags_NoBringToFrontOnFocus;
+                                    ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                    ImGuiWindowFlags_MenuBar;
 
     ImGui::Begin("MainWindow", nullptr, window_flags);
 
-    // Render custom title bar
-    RenderTitleBar();
+    // Render menu bar (ImGui positions this automatically at the top of this window)
+    RenderMenuBar();
+
+    ImGui::PopStyleVar();  // Pop FramePadding
 
     // Handle Ctrl+Mousewheel for font size changes
     ImGuiIO& io = ImGui::GetIO();
@@ -1487,14 +1511,6 @@ void MainWindow::RenderTitleBar() {
     ImVec2 titleBarMin = ImGui::GetCursorScreenPos();
     ImVec2 titleBarMax = ImVec2(titleBarMin.x + ImGui::GetContentRegionAvail().x, titleBarMin.y + titleBarHeight);
 
-    // Draw title bar background
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    ImU32 titleBarColor = ImGui::ColorConvertFloat4ToU32(ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
-    drawList->AddRectFilled(titleBarMin, titleBarMax, titleBarColor);
-
-    // Reserve space for title bar
-    ImGui::Dummy(ImVec2(0.0f, titleBarHeight));
-
     // Handle window dragging
     ImVec2 mousePos = io.MousePos;
     bool mouseInTitleBar = mousePos.x >= titleBarMin.x && mousePos.x <= titleBarMax.x &&
@@ -1558,6 +1574,149 @@ void MainWindow::RenderTitleBar() {
     }
 
     ImGui::PopStyleColor(3);
+}
+
+void MainWindow::RenderMenuBar() {
+    static bool showAboutDialog = false;
+
+    if (ImGui::BeginMenuBar()) {
+        // File menu
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Refresh", "F5")) {
+                if (m_pServicesController) {
+                    try {
+                        m_pServicesController->Refresh();
+                    } catch (const std::exception& e) {
+                        spdlog::error("Failed to refresh: {}", e.what());
+                    }
+                }
+            }
+
+            if (ImGui::MenuItem("Export to XML...", nullptr, false, false)) {
+                // TBD in future milestone
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Exit", "Alt+F4")) {
+                DestroyWindow(m_hWnd);
+            }
+
+            ImGui::EndMenu();
+        }
+
+        // View menu
+        if (ImGui::BeginMenu("View")) {
+            const char* views[] = {"Services", "Devices", "Processes", "Windows", "Modules", "Uninstaller"};
+            const char* shortcuts[] = {"Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4", "Ctrl+5", "Ctrl+6"};
+
+            for (int i = 0; i < 6; ++i) {
+                bool selected = (m_activeTab == views[i]);
+                if (ImGui::MenuItem(views[i], shortcuts[i], selected)) {
+                    m_activeTab = views[i];
+                    auto& appSettings = config::theSettings.application;
+                    appSettings.activeView.set(m_activeTab);
+                    if (m_pConfigBackend) {
+                        appSettings.save(*m_pConfigBackend);
+                    }
+                }
+            }
+
+            ImGui::EndMenu();
+        }
+
+        // Tools menu
+        if (ImGui::BeginMenu("Tools")) {
+            if (ImGui::MenuItem("Options...", nullptr, false, false)) {
+                // TBD in future milestone
+            }
+
+            if (ImGui::MenuItem("Connect to Remote Machine...", nullptr, false, false)) {
+                // TBD in future milestone
+            }
+
+            ImGui::EndMenu();
+        }
+
+        // Themes menu
+        if (ImGui::BeginMenu("Themes")) {
+            auto& appSettings = config::theSettings.application;
+            std::string currentTheme = appSettings.theme.get();
+
+            if (ImGui::MenuItem("Dark", nullptr, currentTheme == "Dark")) {
+                appSettings.theme.set("Dark");
+                if (m_pConfigBackend) {
+                    appSettings.save(*m_pConfigBackend);
+                }
+                ImGui::StyleColorsDark();
+            }
+
+            if (ImGui::MenuItem("Light", nullptr, currentTheme == "Light")) {
+                appSettings.theme.set("Light");
+                if (m_pConfigBackend) {
+                    appSettings.save(*m_pConfigBackend);
+                }
+                ImGui::StyleColorsLight();
+            }
+
+            if (ImGui::MenuItem("Classic", nullptr, currentTheme == "Classic")) {
+                appSettings.theme.set("Classic");
+                if (m_pConfigBackend) {
+                    appSettings.save(*m_pConfigBackend);
+                }
+                ImGui::StyleColorsClassic();
+            }
+
+            ImGui::EndMenu();
+        }
+
+        // Help menu
+        if (ImGui::BeginMenu("Help")) {
+            if (ImGui::MenuItem("About pserv5...")) {
+                showAboutDialog = true;
+            }
+
+            if (ImGui::MenuItem("Documentation")) {
+                ShellExecuteW(nullptr, L"open", L"http://p-nand-q.com/download/pserv_cpl/index.html", nullptr, nullptr, SW_SHOWNORMAL);
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Check for Updates...", nullptr, false, false)) {
+                // TBD in future milestone
+            }
+
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMenuBar();
+    }
+
+    // About dialog
+    if (showAboutDialog) {
+        ImGui::OpenPopup("About pserv5");
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (ImGui::BeginPopupModal("About pserv5", &showAboutDialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("pserv5");
+        ImGui::Separator();
+        ImGui::Text("Version 5.0.0");
+        ImGui::Text("A modern Windows service management utility");
+        ImGui::Spacing();
+        ImGui::Text("Copyright (c) 2025");
+        ImGui::Text("http://p-nand-q.com");
+        ImGui::Spacing();
+
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            showAboutDialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
 } // namespace pserv

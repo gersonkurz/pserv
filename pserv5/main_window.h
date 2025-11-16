@@ -68,6 +68,7 @@ private:
     void ClearServices();
     void RenderProgressDialog();
     void RenderTitleBar();
+    void RenderMenuBar();
     bool IsWindowMaximized() const;
 };
 

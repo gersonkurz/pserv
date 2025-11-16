@@ -26,6 +26,7 @@ public:
         ApplicationSettings(Section* pParent) : Section{pParent, "Application"} {}
         TypedValue<std::string> activeView{this, "ActiveView", "Services"};
         TypedValue<int32_t> fontSizeScaled{this, "FontSize", 1600};  // Font size * 100 (16.0f -> 1600)
+        TypedValue<std::string> theme{this, "Theme", "Dark"};  // Dark, Light, or Classic
     } application{this};
 
     struct ServicesTableSettings : public Section {
