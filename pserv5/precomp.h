@@ -19,8 +19,23 @@
 #include <span>
 #include <atomic>
 #include <future>
+#include <thread>
+#include <chrono>
+#include <sstream>
+#include <algorithm>
 
 // spdlog
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
+
+#include <d3d11.h>
+#include <wrl/client.h>
+#include <dxgi.h>
+
+#include <imgui.h>
+#include <imgui_impl_win32.h>
+#include <imgui_impl_dx11.h>
+#include <imgui_internal.h>
+#include <shellapi.h>
+

@@ -17,6 +17,7 @@ namespace pserv {
         virtual std::string GetId() const = 0;
         virtual void Update(const DataObject& other) = 0;
         virtual std::string GetProperty(int propertyId) const = 0;
+        virtual bool MatchesFilter(const std::string& filter) const = 0;
 
         bool IsRunning() const { return m_bIsRunning; }
         bool IsDisabled() const { return m_bIsDisabled; }

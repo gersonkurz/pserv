@@ -4,6 +4,15 @@
 
 namespace pserv::config {
 
+struct DisplayTable : public Section {
+    DisplayTable(Section* pParent, std::string name) : Section{ pParent, name } {}
+    // Default widths for 18 columns: DisplayName, Name, Status, StartType, ProcessId, ServiceType, BinaryPathName, Description, User, LoadOrderGroup, ErrorControl, TagId, Win32ExitCode, ServiceSpecificExitCode, CheckPoint, WaitHint, ServiceFlags, ControlsAccepted
+    TypedValue<std::string> columnWidths{ this, "ColumnWidths", "250,180,120,100,80,200,400,300,150,120,80,60,100,150,80,80,80,200" };
+    TypedValue<std::string> columnOrder{ this, "ColumnOrder", "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17" };
+    TypedValue<int32_t> sortColumn{ this, "SortColumn", -1 };
+    TypedValue<bool> sortAscending{ this, "SortAscending", true };
+};
+
 class RootSettings : public Section {
 public:
     RootSettings() : Section{} {}
@@ -29,14 +38,22 @@ public:
         TypedValue<std::string> theme{this, "Theme", "Dark"};  // Dark, Light, or Classic
     } application{this};
 
-    struct ServicesTableSettings : public Section {
-        ServicesTableSettings(Section* pParent) : Section{pParent, "ServicesTable"} {}
-        // Default widths for 18 columns: DisplayName, Name, Status, StartType, ProcessId, ServiceType, BinaryPathName, Description, User, LoadOrderGroup, ErrorControl, TagId, Win32ExitCode, ServiceSpecificExitCode, CheckPoint, WaitHint, ServiceFlags, ControlsAccepted
-        TypedValue<std::string> columnWidths{this, "ColumnWidths", "250,180,120,100,80,200,400,300,150,120,80,60,100,150,80,80,80,200"};
-        TypedValue<std::string> columnOrder{this, "ColumnOrder", "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17"};
-        TypedValue<int32_t> sortColumn{this, "SortColumn", -1};
-        TypedValue<bool> sortAscending{this, "SortAscending", true};
-    } servicesTable{this};
+
+    DisplayTable servicesTable{this, "ServicesTable"};
+    DisplayTable devicesTable{ this, "DevicesTable" };
+
+    DisplayTable* getSectionFor(const std::string& name)
+    {
+        if (name == "Services")
+        {
+            return &servicesTable;
+        }
+        if (name == "Devices")
+        {
+            return &devicesTable;
+        }
+        return nullptr;
+    }
 };
 
 extern RootSettings theSettings;

@@ -81,7 +81,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -90,6 +90,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(ProjectDir)pserv5.manifest</AdditionalManifestFiles>
@@ -104,7 +105,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -113,6 +114,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(ProjectDir)pserv5.manifest</AdditionalManifestFiles>
@@ -125,7 +127,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -134,6 +136,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(ProjectDir)pserv5.manifest</AdditionalManifestFiles>
@@ -148,7 +151,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -157,12 +160,14 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(ProjectDir)pserv5.manifest</AdditionalManifestFiles>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="core\data_controller_library.h" />
     <ClInclude Include="precomp.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="pserv5.h" />
@@ -198,6 +203,7 @@
     <ClInclude Include="..\imgui\backends\imgui_impl_dx11.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="core\data_controller_library.cpp" />
     <ClCompile Include="precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
