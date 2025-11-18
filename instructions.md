@@ -4,6 +4,85 @@
 
 This document outlines the plan to modernize pserv from version 4 (C# WPF) to version 5 (C++20 native), maintaining full feature parity while improving performance, maintainability, and user experience.
 
+## Current Project Status (as of 2025-11-18)
+
+### ✅ COMPLETED: Phases 1-4 (Milestones 0-27)
+
+**Phase 1: Foundation & Infrastructure** - DONE
+- ImGui application with Win32 window and DirectX 11 rendering
+- spdlog logging with rotating file sink
+- Hierarchical configuration system (TOML-based persistence)
+- Tab bar infrastructure with state persistence
+- Core interfaces (DataController, DataObject, etc.)
+
+**Phase 2: Windows API Wrappers** - DONE
+- WIL integration for Windows API error handling
+- ServiceManager with full service control and remote support
+- COM-style reference counting (IRefCounted)
+- Async operation infrastructure with progress reporting
+
+**Phase 3: Services View (Core Feature)** - DONE
+- Complete ServicesDataController with all operations
+- Full service management (start/stop/pause/continue/restart)
+- Startup type configuration
+- Service properties dialog (multi-service editing)
+- Service deletion with registry cleanup
+- File system integration (Registry, Explorer, Terminal)
+- Filtering, sorting, multi-select, column persistence
+- Status bar with statistics
+
+**Phase 4: Devices View** - DONE
+- DevicesDataController (inherits from ServicesDataController)
+- Filters for kernel and file system drivers
+- All service operations work on drivers
+
+**UI Modernization** - DONE
+- Custom title bar with Windows 11 accent color integration
+- Modern ImGui menu bar (File, View, Help)
+- Window controls (minimize, maximize, close)
+- DPI-aware rendering
+
+**Architecture Achievements:**
+- ✅ Clean controller abstraction (UI-independent business logic)
+- ✅ Generic rendering loop works with any DataController
+- ✅ No MainWindow knowledge of concrete controller types
+- ✅ Controllers fully own their domain logic
+
+### 🚧 REMAINING WORK: Phases 5-10
+
+**Phase 5: Processes View** - NOT STARTED
+- ProcessInfo model + ProcessesDataController
+- Process enumeration with performance metrics
+- Process operations (terminate, change priority)
+
+**Phase 6: Windows View** - NOT STARTED
+- WindowInfo model + WindowsDataController
+- Desktop window enumeration and manipulation
+- Operations: show/hide/minimize/maximize/close
+
+**Phase 7: Modules View** - NOT STARTED
+- ModuleInfo model + ModulesDataController
+- DLL enumeration across all processes
+
+**Phase 8: Uninstaller View** - NOT STARTED
+- InstalledProgramInfo model + UninstallerDataController
+- Registry-based installed programs listing
+
+**Phase 9: Command-Line Interface** - NOT STARTED
+- CommandLineProcessor for automation
+- Headless mode support
+- XML export/import for all views
+
+**Phase 10: Polish & Beta Release** - NOT STARTED
+- Comprehensive testing and optimization
+- Memory leak detection and fixing
+- WiX MSI installer project
+- Documentation and release preparation
+
+**Estimated Completion: ~48% (4 of 10 phases complete)**
+
+---
+
 ## Project Context
 
 ### Historical Background
@@ -1449,735 +1528,15 @@ if (!hSCM) {
 // Automatic cleanup when hSCM goes out of scope
 ```
 
-## Step-by-Step Implementation Plan
-
-This section provides a detailed, milestone-based implementation plan. Each step is designed to be **compilable, testable, and committable**. This prevents getting lost in the middle of implementation and provides clear progress checkpoints.
-
-### Milestone 0: Project Setup and Verification
-**Goal**: Ensure build environment works and all dependencies are accessible
-
-**Steps:**
-1. Verify Visual Studio 2022 with C++20 support installed
-2. Verify git submodules are initialized (`git submodule update --init --recursive`)
-3. Open `pserv5.sln` in Visual Studio
-4. Verify project compiles with current empty structure
-5. Create `archive\Config_backup\` and copy all Config files there for reference
-
-**Acceptance**: Clean compile of empty project, all submodules present
-
-**Commit Point**: "Initial project structure verified"
-
----
-
-### Milestone 1: Logging Infrastructure
-**Goal**: Get spdlog working before anything else (needed for debugging all subsequent steps)
-
-**Steps:**
-1. Create `pserv5\utils\logging.h`:
-   ```cpp
-   #pragma once
-   #include <spdlog/spdlog.h>
-   #include <spdlog/sinks/rotating_file_sink.h>
-   #include <memory>
-
-   namespace pserv::utils {
-       std::shared_ptr<spdlog::logger> InitializeLogging();
-   }
-   ```
-
-2. Create `pserv5\utils\logging.cpp`:
-   ```cpp
-   #include "logging.h"
-   #include <spdlog/sinks/stdout_color_sinks.h>
-   #include <filesystem>
-
-   namespace pserv::utils {
-       std::shared_ptr<spdlog::logger> InitializeLogging() {
-           auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-           auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-               "pserv5.log", 1024 * 1024 * 10, 3);
-
-           std::vector<spdlog::sink_ptr> sinks{console_sink, file_sink};
-           auto logger = std::make_shared<spdlog::logger>("pserv5", sinks.begin(), sinks.end());
-           logger->set_level(spdlog::level::debug);
-           spdlog::set_default_logger(logger);
-
-           return logger;
-       }
-   }
-   ```
-
-3. Update `pserv5.cpp` to initialize logging in `WinMain`:
-   ```cpp
-   #include "utils/logging.h"
-
-   int APIENTRY wWinMain(...) {
-       auto logger = pserv::utils::InitializeLogging();
-       logger->info("pserv5 starting up");
-
-       // ... rest of WinMain
-
-       logger->info("pserv5 shutting down");
-       return 0;
-   }
-   ```
-
-4. Add files to `.vcxproj`
-5. **Compile and test**: Run application, verify `pserv5.log` is created with startup/shutdown messages
-
-**Acceptance**: Application launches, logs to both console and file, clean exit
-
-**Commit Point**: "Add spdlog logging infrastructure"
-
----
-
-### Milestone 2: Configuration System Integration
-**Goal**: Copy and integrate Config classes, make them compile in pserv namespace
-
-**Steps:**
-1. Create `pserv5\Config\` directory
-2. Copy all files from `archive\Config\` to `pserv5\Config\`
-3. Change namespace in all files: `jucyaudio::config` → `pserv::config`
-4. Update `#include` paths to relative: `#include <Config/...>` → `#include "..."`
-5. Add `config` logger initialization to `logging.cpp`:
-   ```cpp
-   pserv::config::logger = logger; // Share same logger
-   ```
-
-6. Create minimal `pserv5\Config\Settings.h`:
-   ```cpp
-   #pragma once
-   #include "section.h"
-   #include "typed_value.h"
-
-   namespace pserv::config {
-       class RootSettings : public Section {
-       public:
-           RootSettings() : Section{} {}
-
-           struct LoggingSettings : public Section {
-               LoggingSettings(Section* pParent) : Section{pParent, "Logging"} {}
-               TypedValue<std::string> logLevel{this, "LogLevel", "debug"};
-           } logging{this};
-       };
-
-       extern RootSettings theSettings;
-   }
-   ```
-
-7. Create `pserv5\Config\Settings.cpp`:
-   ```cpp
-   #include "Settings.h"
-   namespace pserv::config {
-       RootSettings theSettings;
-   }
-   ```
-
-8. Add all Config files to `.vcxproj`
-9. **Compile**: Fix any namespace/include errors until clean compile
-
-**Acceptance**: Project compiles with Config system integrated
-
-**Commit Point**: "Integrate configuration system from archive"
-
----
-
-### Milestone 3: Configuration Loading/Saving Test
-**Goal**: Verify config system works end-to-end
-
-**Steps:**
-1. Add tomlplusplus include to Settings.h: `#include <toml++/toml.h>` (via toml_backend.h)
-2. Update `WinMain` to load/save settings:
-   ```cpp
-   #include "Config/Settings.h"
-   #include "Config/toml_backend.h"
-
-   int APIENTRY wWinMain(...) {
-       auto logger = pserv::utils::InitializeLogging();
-       logger->info("pserv5 starting up");
-
-       // Load configuration
-       std::string configPath = "config.toml"; // Simplified for testing
-       pserv::config::TomlBackend backend{configPath};
-       pserv::config::theSettings.load(backend);
-
-       logger->set_level(spdlog::level::from_str(
-           pserv::config::theSettings.logging.logLevel.get()));
-       logger->info("Log level set to: {}",
-           pserv::config::theSettings.logging.logLevel.get());
-
-       // ... application logic ...
-
-       // Save configuration
-       pserv::config::theSettings.save(backend);
-       logger->info("pserv5 shutting down");
-       return 0;
-   }
-   ```
-
-3. **Compile and test**:
-   - Run application
-   - Verify `config.toml` is created
-   - Manually edit `config.toml` to change log level to "info"
-   - Run again, verify log level changes
-
-**Acceptance**: Config loads/saves correctly, settings persist across runs
-
-**Commit Point**: "Configuration system loading and saving verified"
-
----
-
-### Milestone 4: Basic Win32 Window
-**Goal**: Create an empty Win32 window (no ImGui yet)
-
-**Steps:**
-1. Create `pserv5\main_window.h`:
-   ```cpp
-   #pragma once
-   #include <Windows.h>
-
-   namespace pserv {
-       class MainWindow {
-       public:
-           MainWindow();
-           ~MainWindow();
-
-           bool Initialize(HINSTANCE hInstance);
-           void Show(int nCmdShow);
-           int MessageLoop();
-
-       private:
-           static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-
-           HWND m_hWnd{nullptr};
-           HINSTANCE m_hInstance{nullptr};
-       };
-   }
-   ```
-
-2. Create `pserv5\main_window.cpp` with basic Win32 window implementation
-3. Update `WinMain` to use MainWindow:
-   ```cpp
-   int APIENTRY wWinMain(HINSTANCE hInstance, ...) {
-       auto logger = pserv::utils::InitializeLogging();
-       logger->info("pserv5 starting up");
-
-       pserv::MainWindow mainWindow;
-       if (!mainWindow.Initialize(hInstance)) {
-           logger->error("Failed to initialize main window");
-           return 1;
-       }
-
-       mainWindow.Show(nCmdShow);
-       int result = mainWindow.MessageLoop();
-
-       logger->info("pserv5 shutting down");
-       return result;
-   }
-   ```
-
-4. Add files to `.vcxproj`
-5. **Compile and test**: Run application, verify empty window appears and closes cleanly
-
-**Acceptance**: Empty Win32 window launches and handles messages correctly
-
-**Commit Point**: "Add basic Win32 window infrastructure"
-
----
-
-### Milestone 5a: DirectX 11 Rendering
-**Goal**: Get basic DirectX 11 rendering working (no ImGui yet)
-
-**Steps:**
-1. Add DirectX 11 initialization to `MainWindow`:
-   - Create device and device context
-   - Create swap chain for window
-   - Create render target view
-   - Handle window resize events (recreate swap chain)
-2. Implement basic render loop:
-   - Clear to solid color (e.g., cornflower blue)
-   - Present swap chain
-3. **Compile and test**: Run application, verify window shows solid color and resizes correctly
-
-**Acceptance**: Window displays solid color, no DX11 errors in debug output, resize works
-
-**Commit Point**: "Add DirectX 11 rendering infrastructure"
-
----
-
-### Milestone 5b: ImGui Integration
-**Goal**: Get ImGui rendering on top of DirectX 11
-
-**Steps:**
-1. Add ImGui initialization:
-   - Initialize ImGui context
-   - Initialize Win32 backend (imgui_impl_win32)
-   - Initialize DX11 backend (imgui_impl_dx11)
-2. Update render loop:
-   - ImGui::NewFrame at start of frame
-   - Create simple test window with "Hello World" text
-   - ImGui::Render and render draw data to DX11
-3. Update WndProc to forward events to ImGui (imgui_impl_win32_WndProcHandler)
-4. **Compile and test**: Verify ImGui window renders, mouse/keyboard work, window is draggable
-
-**Acceptance**: ImGui renders correctly, responds to mouse/keyboard, can interact with test window
-
-**Commit Point**: "Integrate ImGui with DirectX 11 backend"
-
----
-
-### Milestone 6: Window State Persistence
-**Goal**: Save/restore window position and size
-
-**Steps:**
-1. Expand `Settings.h` to include WindowSettings section:
-   ```cpp
-   struct WindowSettings : public Section {
-       WindowSettings(Section* pParent) : Section{pParent, "Window"} {}
-       TypedValue<int> width{this, "Width", 1280};
-       TypedValue<int> height{this, "Height", 720};
-       TypedValue<int> positionX{this, "PositionX", 100};
-       TypedValue<int> positionY{this, "PositionY", 100};
-       TypedValue<bool> maximized{this, "Maximized", false};
-   } window{this};
-   ```
-
-2. Update `MainWindow::Initialize()` to read window settings
-3. Update `MainWindow::~MainWindow()` to save window settings
-4. **Compile and test**:
-   - Resize/move window
-   - Close application
-   - Reopen, verify window position/size restored
-
-**Acceptance**: Window geometry persists across restarts
-
-**Commit Point**: "Add window state persistence"
-
----
-
-### Milestone 7: Tab Bar Infrastructure
-**Goal**: Create tab bar for switching views (no content yet)
-
-**Steps:**
-1. Add ImGui tab bar to MainWindow render loop
-2. Create placeholder tabs: Services, Devices, Processes, Windows, Modules, Uninstaller
-3. Add active tab state to Settings:
-   ```cpp
-   struct ApplicationSettings : public Section {
-       ApplicationSettings(Section* pParent) : Section{pParent, "Application"} {}
-       TypedValue<std::string> activeView{this, "ActiveView", "Services"};
-   } application{this};
-   ```
-
-4. Persist active tab selection
-5. **Compile and test**: Verify tabs switch, selection persists across restarts
-
-**Acceptance**: Tab bar functional, last viewed tab restored on startup
-
-**Commit Point**: "Add tab bar infrastructure with persistence"
-
----
-
-### Milestone 8: Base Classes and Interfaces
-**Goal**: Define core abstractions (no implementations yet)
-
-**Steps:**
-1. Create `pserv5\core\IRefCounted.h` (copy from archive, change namespace)
-2. Create `pserv5\core\data_object.h`:
-   ```cpp
-   #pragma once
-   #include "IRefCounted.h"
-   #include <string>
-
-   namespace pserv {
-       class DataObject : public RefCountImpl {
-       private:
-           bool m_bIsRunning{false};
-           bool m_bIsDisabled{false};
-
-       protected:
-           void SetRunning(bool bRunning) { m_bIsRunning = bRunning; }
-           void SetDisabled(bool bDisabled) { m_bIsDisabled = bDisabled; }
-
-       public:
-           virtual ~DataObject() = default;
-           virtual std::string GetId() const = 0;
-           virtual void Update(const DataObject& other) = 0;
-           virtual std::string GetProperty(int propertyId) const = 0;
-
-           bool IsRunning() const { return m_bIsRunning; }
-           bool IsDisabled() const { return m_bIsDisabled; }
-       };
-   }
-   ```
-
-3. Create `pserv5\core\data_object_column.h`
-4. Create `pserv5\core\data_controller.h` (abstract base)
-5. Add files to `.vcxproj`
-6. **Compile**: Verify all base classes compile
-
-**Acceptance**: Base classes compile, no implementations needed yet
-
-**Commit Point**: "Add core base classes and interfaces"
-
----
-
-### Milestone 9: UTF-8 Utilities
-**Goal**: Add string conversion helpers
-
-**Steps:**
-1. Create `pserv5\utils\string_utils.h`:
-   ```cpp
-   #pragma once
-   #include <string>
-   #include <string_view>
-   #include <Windows.h>
-
-   namespace pserv::utils {
-       inline std::wstring Utf8ToWide(std::string_view utf8) {
-           // Implementation from instructions.md
-       }
-
-       inline std::string WideToUtf8(std::wstring_view wide) {
-           // Implementation from instructions.md
-       }
-   }
-   ```
-
-2. Add test code in WinMain to verify conversions work
-3. **Compile and test**: Verify UTF-8 ↔ UTF-16 conversions work correctly
-
-**Acceptance**: String utilities compile and work correctly
-
-**Commit Point**: "Add UTF-8 string conversion utilities"
-
----
-
-### Milestone 10: First Windows API Wrapper (WIL + Services)
-**Goal**: Get one real Windows API wrapper working
-
-**Steps:**
-1. Add WIL submodule: `git submodule add https://github.com/microsoft/wil.git`
-2. Add WIL include to project settings
-3. Create `pserv5\windows_api\service_manager.h` (minimal version)
-4. Create `pserv5\windows_api\service_manager.cpp`
-5. Implement just `EnumerateServices()` method
-6. Add test button in ImGui to call EnumerateServices and log results
-7. **Compile and test**: Click button, verify services are enumerated and logged
-
-**Acceptance**: Can enumerate local services and display count
-
-**Commit Point**: "Add WIL and basic service enumeration"
-
----
-
-### Milestone 11: First Model (ServiceInfo)
-**Goal**: Create first concrete DataObject implementation
-
-**Steps:**
-1. Create `pserv5\models\service_info.h`:
-   ```cpp
-   namespace pserv {
-       enum class ServiceProperty {
-           Name = 0,
-           DisplayName,
-           Status,
-           StartType,
-           ProcessId,
-           // ... more properties
-       };
-
-       class ServiceInfo : public DataObject {
-           // Implementation
-       };
-   }
-   ```
-
-2. Create `pserv5\models\service_info.cpp`
-3. Update `ServiceManager::EnumerateServices()` to return `vector<ServiceInfo*>`
-4. Display services in ImGui (simple list, no table yet)
-5. **Compile and test**: Verify service list displays in UI
-
-**Acceptance**: Services display in UI with basic information
-
-**Commit Point**: "Add ServiceInfo model and display in UI"
-
----
-
-### Milestone 12: Async Operations Infrastructure
-**Goal**: Add background operation support BEFORE building full controller
-
-**Rationale**: Service operations (start/stop) can take 5+ seconds. We need async infrastructure early to avoid UI freezes during development and testing.
-
-**Steps:**
-1. Create `pserv5\core\async_operation.h`:
-   ```cpp
-   #pragma once
-   #include <atomic>
-   #include <future>
-   #include <functional>
-   #include <string>
-
-   #define WM_ASYNC_OPERATION_COMPLETE (WM_USER + 1)
-
-   namespace pserv {
-       enum class AsyncStatus {
-           Pending,
-           Running,
-           Completed,
-           Cancelled,
-           Failed
-       };
-
-       class AsyncOperation {
-       public:
-           void Start(HWND hWnd, std::function<bool(AsyncOperation*)> workFunc);
-           void RequestCancel();
-           bool IsCancelRequested() const;
-           void ReportProgress(float progress, std::string message);
-           AsyncStatus GetStatus() const;
-
-       private:
-           std::atomic<AsyncStatus> m_status{AsyncStatus::Pending};
-           std::atomic<bool> m_bCancelRequested{false};
-           std::future<void> m_future;
-           HWND m_hWnd{nullptr};
-       };
-   }
-   ```
-
-2. Create `pserv5\core\async_operation.cpp` with implementation
-3. Update `MainWindow` to handle `WM_ASYNC_OPERATION_COMPLETE` message
-4. Add simple progress dialog (modal ImGui window)
-5. Create test button that launches 5-second async operation with progress updates
-6. **Compile and test**: Click button, verify:
-   - UI doesn't freeze during operation
-   - Progress updates appear
-   - Cancel button works
-   - Completion message appears
-
-**Acceptance**: Async operations work, UI remains responsive, cancellation works
-
-**Commit Point**: "Add async operation infrastructure with progress reporting"
-
-**Note**: This allows UI to freeze for milestones 10-11 (basic service enumeration test), but all subsequent work with service operations will be non-blocking.
-
----
-
-### Milestone 13: First Controller (ServicesDataController)
-**Goal**: Create first DataController implementation
-
-**Steps:**
-1. Create `pserv5\controllers\services_data_controller.h`
-2. Create `pserv5\controllers\services_data_controller.cpp`
-3. Implement `Refresh()`, `GetColumns()`, `GetObjects()` methods
-4. Wire up to ImGui tab (replace placeholder)
-5. **Compile and test**: Services tab shows real service data
-
-**Acceptance**: Services tab displays actual service data with columns
-
-**Commit Point**: "Add ServicesDataController with basic functionality"
-
----
-
-### Milestone 14: ImGui Table Rendering
-**Goal**: Proper table display with sorting/filtering
-
-**Steps:**
-1. Replace simple list with ImGui::BeginTable
-2. Add column headers from controller
-3. Implement basic sorting (click column header)
-4. **Compile and test**: Verify table renders, sorting works
-
-**Acceptance**: Service table displays properly with sortable columns
-
-**Commit Point**: "Add ImGui table rendering with sorting"
-
----
-
-### Milestone 15: Column Configuration Persistence
-**Goal**: Save/restore column order and widths
-
-**Steps:**
-1. Expand Settings.h with ServicesViewSettings
-2. Implement column reordering
-3. Implement column width persistence
-4. **Compile and test**: Reorder/resize columns, verify persistence
-
-**Acceptance**: Column configuration persists across restarts
-
-**Commit Point**: "Add column configuration persistence"
-
----
-
-### Milestone 16: Context Menu and First Async Action
-**Goal**: Add right-click context menu with one async service operation
-
-**Steps:**
-1. Implement `GetAvailableActions()` in ServicesDataController
-2. Add ImGui context menu in table
-3. Implement "Start Service" action using async infrastructure from Milestone 12
-4. Add "Copy Name" synchronous action for comparison
-5. **Compile and test**:
-   - Right-click stopped service, click "Start Service"
-   - Verify progress dialog appears
-   - Verify UI remains responsive
-   - Verify service actually starts
-
-**Acceptance**: Context menu appears, async service start works without blocking UI
-
-**Commit Point**: "Add context menu with async service operations"
-
----
-
-### Milestone 17: Complete Basic Service Operations
-**Goal**: All basic service operations working with filtering and multi-select
-
-**Steps:**
-1. Implement remaining actions (Stop, Pause, Restart, etc.)
-2. Add filtering
-3. Add multi-select
-4. **Compile and test**: Test all service operations
-
-**Acceptance**: Start, Stop, Pause, Resume, Restart working with multi-select and filtering
-
-**Commit Point**: "Complete Services view implementation (Milestone 17)"
-
----
-
-### Milestone 18: Add Complete Service Data Model
-**Goal**: Expand ServiceInfo to include all service configuration data
-
-**Steps:**
-1. Add missing fields to ServiceInfo:
-   - User/ServiceStartName (account service runs under)
-   - LoadOrderGroup
-   - ErrorControl
-   - TagId
-   - Win32ExitCode, ServiceSpecificExitCode
-   - CheckPoint, WaitHint, ServiceFlags
-2. Update ServiceManager::EnumerateServices() to populate new fields using QueryServiceConfig
-3. Add getters for all new fields
-4. **Compile and test**: Verify all data populates correctly
-
-**Acceptance**: ServiceInfo contains all service configuration data from pserv4
-
-**Commit Point**: "Add complete service data model (Milestone 18)"
-
----
-
-### Milestone 19: Add All Service Columns
-**Goal**: Add all missing columns to Services view
-
-**Steps:**
-1. Add columns to ServicesDataController:
-   - User
-   - Service Type (localized string)
-   - Binary Path Name
-   - Load Order Group
-   - Error Control
-   - Tag ID
-   - Description
-   - Win32 Exit Code
-   - Service Specific Exit Code
-   - Check Point
-   - Wait Hint
-   - Service Flags
-   - Controls Accepted (detailed string)
-   - Install Location (derived from BinaryPathName)
-2. Update GetProperty() in ServiceInfo to return all column values
-3. Add helper methods for string conversions (ServiceTypeString, ErrorControlString, etc.)
-4. Update column configuration persistence to handle new columns
-5. **Compile and test**: Verify all columns display correctly, can be reordered/resized
-
-**Acceptance**: All pserv4 service columns available and working
-
-**Commit Point**: "Add all service columns (Milestone 19)"
-
----
-
-### Milestone 20: Add Startup Type Configuration
-**Goal**: Add context menu actions to change service startup type
-
-**Steps:**
-1. Add ServiceAction enum values: SetStartupAutomatic, SetStartupManual, SetStartupDisabled
-2. Add ServiceManager methods:
-   - ChangeServiceStartType(serviceName, startType)
-3. Add context menu items to show startup type actions
-4. Implement async operations for startup type changes
-5. Support multi-select for batch startup type changes
-6. **Compile and test**: Change startup types, verify persistence across restarts
-
-**Acceptance**: Can change startup type for single or multiple services
-
-**Commit Point**: "Add startup type configuration (Milestone 20)"
-
----
-
-### Milestone 21: Add File System Integration Actions
-**Goal**: Add context menu actions for Registry Editor, Explorer, and Terminal
-
-**Steps:**
-1. Add ServiceAction enum values: OpenInRegistryEditor, OpenInExplorer, OpenTerminalHere
-2. Add InstallLocation property to ServiceInfo (extract directory from BinaryPathName)
-3. Implement actions in MainWindow:
-   - OpenInRegistryEditor: Launch regedit with service registry key selected
-   - OpenInExplorer: Open install location in Windows Explorer
-   - OpenTerminalHere: Open CMD/PowerShell in install location
-4. Add to context menu (always available, not state-dependent)
-5. **Compile and test**: Verify each action opens correct location
-
-**Acceptance**: Registry, Explorer, and Terminal integration working
-
-**Commit Point**: "Add file system integration actions (Milestone 21)"
-
----
-
-### Milestone 22: Add Service Deletion Actions
-**Goal**: Add context menu actions to uninstall services and delete registry keys
-
-**Steps:**
-1. Add ServiceAction enum values: UninstallService, DeleteRegistryKey
-2. Add ServiceManager methods:
-   - DeleteService(serviceName) - calls DeleteService Win32 API
-3. Implement actions with confirmation dialogs:
-   - UninstallService: Confirm, then delete service, then remove from list
-   - DeleteRegistryKey: Confirm, then delete HKLM\SYSTEM\CurrentControlSet\Services\<name>
-4. Support multi-select with Yes/No/Cancel for each service
-5. **Compile and test**: Test service deletion, verify orphaned registry cleanup
-
-**Acceptance**: Can uninstall services and clean up orphaned registry entries
-
-**Commit Point**: "Add service deletion actions (Milestone 22)"
-
----
-
-### Milestone 23: Add Service Properties Dialog
-**Goal**: Add detailed properties/configuration dialog for services
-
-**Steps:**
-1. Create ServicePropertiesDialog class (ImGui modal window)
-2. Show all service fields in read-only sections:
-   - General: Display Name, Service Name, Description, Path, Status
-   - Configuration: Startup Type, Service Type, Error Control, User Account
-   - Details: PID, Exit Codes, Checkpoint, Wait Hint, Controls Accepted
-   - Dependencies: Load Order Group, Tag ID
-3. Add editable fields:
-   - Display Name
-   - Description
-   - Startup Type (dropdown)
-   - Binary Path Name
-4. Add "Apply" button that calls ServiceManager::ChangeServiceConfig()
-5. Add "Properties" action to context menu
-6. **Compile and test**: Edit service properties, verify changes persist
-
-**Acceptance**: Properties dialog shows all service data and allows editing key fields
-
-**Commit Point**: "Add service properties dialog (Milestone 23)"
-
----
-
-**After Milestone 23**: Services view has full feature parity with pserv4. Continue with Devices, Processes, Windows, Modules, Uninstaller views following similar patterns.
+## Completed Milestones (Historical Reference)
+
+**Milestones 0-27 have been completed** and are documented in git commit history. Key commits:
+- `6b7ebbb` - "Completely redesigned controller integration for clean separation"
+- `6f34da6` - "Add Devices view with full UI implementation"
+- `def5a3a` - "Implement Milestone 27: Title bar styling and polish"
+- `acace08` - "Implement Milestone 26: Modern menu bar with ImGui"
+
+For detailed implementation history, see git log and `.claude_notes.md`.
 
 ---
 
@@ -3067,198 +2426,14 @@ After reviewing pserv4's architecture and discussing improvements, we've refined
 
 ---
 
-## UI Modernization Milestones
+## UI Modernization Milestones (COMPLETED)
 
-### Overview
-Transform pserv5's UI from Win32 style (classic title bar + menu bar) to modern Windows app style (borderless window with custom chrome). This matches the aesthetic of modern Windows apps like Calculator, Store, Settings, etc.
+UI modernization (Milestones 24-27) has been **completed**. The application now features:
+- Borderless window with custom title bar
+- Windows 11 accent color integration
+- Modern ImGui menu bar
+- Custom window controls (minimize, maximize, close)
+- DPI-aware rendering
 
-### Milestone 24: Remove Win32 Title Bar and Menu
-**Goal**: Convert window to borderless style while maintaining all functionality.
-
-**Tasks**:
-1. Change window style from `WS_OVERLAPPEDWINDOW` to `WS_POPUP | WS_THICKFRAME`
-   - This removes title bar and system menu
-   - Keeps window resizable via borders
-   - Requires manual implementation of window controls
-
-2. Remove Win32 menu resource
-   - Remove `lpszMenuName` from window class registration
-   - Remove menu resource references (IDC_PSERV5)
-
-3. Test window resizing still works
-   - Verify borders are visible and functional
-   - Verify window can be resized from all edges
-
-**Acceptance Criteria**:
-- [ ] Window has no title bar
-- [ ] Window has no classic menu bar
-- [ ] Window is still resizable via borders
-- [ ] Window state persistence still works
-
-**Implementation Notes**:
-- This milestone intentionally breaks window dragging and close button
-- These will be fixed in subsequent milestones
-- User can still close via Alt+F4 or taskbar
-
----
-
-### Milestone 25: Custom Title Bar with Window Controls
-**Goal**: Add custom title bar with dragging support and window control buttons.
-
-**Tasks**:
-1. Create custom title bar in ImGui
-   - Reserve space at top of window (before main content)
-   - Draw background with appropriate styling
-   - Add app icon and "pserv5" title text
-
-2. Implement window dragging
-   - Detect mouse down on title bar area
-   - Send `WM_NCLBUTTONDOWN` with `HTCAPTION` to enable Windows drag behavior
-   - This automatically handles dragging and window snapping
-
-3. Add window control buttons (minimize/maximize/close)
-   - Draw buttons on right side of title bar
-   - Implement click handlers:
-     - Minimize: `ShowWindow(m_hWnd, SW_MINIMIZE)`
-     - Maximize/Restore: `ShowWindow(m_hWnd, IsMaximized() ? SW_RESTORE : SW_MAXIMIZE)`
-     - Close: `DestroyWindow(m_hWnd)`
-   - Add hover states for visual feedback
-
-4. Handle maximize state
-   - Detect maximize state changes
-   - Adjust window margins when maximized (to account for invisible borders)
-   - Update maximize button icon (maximize vs restore)
-
-**Acceptance Criteria**:
-- [ ] Custom title bar is visible at top of window
-- [ ] Clicking and dragging title bar moves window
-- [ ] Window snaps to screen edges during drag
-- [ ] Minimize button minimizes window
-- [ ] Maximize button toggles between maximized/restored
-- [ ] Close button closes window
-- [ ] Maximize button icon changes based on state
-- [ ] All buttons have visible hover effects
-
-**Implementation Notes**:
-- Use `ImGui::GetIO().MousePos` to detect clicks on title bar
-- Title bar height should be approximately `GetSystemMetrics(SM_CYCAPTION)`
-- When maximized, need to call `DwmExtendFrameIntoClientArea` to handle borders properly
-
----
-
-### Milestone 26: Modern Menu Bar
-**Goal**: Replace Win32 menu with modern ImGui menu bar integrated into the UI.
-
-**Tasks**:
-1. Add menu bar below title bar
-   - Use `ImGui::BeginMenuBar()` / `ImGui::EndMenuBar()`
-   - Position directly below custom title bar
-   - Style to match modern aesthetic
-
-2. Implement File menu
-   - "Refresh" (F5) - calls current controller's Refresh()
-   - "Export to XML..." - TBD in future milestone
-   - Separator
-   - "Exit" (Alt+F4) - closes window
-
-3. Implement View menu
-   - Radio buttons for each view (Services, Devices, Processes, etc.)
-   - Checkmark on currently active view
-   - Keyboard shortcuts (Ctrl+1 through Ctrl+6)
-
-4. Implement Tools menu (placeholder for now)
-   - "Options..." - TBD in future milestone
-   - "Connect to Remote Machine..." - TBD in future milestone
-
-5. Implement Themes menu
-   - Radio buttons for theme selection
-   - Options: "Dark", "Light", "Classic"
-   - Save theme preference to config
-
-6. Implement Help menu
-   - "About pserv5..." - shows version info dialog
-   - "Documentation" - opens web browser to documentation URL
-   - Separator
-   - "Check for Updates..." - TBD in future milestone
-
-**Acceptance Criteria**:
-- [ ] Menu bar is visible below title bar
-- [ ] All menu items are functional
-- [ ] Keyboard shortcuts work
-- [ ] Theme selection changes UI colors
-- [ ] About dialog shows version and copyright info
-- [ ] Menu has modern styling (no classic Win32 look)
-
-**Implementation Notes**:
-- For styling, adjust ImGui colors: `ImGuiCol_MenuBarBg`, `ImGuiCol_PopupBg`, etc.
-- Theme implementation may use `ImGui::StyleColorsDark()`, `ImGui::StyleColorsLight()`, etc.
-- About dialog can be a simple `ImGui::OpenPopup()` modal
-
----
-
-### Milestone 27: Title Bar Styling and Polish
-**Goal**: Refine title bar appearance to match Windows 11 aesthetic.
-
-**Tasks**:
-1. Add accent color support
-   - Query Windows accent color via `DwmGetColorizationColor`
-   - Apply to title bar when window is focused
-   - Use neutral color when unfocused
-
-2. Improve button styling
-   - Use appropriate button sizes (46x32 pixels is Windows 11 standard)
-   - Add proper icon glyphs using Segoe Fluent Icons font
-   - Implement hover animations (smooth color transitions)
-   - Red background for close button on hover
-
-3. Add window icon
-   - Load app icon from resources
-   - Render at proper DPI scaling
-   - Position on left side of title bar
-
-4. Handle DPI changes
-   - Recalculate title bar height on DPI change
-   - Reload icon at new DPI
-   - Adjust button sizes
-
-5. Test on different Windows versions
-   - Verify on Windows 10
-   - Verify on Windows 11
-   - Handle differences gracefully
-
-**Acceptance Criteria**:
-- [ ] Title bar uses Windows accent color when focused
-- [ ] Title bar grays out when window loses focus
-- [ ] Buttons have proper sizing and spacing
-- [ ] Buttons use icon glyphs instead of text
-- [ ] Close button shows red background on hover
-- [ ] App icon is visible and properly scaled
-- [ ] UI adapts correctly to DPI changes
-- [ ] Works correctly on Windows 10 and 11
-
-**Implementation Notes**:
-- Segoe Fluent Icons font provides glyphs for minimize (U+E921), maximize (U+E922), restore (U+E923), close (U+E8BB)
-- May need to load custom font using `ImGui::GetIO().Fonts->AddFontFromFileTTF()`
-- For DPI handling, listen for `WM_DPICHANGED` message
-
----
-
-### Implementation Strategy
-
-**Order of execution**:
-1. Start with Milestone 24 (simplest - just window style changes)
-2. Then Milestone 25 (restore window functionality with custom controls)
-3. Then Milestone 26 (add menu functionality)
-4. Finally Milestone 27 (polish and refinement)
-
-**Testing approach**:
-- After each milestone, verify all previous functionality still works
-- Test window state persistence after each change
-- Test on multi-monitor setups
-- Test with different DPI settings
-
-**Rollback strategy**:
-- Each milestone is a separate commit
-- Can revert individual milestones if issues arise
-- Keep Win32 menu resource code in archive until all milestones complete
+See git commits `def5a3a` through `acace08` for implementation details.
 

@@ -49,6 +49,7 @@ private:
     // ImGui state
     std::string m_activeTab;
 	DataController* m_pCurrentController{ nullptr };
+	std::string m_pendingTabSwitch;  // Tab to switch to (empty = no pending switch)
     DataActionDispatchContext m_dispatchContext;
     ImGuiTable* m_pCurrentTable{nullptr};  // Cached pointer to services table
     char m_filterText[256]{};  // Filter text for services view

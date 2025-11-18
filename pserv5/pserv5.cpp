@@ -28,6 +28,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     pserv::config::TomlBackend backend{configPath.string()};
     pserv::config::theSettings.load(backend);
 
+    // Step 2.5: Log what was loaded for active tab
+    logger->info("Config loaded - activeView value: '{}'", pserv::config::theSettings.application.activeView.get());
+
     // Step 3: Apply logging configuration from loaded settings
     std::string logLevel = pserv::config::theSettings.logging.logLevel.get();
     logger->set_level(spdlog::level::from_str(logLevel));

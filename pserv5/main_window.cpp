@@ -108,7 +108,7 @@ namespace pserv {
 		// Load active tab from settings
 		auto& appSettings = config::theSettings.application;
 		m_activeTab = appSettings.activeView.get();
-		spdlog::info("Loaded active tab: {}", m_activeTab);
+		spdlog::info("Loaded active tab from config: '{}'", m_activeTab);
 
 		spdlog::info("Main window initialized successfully");
 		return true;
@@ -496,21 +496,44 @@ namespace pserv {
 					// if we don't have an active tab yet, set it to the first controller
 					m_activeTab = thisTabName;
 				}
-				// Set the initially active tab on first frame
+
+				// Set flags for tab selection
 				ImGuiTabItemFlags flags = ImGuiTabItemFlags_None;
 				if (firstFrame && (m_activeTab == thisTabName)) {
 					flags |= ImGuiTabItemFlags_SetSelected;
 				}
+				// Handle pending tab switch from menu
+				if (!m_pendingTabSwitch.empty() && (m_pendingTabSwitch == thisTabName)) {
+					spdlog::debug("Applying pending tab switch to '{}' via ImGuiTabItemFlags_SetSelected", thisTabName);
+					flags |= ImGuiTabItemFlags_SetSelected;
+					m_pendingTabSwitch.clear();
+				}
 
 				if (ImGui::BeginTabItem(thisTabName.c_str(), nullptr, flags)) {
-					// Check if active tab changed
-					if ((m_activeTab == thisTabName) && (m_pCurrentController != controller)) {
+					// Detect if active tab changed (user clicked tab or menu triggered switch)
+					// Skip change detection on first frame to allow ImGui to settle
+					if (!firstFrame && (m_activeTab != thisTabName)) {
+						spdlog::info("Active tab changing from '{}' to '{}'", m_activeTab, thisTabName);
+						m_activeTab = thisTabName;
 						m_pCurrentController = controller;
 						auto& appSettings = config::theSettings.application;
+						spdlog::debug("Setting appSettings.activeView to: {}", m_activeTab);
 						appSettings.activeView.set(m_activeTab);
 						if (m_pConfigBackend) {
+							spdlog::debug("Saving config with activeView: {}", appSettings.activeView.get());
 							appSettings.save(*m_pConfigBackend);
-							spdlog::debug("Active tab changed to: {}", m_activeTab);
+							spdlog::info("Active tab changed to '{}' and persisted to config", m_activeTab);
+						}
+						else {
+							spdlog::warn("m_pConfigBackend is null, cannot persist active tab");
+						}
+					}
+
+					// Always ensure controller is synced with visible tab
+					if (m_pCurrentController != controller) {
+						m_pCurrentController = controller;
+						if (firstFrame) {
+							spdlog::debug("First frame: syncing controller to active tab '{}'", thisTabName);
 						}
 					}
 
@@ -581,7 +604,7 @@ namespace pserv {
 
 		if (m_filterText[0] != '\0') {
 			for (const auto* dataObject : allDataObjects) {
-				if (dataObject->MatchesFilter(m_filterText)) {
+				if (!dataObject->MatchesFilter(m_filterText)) {
 					filteredDataObjects.push_back(dataObject);
 				}
 			}
@@ -1127,16 +1150,13 @@ namespace pserv {
 
 				int shortcutIndex = 1;
 				for (const auto controller : m_Controllers.GetDataControllers()) {
-					const char* tabName = controller->GetControllerName().c_str();
+					const std::string tabName = controller->GetControllerName();
 					bool selected = (m_activeTab == tabName);
 					const auto shortcut = std::format("Ctrl+{}", shortcutIndex++);
-					if (ImGui::MenuItem(tabName, shortcut.c_str(), selected)) {
-						m_activeTab = tabName;
-						auto& appSettings = config::theSettings.application;
-						appSettings.activeView.set(m_activeTab);
-						if (m_pConfigBackend) {
-							appSettings.save(*m_pConfigBackend);
-						}
+					if (ImGui::MenuItem(tabName.c_str(), shortcut.c_str(), selected)) {
+						// Request tab switch on next frame
+						spdlog::debug("View menu: requesting tab switch to '{}'", tabName);
+						m_pendingTabSwitch = tabName;
 					}
 				}
 

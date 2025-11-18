@@ -1,6 +1,6 @@
 [Application]
-ActiveView = 'Devices'
-FontSize = 2000
+ActiveView = 'Services'
+FontSize = 1800
 Theme = 'Dark'
 
 [DevicesTable]
