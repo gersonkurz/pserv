@@ -4,6 +4,7 @@
 #include <controllers/devices_data_controller.h>
 #include <controllers/processes_data_controller.h>
 #include <controllers/windows_data_controller.h>
+#include <controllers/modules_data_controller.h>
 
 namespace
 {
@@ -30,6 +31,7 @@ namespace pserv
 			dataControllers.push_back(new DevicesDataController());
 			dataControllers.push_back(new ProcessesDataController());
 			dataControllers.push_back(new WindowsDataController());
+			dataControllers.push_back(new ModulesDataController());
 		}
 		return dataControllers;
 	}

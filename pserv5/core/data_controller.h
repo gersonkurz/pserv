@@ -59,5 +59,9 @@ namespace pserv {
 
         const std::string& GetControllerName() const { return m_controllerName; }
         const std::string& GetItemName() const { return m_itemName; }
+        bool IsLoaded() const { return m_bLoaded; }
+
+    protected:
+        bool m_bLoaded{ false };
     };
 }

@@ -15,7 +15,7 @@ public:
 
     // Enumerate all running processes
     // Returns raw pointers - caller is responsible for cleanup (typically via RefCount/release)
-    std::vector<ProcessInfo*> EnumerateProcesses();
+    static std::vector<ProcessInfo*> EnumerateProcesses();
 
     // Terminate a process by ID
     // Returns true on success

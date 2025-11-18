@@ -575,6 +575,16 @@ namespace pserv {
 	void MainWindow::RenderDataController(DataController* controller) {
 		const auto& controllerName = controller->GetControllerName();
 
+		// Lazy refresh if data is not loaded yet
+		if (!controller->IsLoaded()) {
+			try {
+				controller->Refresh();
+			}
+			catch (const std::exception& e) {
+				spdlog::error("Failed to initial refresh {}: {}", controllerName, e.what());
+			}
+		}
+
 		ImGui::Separator();
 		{
 			const auto buttonName{ std::format("Refresh {}", controllerName) };

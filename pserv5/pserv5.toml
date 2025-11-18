@@ -1,5 +1,5 @@
 [Application]
-ActiveView = 'Processes'
+ActiveView = 'Windows'
 FontSize = 1800
 Theme = 'Dark'
 
@@ -11,6 +11,12 @@ SortColumn = -1
 
 [Logging]
 LogLevel = 'debug'
+
+[ModulesTable]
+ColumnOrder = '0,1,2,3,4'
+ColumnWidths = '150,80,250,500,100'
+SortAscending = true
+SortColumn = -1
 
 [ProcessesTable]
 ColumnOrder = '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16'

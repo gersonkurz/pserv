@@ -60,6 +60,7 @@ void ProcessesDataController::Refresh() {
         }
         
         spdlog::info("Refreshed {} processes", m_processes.size());
+        m_bLoaded = true;
     }
     catch (const std::exception& e) {
         spdlog::error("Failed to refresh processes: {}", e.what());
@@ -71,6 +72,7 @@ void ProcessesDataController::Clear() {
         delete p;
     }
     m_processes.clear();
+    m_bLoaded = false;
 }
 
 const std::vector<DataObjectColumn>& ProcessesDataController::GetColumns() const {

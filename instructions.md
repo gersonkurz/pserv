@@ -59,14 +59,15 @@ This document outlines the plan to modernize pserv from version 4 (C# WPF) to ve
 
 ### 🚧 REMAINING WORK: Phases 6-10
 
-**Phase 6: Windows View** - NOT STARTED
+**Phase 6: Windows View** - DONE
 - WindowInfo model + WindowsDataController
 - Desktop window enumeration and manipulation
 - Operations: show/hide/minimize/maximize/close
 
-**Phase 7: Modules View** - NOT STARTED
+**Phase 7: Modules View** - IN PROGRESS
 - ModuleInfo model + ModulesDataController
 - DLL enumeration across all processes
+- **Needs**: UI integration, and full feature verification.
 
 **Phase 8: Uninstaller View** - NOT STARTED
 - InstalledProgramInfo model + UninstallerDataController
@@ -83,7 +84,7 @@ This document outlines the plan to modernize pserv from version 4 (C# WPF) to ve
 - WiX MSI installer project
 - Documentation and release preparation
 
-**Estimated Completion: ~55% (Phase 5 in progress)**
+**Estimated Completion: ~60% (Phase 7 in progress)**
 
 ---
 

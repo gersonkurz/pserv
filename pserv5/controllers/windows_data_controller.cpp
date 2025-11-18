@@ -23,9 +23,6 @@ WindowsDataController::WindowsDataController()
         DataObjectColumn("ThreadID", "ThreadID"),
         DataObjectColumn("Process", "Process")
     };
-
-    // Initial refresh
-    Refresh();
 }
 
 WindowsDataController::~WindowsDataController() {
@@ -50,6 +47,7 @@ void WindowsDataController::Refresh() {
     }
     
     spdlog::info("Refreshed {} windows", m_windows.size());
+    m_bLoaded = true;
 }
 
 void WindowsDataController::Clear() {
@@ -58,6 +56,7 @@ void WindowsDataController::Clear() {
     }
     m_windows.clear();
     m_dataObjects.clear();
+    m_bLoaded = false;
 }
 
 const std::vector<DataObjectColumn>& WindowsDataController::GetColumns() const {
