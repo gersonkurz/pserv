@@ -2,6 +2,7 @@
 #include <core/data_controller_library.h>
 #include <controllers/services_data_controller.h>
 #include <controllers/devices_data_controller.h>
+#include <controllers/processes_data_controller.h>
 
 namespace
 {
@@ -26,6 +27,7 @@ namespace pserv
 		{
 			dataControllers.push_back(new ServicesDataController());
 			dataControllers.push_back(new DevicesDataController());
+			dataControllers.push_back(new ProcessesDataController());
 		}
 		return dataControllers;
 	}

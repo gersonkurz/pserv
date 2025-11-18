@@ -29,5 +29,13 @@ inline std::string WideToUtf8(std::wstring_view wide) {
     return result;
 }
 
+inline std::string ToLower(std::string_view str) {
+    std::string result(str);
+    for (char& c : result) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+    return result;
+}
+
 
 } // namespace pserv::utils
