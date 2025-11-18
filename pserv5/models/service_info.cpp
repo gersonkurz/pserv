@@ -2,6 +2,7 @@
 #include "service_info.h"
 #include <format>
 #include "Shlwapi.h"
+#include "../utils/string_utils.h"
 
 namespace pserv {
 
@@ -27,7 +28,17 @@ namespace pserv {
 
 	bool ServiceInfo::MatchesFilter(const std::string& filter) const
 	{
-		return !StrStrIA(m_name.c_str(), filter.c_str()) || !StrStrIA(m_displayName.c_str(), filter.c_str());
+		if (filter.empty()) return true;
+
+		std::string filterLower = utils::ToLower(filter);
+
+		if (utils::ToLower(m_name).find(filterLower) != std::string::npos) return true;
+		if (utils::ToLower(m_displayName).find(filterLower) != std::string::npos) return true;
+		if (utils::ToLower(m_description).find(filterLower) != std::string::npos) return true;
+		if (utils::ToLower(m_binaryPathName).find(filterLower) != std::string::npos) return true;
+		if (utils::ToLower(m_user).find(filterLower) != std::string::npos) return true;
+
+		return false;
 	}
 
 	void ServiceInfo::SetCurrentState(DWORD state) {

@@ -604,7 +604,7 @@ namespace pserv {
 
 		if (m_filterText[0] != '\0') {
 			for (const auto* dataObject : allDataObjects) {
-				if (!dataObject->MatchesFilter(m_filterText)) {
+				if (dataObject->MatchesFilter(m_filterText)) {
 					filteredDataObjects.push_back(dataObject);
 				}
 			}
