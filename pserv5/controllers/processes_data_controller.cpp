@@ -19,7 +19,15 @@ ProcessesDataController::ProcessesDataController()
         DataObjectColumn("Working Set", "WorkingSetSize"),
         DataObjectColumn("Private Bytes", "PrivatePageCount"),
         DataObjectColumn("Path", "Path"),
-        DataObjectColumn("Command Line", "CommandLine")
+        DataObjectColumn("Command Line", "CommandLine"),
+        DataObjectColumn("Handles", "HandleCount"),
+        DataObjectColumn("Start Time", "StartTime"),
+        DataObjectColumn("CPU Time", "TotalCPUTime"),
+        DataObjectColumn("Kernel Time", "KernelCPUTime"),
+        DataObjectColumn("User Time", "UserCPUTime"),
+        DataObjectColumn("Paged Pool", "PagedPoolUsage"),
+        DataObjectColumn("Non-Paged Pool", "NonPagedPoolUsage"),
+        DataObjectColumn("Page Faults", "PageFaultCount")
     };
 }
 
@@ -241,8 +249,9 @@ void ProcessesDataController::Sort(int columnIndex, bool ascending) {
 
     std::sort(m_processes.begin(), m_processes.end(), [columnIndex, ascending](const ProcessInfo* a, const ProcessInfo* b) {
         // Handle numeric columns
-        // PID=1, Threads=4, WorkingSet=5, Private=6
-        if (columnIndex == 1 || columnIndex == 4 || columnIndex == 5 || columnIndex == 6) {
+        // PID=1, Threads=4, Handles=9, PageFaults=16
+        // Memory columns (5,6,14,15) are currently string-sorted (TODO: fix)
+        if (columnIndex == 1 || columnIndex == 4 || columnIndex == 9 || columnIndex == 16) {
              long long valA = 0, valB = 0;
              try {
                  // This is inefficient (parsing back string), but consistent with current architecture
@@ -259,8 +268,8 @@ void ProcessesDataController::Sort(int columnIndex, bool ascending) {
                  switch(columnIndex) {
                      case 1: valA = a->GetPid(); valB = b->GetPid(); break;
                      case 4: valA = a->GetThreadCount(); valB = b->GetThreadCount(); break;
-                     case 5: valA = a->GetWorkingSetSize(); valB = b->GetWorkingSetSize(); break;
-                     case 6: valA = a->GetPrivatePageCount(); valB = b->GetPrivatePageCount(); break;
+                     case 9: valA = a->GetHandleCount(); valB = b->GetHandleCount(); break;
+                     // case 16: valA = a->GetPageFaultCount(); valB = b->GetPageFaultCount(); break; // Need getter
                  }
              } catch (...) {}
              

@@ -20,7 +20,15 @@ enum class ProcessProperty {
     PeakWorkingSetSize,
     VirtualSize,
     HandleCount,
-    SessionId
+    SessionId,
+    // New columns
+    StartTime,
+    TotalCPUTime,
+    UserCPUTime,
+    KernelCPUTime,
+    PagedPoolUsage,
+    NonPagedPoolUsage,
+    PageFaultCount
 };
 
 class ProcessInfo : public DataObject {
@@ -39,6 +47,15 @@ private:
     SIZE_T m_virtualSize{};
     DWORD m_handleCount{};
     DWORD m_sessionId{};
+    
+    // New fields
+    FILETIME m_creationTime{};
+    FILETIME m_exitTime{}; // Unused for running processes
+    FILETIME m_kernelTime{};
+    FILETIME m_userTime{};
+    SIZE_T m_quotaPagedPoolUsage{};
+    SIZE_T m_quotaNonPagedPoolUsage{};
+    DWORD m_pageFaultCount{};
 
 public:
     ProcessInfo(DWORD pid, std::string name);
@@ -79,10 +96,25 @@ public:
     void SetVirtualSize(SIZE_T size) { m_virtualSize = size; }
     void SetHandleCount(DWORD count) { m_handleCount = count; }
     void SetSessionId(DWORD sessionId) { m_sessionId = sessionId; }
+    
+    // New Setters
+    void SetTimes(const FILETIME& creation, const FILETIME& exit, const FILETIME& kernel, const FILETIME& user) {
+        m_creationTime = creation;
+        m_exitTime = exit;
+        m_kernelTime = kernel;
+        m_userTime = user;
+    }
+    void SetMemoryExtras(SIZE_T pagedPool, SIZE_T nonPagedPool, DWORD pageFaults) {
+        m_quotaPagedPoolUsage = pagedPool;
+        m_quotaNonPagedPoolUsage = nonPagedPool;
+        m_pageFaultCount = pageFaults;
+    }
 
     // Helpers
     std::string GetPriorityString() const;
     static std::string BytesToSizeString(SIZE_T bytes);
+    static std::string FileTimeToString(const FILETIME& ft);
+    static std::string DurationToString(const FILETIME& ft); // Treat FILETIME as duration
 };
 
 } // namespace pserv

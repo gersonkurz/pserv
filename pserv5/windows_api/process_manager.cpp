@@ -218,13 +218,25 @@ std::vector<ProcessInfo*> ProcessManager::EnumerateProcesses() {
             pProcess->SetPath(GetProcessPathInternal(hProcess.get()));
             pProcess->SetPriorityClass(GetPriorityClass(hProcess.get()));
             pProcess->SetCommandLine(GetProcessCommandLine(hProcess.get()));
-            pProcess->SetHandleCount(0); // Requires GetProcessHandleCount usually
+            
+            DWORD handleCount = 0;
+            if (GetProcessHandleCount(hProcess.get(), &handleCount)) {
+                pProcess->SetHandleCount(handleCount);
+            }
 
             PROCESS_MEMORY_COUNTERS_EX pmc;
             if (GetProcessMemoryInfo(hProcess.get(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
                 pProcess->SetWorkingSetSize(pmc.WorkingSetSize);
                 pProcess->SetPeakWorkingSetSize(pmc.PeakWorkingSetSize);
                 pProcess->SetPrivatePageCount(pmc.PrivateUsage);
+                
+                // Set extended memory stats
+                pProcess->SetMemoryExtras(pmc.QuotaPagedPoolUsage, pmc.QuotaNonPagedPoolUsage, pmc.PageFaultCount);
+            }
+            
+            FILETIME creation, exit, kernel, user;
+            if (GetProcessTimes(hProcess.get(), &creation, &exit, &kernel, &user)) {
+                pProcess->SetTimes(creation, exit, kernel, user);
             }
         } else {
             // Access denied or system process

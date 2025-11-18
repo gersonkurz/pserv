@@ -34,6 +34,15 @@ void ProcessInfo::Update(const DataObject& other) {
     m_virtualSize = otherProcess.m_virtualSize;
     m_handleCount = otherProcess.m_handleCount;
     m_sessionId = otherProcess.m_sessionId;
+    
+    // Update new fields
+    m_creationTime = otherProcess.m_creationTime;
+    m_exitTime = otherProcess.m_exitTime;
+    m_kernelTime = otherProcess.m_kernelTime;
+    m_userTime = otherProcess.m_userTime;
+    m_quotaPagedPoolUsage = otherProcess.m_quotaPagedPoolUsage;
+    m_quotaNonPagedPoolUsage = otherProcess.m_quotaNonPagedPoolUsage;
+    m_pageFaultCount = otherProcess.m_pageFaultCount;
 
     // Name and PID are immutable for the same object ID usually, but update name just in case
     m_name = otherProcess.m_name;
@@ -69,6 +78,30 @@ std::string ProcessInfo::GetProperty(int propertyId) const {
             return std::to_string(m_handleCount);
         case ProcessProperty::SessionId:
             return std::to_string(m_sessionId);
+        case ProcessProperty::StartTime:
+            return FileTimeToString(m_creationTime);
+        case ProcessProperty::TotalCPUTime:
+            {
+                ULARGE_INTEGER kernel, user;
+                kernel.LowPart = m_kernelTime.dwLowDateTime; kernel.HighPart = m_kernelTime.dwHighDateTime;
+                user.LowPart = m_userTime.dwLowDateTime; user.HighPart = m_userTime.dwHighDateTime;
+                ULARGE_INTEGER total;
+                total.QuadPart = kernel.QuadPart + user.QuadPart;
+                FILETIME ftTotal;
+                ftTotal.dwLowDateTime = total.LowPart;
+                ftTotal.dwHighDateTime = total.HighPart;
+                return DurationToString(ftTotal);
+            }
+        case ProcessProperty::UserCPUTime:
+            return DurationToString(m_userTime);
+        case ProcessProperty::KernelCPUTime:
+            return DurationToString(m_kernelTime);
+        case ProcessProperty::PagedPoolUsage:
+            return BytesToSizeString(m_quotaPagedPoolUsage);
+        case ProcessProperty::NonPagedPoolUsage:
+            return BytesToSizeString(m_quotaNonPagedPoolUsage);
+        case ProcessProperty::PageFaultCount:
+            return std::to_string(m_pageFaultCount);
         default:
             return "";
     }
@@ -117,6 +150,42 @@ std::string ProcessInfo::BytesToSizeString(SIZE_T bytes) {
     } else {
         snprintf(buffer, sizeof(buffer), "%.2f %s", doubleBytes, suffixes[suffixIndex]);
     }
+    return std::string(buffer);
+}
+
+std::string ProcessInfo::FileTimeToString(const FILETIME& ft) {
+    if (ft.dwLowDateTime == 0 && ft.dwHighDateTime == 0) return "";
+    
+    SYSTEMTIME stUTC, stLocal;
+    FileTimeToSystemTime(&ft, &stUTC);
+    SystemTimeToTzSpecificLocalTime(NULL, &stUTC, &stLocal);
+
+    // Use Windows API for localized date/time string
+    // Or simple snprintf for now: YYYY-MM-DD HH:MM:SS
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d",
+        stLocal.wYear, stLocal.wMonth, stLocal.wDay,
+        stLocal.wHour, stLocal.wMinute, stLocal.wSecond);
+        
+    return std::string(buffer);
+}
+
+std::string ProcessInfo::DurationToString(const FILETIME& ft) {
+    ULARGE_INTEGER li;
+    li.LowPart = ft.dwLowDateTime;
+    li.HighPart = ft.dwHighDateTime;
+    
+    // FILETIME is 100-nanosecond intervals
+    // 1 second = 10,000,000 intervals
+    uint64_t seconds = li.QuadPart / 10000000;
+    uint64_t minutes = seconds / 60;
+    uint64_t hours = minutes / 60;
+    
+    seconds %= 60;
+    minutes %= 60;
+    
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "%02llu:%02llu:%02llu", hours, minutes, seconds);
     return std::string(buffer);
 }
 
