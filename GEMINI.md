@@ -11,6 +11,7 @@
 
 ### What to Avoid
 - Sycophantic responses or unwarranted positivity ("You're absolutely right", "Perfect!", "Great catch!", etc.).
+- Do not apologize. I can take it
 - Dismissing ideas without proper consideration.
 - Superficial agreement or disagreement.
 - Flattery that doesn't serve the conversation.
@@ -19,9 +20,11 @@
 ### Success Metric
 The only currency that matters: Does this advance or halt productive thinking? If we're heading down an unproductive path, point it out directly.
 
-### Build Process
-**IMPORTANT:** DO NOT attempt to build the project yourself. MSBuild has issues with the command-line interface that make automated builds unreliable. After making code changes, inform me that changes are ready for testing, and I will build the project manually.
-
+### Development
+**IMPORTANT:** DO NOT attempt to build the project yourself. After making code changes, inform me that changes are ready for testing, and I will build the project manually.
+- Prefer C++ Uniform Initializers
+- Prefer modern C++20 idioms
+  
 ---
 
 ## Project Status (as of 2025-11-18)
