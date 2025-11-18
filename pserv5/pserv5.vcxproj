@@ -197,6 +197,9 @@
     <ClInclude Include="models\process_info.h" />
     <ClInclude Include="windows_api\process_manager.h" />
     <ClInclude Include="controllers\processes_data_controller.h" />
+    <ClInclude Include="controllers\windows_data_controller.h" />
+    <ClInclude Include="models\window_info.h" />
+    <ClInclude Include="windows_api\window_manager.h" />
     <ClInclude Include="..\imgui\imconfig.h" />
     <ClInclude Include="..\imgui\imgui.h" />
     <ClInclude Include="..\imgui\imgui_internal.h" />
@@ -224,6 +227,9 @@
     <ClCompile Include="models\process_info.cpp" />
     <ClCompile Include="windows_api\process_manager.cpp" />
     <ClCompile Include="controllers\processes_data_controller.cpp" />
+    <ClCompile Include="controllers\windows_data_controller.cpp" />
+    <ClCompile Include="models\window_info.cpp" />
+    <ClCompile Include="windows_api\window_manager.cpp" />
     <ClCompile Include="dialogs\service_properties_dialog.cpp" />
     <ClCompile Include="dialogs\process_properties_dialog.cpp" />
     <ClCompile Include="Config\section.cpp" />

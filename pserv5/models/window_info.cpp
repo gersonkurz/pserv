@@ -1,0 +1,79 @@
+#include "precomp.h"
+#include "window_info.h"
+#include "../utils/string_utils.h"
+
+namespace pserv {
+
+WindowInfo::WindowInfo(HWND hwnd)
+    : m_hwnd(hwnd)
+{
+}
+
+std::string WindowInfo::GetId() const {
+    // Use HWND as unique ID (formatted as hex string)
+    return std::format("{:016X}", reinterpret_cast<uintptr_t>(m_hwnd));
+}
+
+void WindowInfo::Update(const DataObject& other) {
+    const auto& otherWin = static_cast<const WindowInfo&>(other);
+    
+    m_title = otherWin.m_title;
+    m_className = otherWin.m_className;
+    m_rect = otherWin.m_rect;
+    m_style = otherWin.m_style;
+    m_exStyle = otherWin.m_exStyle;
+    m_windowId = otherWin.m_windowId;
+    m_processId = otherWin.m_processId;
+    m_threadId = otherWin.m_threadId;
+    m_processName = otherWin.m_processName;
+
+    SetRunning(otherWin.IsRunning());
+    SetDisabled(otherWin.IsDisabled());
+}
+
+std::string WindowInfo::GetProperty(int propertyId) const {
+    switch (static_cast<WindowProperty>(propertyId)) {
+        case WindowProperty::InternalID:
+            return std::format("{:08X}", reinterpret_cast<uintptr_t>(m_hwnd)); // Legacy format often just 32-bit hex part, but we'll show what fits
+        case WindowProperty::Title:
+            return m_title;
+        case WindowProperty::Class:
+            return m_className;
+        case WindowProperty::Size:
+            return std::format("({}, {})", m_rect.right - m_rect.left, m_rect.bottom - m_rect.top);
+        case WindowProperty::Position:
+            return std::format("({}, {})", m_rect.top, m_rect.left); // Legacy: Top, Left
+        case WindowProperty::Style:
+            return std::format("0x{:08X}", m_style);
+        case WindowProperty::ExStyle:
+            return std::format("0x{:08X}", m_exStyle);
+        case WindowProperty::ID:
+            return std::to_string(m_windowId);
+        case WindowProperty::ProcessID:
+            return std::to_string(m_processId);
+        case WindowProperty::ThreadID:
+            return std::to_string(m_threadId);
+        case WindowProperty::Process:
+            return m_processName;
+        default:
+            return "";
+    }
+}
+
+bool WindowInfo::MatchesFilter(const std::string& filter) const {
+    if (filter.empty()) return true;
+    
+    std::string filterLower = utils::ToLower(filter);
+
+    if (utils::ToLower(m_title).find(filterLower) != std::string::npos) return true;
+    if (utils::ToLower(m_className).find(filterLower) != std::string::npos) return true;
+    if (utils::ToLower(m_processName).find(filterLower) != std::string::npos) return true;
+    
+    // Hex HWND match
+    std::string hwndStr = std::format("{:X}", reinterpret_cast<uintptr_t>(m_hwnd));
+    if (utils::ToLower(hwndStr).find(filterLower) != std::string::npos) return true;
+
+    return false;
+}
+
+} // namespace pserv

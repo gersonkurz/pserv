@@ -42,6 +42,7 @@ public:
     DisplayTable servicesTable{this, "ServicesTable"};
     DisplayTable devicesTable{ this, "DevicesTable" };
     DisplayTable processesTable{ this, "ProcessesTable" };
+    DisplayTable windowsTable{ this, "WindowsTable" };
 
     DisplayTable* getSectionFor(const std::string& name)
     {
@@ -56,6 +57,10 @@ public:
         if (name == "Processes")
         {
             return &processesTable;
+        }
+        if (name == "Windows")
+        {
+            return &windowsTable;
         }
         return nullptr;
     }

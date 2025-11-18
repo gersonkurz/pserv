@@ -48,12 +48,16 @@ This document outlines the plan to modernize pserv from version 4 (C# WPF) to ve
 - ✅ No MainWindow knowledge of concrete controller types
 - ✅ Controllers fully own their domain logic
 
-### 🚧 REMAINING WORK: Phases 5-10
+### 🏃 IN PROGRESS: Phase 5
 
-**Phase 5: Processes View** - NOT STARTED
-- ProcessInfo model + ProcessesDataController
-- Process enumeration with performance metrics
-- Process operations (terminate, change priority)
+**Phase 5: Processes View** - PARTIALLY IMPLEMENTED
+- `ProcessesDataController` and `ProcessInfo` classes created
+- `ProcessManager` for enumeration implemented
+- Basic columns defined (Name, PID, Memory, Priority, etc.)
+- Actions defined (Terminate, Set Priority, Open Location)
+- **Needs**: Testing, performance tuning, and full feature verification against pserv4.
+
+### 🚧 REMAINING WORK: Phases 6-10
 
 **Phase 6: Windows View** - NOT STARTED
 - WindowInfo model + WindowsDataController
@@ -79,7 +83,7 @@ This document outlines the plan to modernize pserv from version 4 (C# WPF) to ve
 - WiX MSI installer project
 - Documentation and release preparation
 
-**Estimated Completion: ~48% (4 of 10 phases complete)**
+**Estimated Completion: ~55% (Phase 5 in progress)**
 
 ---
 
@@ -122,14 +126,17 @@ pserv4 is a comprehensive Windows system management utility providing:
 - **Logging**: spdlog
 - **Configuration**: Custom hierarchical configuration system (from jucyaudio project)
 - **Windows API Helpers**: WIL (Windows Implementation Library)
-- **XML Processing**: pugixml (for export/import)
+- **JSON Processing**: rapidjson (Available in project)
+- **XML Processing**: pugixml (Planned for pserv4 compatibility, not yet added)
 - **Build System**: MSBuild (Visual Studio project files)
 
 #### Dependency Management
 All dependencies integrated as Git submodules:
 - `imgui` - Already added
 - `spdlog` - Already added
-- `wil` - To be added
+- `wil` - Already added
+- `tomlplusplus` - Already added
+- `rapidjson` - Already added
 - `pugixml` - To be added
 
 Note: Configuration system classes will be copied from `archive\Config\` directory (no external dependency)
@@ -1789,74 +1796,77 @@ pserv5_installer/
 ```
 pserv5/
 ├── pserv5/                    # Main project directory
-│   ├── src/
-│   │   ├── main.cpp           # Entry point: WinMain, Win32 window creation
-│   │   ├── main_window.cpp/h  # Main window class with ImGui loop
-│   │   │
-│   │   ├── core/              # Core abstractions
-│   │   │   ├── data_object.h          # DataObject base class
-│   │   │   ├── data_controller.h/cpp  # DataController base class
-│   │   │   ├── data_object_column.h   # Column descriptor
-│   │   │   ├── refresh_manager.h      # Template for efficient updates
-│   │   │   ├── command_line.cpp/h     # Command-line processor
-│   │   │   └── template_info.h        # XML template data structure
-│   │   │
-│   │   ├── Config/               # Configuration system (copied from archive)
-│   │   │   ├── config_backend.h       # Abstract backend interface
-│   │   │   ├── value_interface.h      # Base for all config items
-│   │   │   ├── section.h/cpp          # Hierarchical sections
-│   │   │   ├── typed_value.h          # TypedValue<T> template
-│   │   │   ├── typed_vector_value.h   # TypedValueVector<T> template
-│   │   │   ├── toml_backend.h         # TOML storage backend
-│   │   │   └── Settings.h/cpp         # Global theSettings instance
-│   │   │
-│   │   ├── windows_api/       # Windows API wrappers (data sources)
-│   │   │   ├── service_manager.cpp/h
-│   │   │   ├── process_manager.cpp/h
-│   │   │   ├── window_manager.cpp/h
-│   │   │   ├── registry_accessor.cpp/h
-│   │   │   └── module_enumerator.cpp/h
-│   │   │
-│   │   ├── models/            # DataObject implementations
-│   │   │   ├── service_info.cpp/h
-│   │   │   ├── process_info.cpp/h
-│   │   │   ├── window_info.cpp/h
-│   │   │   ├── module_info.cpp/h
-│   │   │   └── installed_program_info.cpp/h
-│   │   │
-│   │   ├── controllers/       # DataController implementations
-│   │   │   ├── services_data_controller.cpp/h
-│   │   │   ├── devices_data_controller.cpp/h
-│   │   │   ├── processes_data_controller.cpp/h
-│   │   │   ├── windows_data_controller.cpp/h
-│   │   │   ├── modules_data_controller.cpp/h
-│   │   │   └── uninstaller_data_controller.cpp/h
-│   │   │
-│   │   └── utils/             # Utilities
-│   │       ├── logging.h          # spdlog initialization
-│   │       ├── error_handling.h   # expected<T, error_code> helpers
-│   │       ├── string_utils.h     # Utf8ToWide/WideToUtf8 conversion
-│   │       └── imgui_helpers.h    # ImGui utility functions
-│   │
-│   ├── resources/             # Icons, images, etc.
-│   │   └── pserv5.ico
+│   ├── pserv5.cpp             # Entry point: WinMain, Win32 window creation
+│   ├── pserv5.h               # Main header
+│   ├── main_window.cpp/h      # Main window class with ImGui loop
+│   ├── precomp.cpp/h          # Precompiled header
+│   ├── pserv5.slnx            # Visual Studio 2022 Solution (XML format)
+│   ├── pserv5.vcxproj         # Project file
+│   ├── pserv5.manifest        # Application manifest
 │   ├── pserv5.rc              # Resource file
-│   ├── pserv5.vcxproj         # Visual Studio project
-│   └── pserv5.vcxproj.filters # VS file organization
-│
-├── tests/                     # Unit tests (future)
+│   ├── Resource.h             # Resource IDs
+│   │
+│   ├── core/                  # Core abstractions
+│   │   ├── data_object.h          # DataObject base class
+│   │   ├── data_controller.h/cpp  # DataController base class
+│   │   ├── data_object_column.h   # Column descriptor
+│   │   ├── async_operation.h/cpp  # Background task management
+│   │   ├── IRefCounted.h          # Reference counting interface
+│   │   └── data_controller_library.h/cpp # Library of controllers
+│   │
+│   ├── Config/               # Configuration system
+│   │   ├── config_backend.h       # Abstract backend interface
+│   │   ├── value_interface.h      # Base for all config items
+│   │   ├── section.h/cpp          # Hierarchical sections
+│   │   ├── typed_value.h          # TypedValue<T> template
+│   │   ├── typed_vector_value.h   # TypedValueVector<T> template
+│   │   ├── toml_backend.h         # TOML storage backend
+│   │   └── settings.h/cpp         # Global theSettings instance
+│   │
+│   ├── windows_api/       # Windows API wrappers (data sources)
+│   │   ├── service_manager.cpp/h
+│   │   ├── process_manager.cpp/h
+│   │   ├── window_manager.cpp/h   # (Planned)
+│   │   ├── registry_accessor.cpp/h # (Planned)
+│   │   └── module_enumerator.cpp/h # (Planned)
+│   │
+│   ├── models/            # DataObject implementations
+│   │   ├── service_info.cpp/h
+│   │   ├── process_info.cpp/h
+│   │   ├── window_info.cpp/h      # (Planned)
+│   │   ├── module_info.cpp/h      # (Planned)
+│   │   └── installed_program_info.cpp/h # (Planned)
+│   │
+│   ├── controllers/       # DataController implementations
+│   │   ├── services_data_controller.cpp/h
+│   │   ├── devices_data_controller.h
+│   │   ├── processes_data_controller.cpp/h
+│   │   ├── windows_data_controller.cpp/h # (Planned)
+│   │   ├── modules_data_controller.cpp/h # (Planned)
+│   │   └── uninstaller_data_controller.cpp/h # (Planned)
+│   │
+│   ├── dialogs/           # UI Dialogs
+│   │   ├── service_properties_dialog.cpp/h
+│   │   └── process_properties_dialog.cpp/h
+│   │
+│   └── utils/             # Utilities
+│       ├── logging.cpp/h      # spdlog initialization
+│       ├── win32_error.h      # Windows error codes
+│       └── string_utils.h     # Utf8ToWide/WideToUtf8 conversion
 │
 ├── imgui/                     # Git submodule
 ├── spdlog/                    # Git submodule
 ├── tomlplusplus/              # Git submodule
-├── wil/                       # Git submodule (to be added)
-├── pugixml/                   # Git submodule (to be added)
+├── rapidjson/                 # Git submodule
+├── wil/                       # Git submodule
+├── pugixml/                   # Git submodule (To be added)
 │
 ├── archive/                   # pserv4 reference implementation
 │   ├── pserv4/                # C# WPF source code
 │   └── pserv.cpl 4.1.html     # Website documentation
 │
 ├── instructions.md            # This document
+├── GEMINI.md                  # Agent context and memory
 └── README.md                  # User-facing documentation
 ```
 
