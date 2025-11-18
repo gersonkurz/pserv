@@ -533,8 +533,6 @@ namespace pserv {
 		{
 			m_pCurrentController->RenderPropertiesDialog();
 		}
-		
-
 
 		// Rendering
 		ImGui::Render();
@@ -615,8 +613,6 @@ namespace pserv {
 		const auto tableName{ std::format("{}Table", controllerName) };
 		if (ImGui::BeginTable(tableName.c_str(), static_cast<int>(columns.size()), flags, tableSize)) {
 
-			// TODO: we need a better abstraction layer here to avoid controller-specific code in the main window
-			// Cache the table pointer for saving state later
 			m_pCurrentTable = ImGui::GetCurrentTable();
 
 			const auto configSection = config::theSettings.getSectionFor(controllerName);
