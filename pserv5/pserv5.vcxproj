@@ -193,6 +193,7 @@
     <ClInclude Include="models\service_info.h" />
     <ClInclude Include="windows_api\service_manager.h" />
     <ClInclude Include="dialogs\service_properties_dialog.h" />
+    <ClInclude Include="dialogs\process_properties_dialog.h" />
     <ClInclude Include="models\process_info.h" />
     <ClInclude Include="windows_api\process_manager.h" />
     <ClInclude Include="controllers\processes_data_controller.h" />
@@ -224,6 +225,7 @@
     <ClCompile Include="windows_api\process_manager.cpp" />
     <ClCompile Include="controllers\processes_data_controller.cpp" />
     <ClCompile Include="dialogs\service_properties_dialog.cpp" />
+    <ClCompile Include="dialogs\process_properties_dialog.cpp" />
     <ClCompile Include="Config\section.cpp" />
     <ClCompile Include="Config\settings.cpp" />
     <ClCompile Include="..\imgui\imgui.cpp">

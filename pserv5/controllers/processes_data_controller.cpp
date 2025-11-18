@@ -9,6 +9,7 @@ namespace pserv {
 
 ProcessesDataController::ProcessesDataController()
     : DataController("Processes", "Process")
+    , m_pPropertiesDialog(new ProcessPropertiesDialog())
 {
     m_columns = {
         DataObjectColumn("Name", "Name"),
@@ -33,6 +34,7 @@ ProcessesDataController::ProcessesDataController()
 
 ProcessesDataController::~ProcessesDataController() {
     Clear();
+    delete m_pPropertiesDialog;
 }
 
 void ProcessesDataController::Refresh() {
@@ -44,19 +46,6 @@ void ProcessesDataController::Refresh() {
         char buffer[256];
         DWORD size = sizeof(buffer);
         if (GetUserNameA(buffer, &size)) {
-             // GetUserName returns just "User", but ProcessInfo has "Domain\\User"
-             // We need to handle that comparison carefully later, or get full name here
-             // Let's try to get domain too
-             
-             // Simpler approach: GetUserNameEx or just construct it
-             // For now, let's use what we have and do partial match or just cache what we can
-             // Actually, better to check "DOMAIN\\User" format match
-             
-             // Let's use the same logic as ProcessManager: LookupAccountSid on current process token?
-             // Too complex for this spot.
-             // Let's assume visual state check can be fuzzy or we fix it up
-             
-             // Just storing standard GetUserName for now, will improve if needed
              m_currentUserName = buffer;
         }
     }
@@ -92,6 +81,9 @@ std::vector<int> ProcessesDataController::GetAvailableActions(const DataObject* 
     std::vector<int> actions;
     if (!dataObject) return actions;
 
+    actions.push_back(static_cast<int>(ProcessAction::Properties));
+    actions.push_back(static_cast<int>(ProcessAction::Separator));
+
     actions.push_back(static_cast<int>(ProcessAction::OpenLocation));
     actions.push_back(static_cast<int>(ProcessAction::Separator));
     
@@ -110,6 +102,7 @@ std::vector<int> ProcessesDataController::GetAvailableActions(const DataObject* 
 
 std::string ProcessesDataController::GetActionName(int action) const {
     switch (static_cast<ProcessAction>(action)) {
+        case ProcessAction::Properties: return "Properties";
         case ProcessAction::Terminate: return "Terminate Process";
         case ProcessAction::OpenLocation: return "Open File Location";
         case ProcessAction::SetPriorityRealtime: return "Set Priority: Realtime";
@@ -152,7 +145,9 @@ VisualState ProcessesDataController::GetVisualState(const DataObject* dataObject
 }
 
 void ProcessesDataController::RenderPropertiesDialog() {
-    // No properties dialog for processes yet
+    if (m_pPropertiesDialog && m_pPropertiesDialog->IsOpen()) {
+        m_pPropertiesDialog->Render();
+    }
 }
 
 void ProcessesDataController::DispatchAction(int action, DataActionDispatchContext& context) {
@@ -160,7 +155,14 @@ void ProcessesDataController::DispatchAction(int action, DataActionDispatchConte
 
     auto processAction = static_cast<ProcessAction>(action);
 
-    if (processAction == ProcessAction::Terminate) {
+    if (processAction == ProcessAction::Properties) {
+        std::vector<ProcessInfo*> selected;
+        for (const auto* obj : context.m_selectedObjects) {
+            selected.push_back(const_cast<ProcessInfo*>(static_cast<const ProcessInfo*>(obj)));
+        }
+        m_pPropertiesDialog->Open(selected);
+    }
+    else if (processAction == ProcessAction::Terminate) {
         std::vector<DWORD> pids;
         std::string confirmMsg = "Are you sure you want to terminate the following processes?\n\n";
         

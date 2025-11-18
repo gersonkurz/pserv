@@ -1,6 +1,7 @@
 #pragma once
 #include "../core/data_controller.h"
 #include "../models/process_info.h"
+#include "../dialogs/process_properties_dialog.h"
 #include <vector>
 
 namespace pserv {
@@ -35,6 +36,7 @@ private:
 
     std::vector<ProcessInfo*> m_processes;
     std::vector<DataObjectColumn> m_columns;
+    ProcessPropertiesDialog* m_pPropertiesDialog{ nullptr };
     
     // Sorting state
     int m_lastSortColumn{-1};
@@ -45,6 +47,7 @@ private:
 
 enum class ProcessAction {
     Terminate = 0,
+    Properties,
     Separator = -1,
     SetPriorityRealtime = 100,
     SetPriorityHigh,
