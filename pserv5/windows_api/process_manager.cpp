@@ -56,6 +56,135 @@ static std::string GetProcessPathInternal(HANDLE hProcess) {
     return "";
 }
 
+// Definitions for PEB access
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#endif
+
+// From winternl.h
+typedef enum _PROCESSINFOCLASS {
+    ProcessBasicInformation = 0,
+    ProcessWow64Information = 26
+} PROCESSINFOCLASS;
+
+typedef NTSTATUS(NTAPI* pfnNtQueryInformationProcess)(
+    HANDLE ProcessHandle,
+    PROCESSINFOCLASS ProcessInformationClass,
+    PVOID ProcessInformation,
+    ULONG ProcessInformationLength,
+    PULONG ReturnLength
+    );
+
+// Partial definitions from winternl.h / documented structures
+// We need UNICODE_STRING and RTL_USER_PROCESS_PARAMETERS layout
+
+typedef struct _UNICODE_STRING_T {
+    USHORT Length;
+    USHORT MaximumLength;
+    PWSTR  Buffer;
+} UNICODE_STRING_T;
+
+// Simplified structures for what we need
+// Architecture agnostic offset calculation is better, but let's define strict layouts for x64/x86
+
+// 64-bit PEB structures
+struct PROCESS_BASIC_INFORMATION64 {
+    NTSTATUS ExitStatus;
+    DWORD64 PebBaseAddress;
+    DWORD64 AffinityMask;
+    DWORD64 BasePriority;
+    DWORD64 UniqueProcessId;
+    DWORD64 InheritedFromUniqueProcessId;
+};
+
+// 32-bit PEB structures (for WoW64)
+struct PROCESS_BASIC_INFORMATION32 {
+    NTSTATUS ExitStatus;
+    DWORD32 PebBaseAddress;
+    DWORD32 AffinityMask;
+    DWORD32 BasePriority;
+    DWORD32 UniqueProcessId;
+    DWORD32 InheritedFromUniqueProcessId;
+};
+
+static std::string GetProcessCommandLine(HANDLE hProcess) {
+    static auto NtQueryInformationProcess = (pfnNtQueryInformationProcess)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "NtQueryInformationProcess");
+    if (!NtQueryInformationProcess) return "";
+
+    // Determine if target is 32-bit (WoW64) or 64-bit
+    BOOL bIsWow64 = FALSE;
+    IsWow64Process(hProcess, &bIsWow64);
+
+    // We are a 64-bit process (pserv5)
+    
+    if (bIsWow64) {
+        // Target is 32-bit. We need to read its 32-bit PEB.
+        // However, accessing 32-bit PEB from 64-bit process requires locating it.
+        // NtQueryInformationProcess with ProcessWow64Information returns the PEB address.
+        
+        ULONG_PTR peb32Address = 0;
+        if (NT_SUCCESS(NtQueryInformationProcess(hProcess, ProcessWow64Information, &peb32Address, sizeof(peb32Address), nullptr)) && peb32Address != 0) {
+             // Read ProcessParameters address from PEB32
+             // PEB32 offset 0x10 is ProcessParameters (pointer)
+             
+             DWORD32 processParameters32 = 0;
+             if (ReadProcessMemory(hProcess, (PVOID)((char*)peb32Address + 0x10), &processParameters32, sizeof(processParameters32), nullptr)) {
+                 
+                 // Read CommandLine UNICODE_STRING32 from ProcessParameters32
+                 // RTL_USER_PROCESS_PARAMETERS32 offset 0x40 is CommandLine
+                 
+                 struct {
+                     USHORT Length;
+                     USHORT MaximumLength;
+                     DWORD32 Buffer;
+                 } cmdLineString32;
+
+                 // Cast DWORD32 to DWORD64 before casting to void* to avoid warning
+                 if (ReadProcessMemory(hProcess, (PVOID)(DWORD64)((char*)(DWORD64)processParameters32 + 0x40), &cmdLineString32, sizeof(cmdLineString32), nullptr)) {
+                     
+                     if (cmdLineString32.Length > 0 && cmdLineString32.Buffer != 0) {
+                         std::vector<wchar_t> buffer(cmdLineString32.Length / 2 + 1);
+                         if (ReadProcessMemory(hProcess, (PVOID)(DWORD64)cmdLineString32.Buffer, buffer.data(), cmdLineString32.Length, nullptr)) {
+                             buffer[cmdLineString32.Length / 2] = L'\0';
+                             return utils::WideToUtf8(buffer.data());
+                         }
+                     }
+                 }
+             }
+        }
+    }
+    else {
+        // Target is 64-bit
+        PROCESS_BASIC_INFORMATION64 pbi = { 0 };
+        if (NT_SUCCESS(NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), nullptr))) {
+            
+            // Read ProcessParameters address from PEB
+            // PEB64 offset 0x20 is ProcessParameters
+            
+            DWORD64 processParameters = 0;
+            if (ReadProcessMemory(hProcess, (PVOID)(pbi.PebBaseAddress + 0x20), &processParameters, sizeof(processParameters), nullptr)) {
+                
+                // Read CommandLine UNICODE_STRING from ProcessParameters
+                // RTL_USER_PROCESS_PARAMETERS64 offset 0x70 is CommandLine
+                
+                UNICODE_STRING_T cmdLineString;
+                if (ReadProcessMemory(hProcess, (PVOID)(processParameters + 0x70), &cmdLineString, sizeof(cmdLineString), nullptr)) {
+                    
+                    if (cmdLineString.Length > 0 && cmdLineString.Buffer != nullptr) {
+                        std::vector<wchar_t> buffer(cmdLineString.Length / 2 + 1);
+                        if (ReadProcessMemory(hProcess, cmdLineString.Buffer, buffer.data(), cmdLineString.Length, nullptr)) {
+                             buffer[cmdLineString.Length / 2] = L'\0';
+                             return utils::WideToUtf8(buffer.data());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return "";
+}
+
 std::vector<ProcessInfo*> ProcessManager::EnumerateProcesses() {
     std::vector<ProcessInfo*> processes;
 
@@ -88,6 +217,7 @@ std::vector<ProcessInfo*> ProcessManager::EnumerateProcesses() {
             pProcess->SetUser(GetProcessUser(hProcess.get()));
             pProcess->SetPath(GetProcessPathInternal(hProcess.get()));
             pProcess->SetPriorityClass(GetPriorityClass(hProcess.get()));
+            pProcess->SetCommandLine(GetProcessCommandLine(hProcess.get()));
             pProcess->SetHandleCount(0); // Requires GetProcessHandleCount usually
 
             PROCESS_MEMORY_COUNTERS_EX pmc;

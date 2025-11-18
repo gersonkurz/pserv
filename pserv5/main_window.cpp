@@ -641,20 +641,25 @@ namespace pserv {
 			const auto configSection = config::theSettings.getSectionFor(controllerName);
 
 			// Load saved column widths from config
-			static std::vector<float> columnWidths;
-			static bool widthsLoaded = false;
+			std::vector<float> columnWidths;
 			if (configSection)
 			{
-				if (!widthsLoaded) {
-					const auto widthsStr = configSection->columnWidths.get();
-					spdlog::debug("Loading column widths from config: {}", widthsStr);
-					std::istringstream iss{ widthsStr };
-					std::string token;
-					while (std::getline(iss, token, ',')) {
+				const auto widthsStr = configSection->columnWidths.get();
+				// Only log if this is the first time for this controller (avoid spam)
+				static std::string lastLoadedController;
+				if (lastLoadedController != controllerName) {
+					spdlog::debug("Loading column widths for {}: {}", controllerName, widthsStr);
+					lastLoadedController = controllerName;
+				}
+				
+				std::istringstream iss{ widthsStr };
+				std::string token;
+				while (std::getline(iss, token, ',')) {
+					try {
 						columnWidths.push_back(std::stof(token));
+					} catch (...) {
+						columnWidths.push_back(100.0f); // Fallback for bad data
 					}
-					widthsLoaded = true;
-					spdlog::debug("Loaded {} column widths", columnWidths.size());
 				}
 			}
 
@@ -681,27 +686,27 @@ namespace pserv {
 			}
 
 			// Apply saved column order AFTER TableSetupColumn but BEFORE TableHeadersRow
-			static bool orderApplied = false;
-			if (configSection) {
-				if (!orderApplied) {
+			// We check if the table needs sorting/ordering reset or if we just switched views
+			static std::string lastOrderAppliedController;
+			if (configSection && lastOrderAppliedController != controllerName) {
 					ImGuiTable* table = ImGui::GetCurrentTable();
 					const auto orderStr = configSection->columnOrder.get();
-					spdlog::debug("Restoring column order: {}", orderStr);
+					spdlog::debug("Restoring column order for {}: {}", controllerName, orderStr);
 
 					std::istringstream iss(orderStr);
 					std::string token;
 					std::vector<int> displayOrder;
 					while (std::getline(iss, token, ',')) {
-						displayOrder.push_back(std::stoi(token));
+						try {
+							displayOrder.push_back(std::stoi(token));
+						} catch (...) {
+							// Ignore malformed tokens
+						}
 					}
 
 					// Apply DisplayOrder to columns and rebuild DisplayOrderToIndex
 					if (displayOrder.size() == columns.size()) {
-						spdlog::debug("Before restoration:");
-						for (int i = 0; i < table->ColumnsCount; ++i) {
-							spdlog::debug("  Column[{}]: DisplayOrder={}, IndexWithinEnabledSet={}",
-								i, table->Columns[i].DisplayOrder, table->Columns[i].IndexWithinEnabledSet);
-						}
+						// ... (debug logs omitted for brevity) ...
 
 						for (size_t i = 0; i < displayOrder.size(); ++i) {
 							if (i < static_cast<size_t>(table->ColumnsCount)) {
@@ -713,16 +718,9 @@ namespace pserv {
 						for (int column_n = 0; column_n < table->ColumnsCount; column_n++) {
 							table->DisplayOrderToIndex[table->Columns[column_n].DisplayOrder] = static_cast<ImGuiTableColumnIdx>(column_n);
 						}
-
-						spdlog::debug("After restoration:");
-						for (int i = 0; i < table->ColumnsCount; ++i) {
-							spdlog::debug("  Column[{}]: DisplayOrder={}, IndexWithinEnabledSet={}",
-								i, table->Columns[i].DisplayOrder, table->Columns[i].IndexWithinEnabledSet);
-						}
 					}
 
-					orderApplied = true;
-				}
+					lastOrderAppliedController = controllerName;
 			}
 
 			ImGui::TableSetupScrollFreeze(0, 1); // Freeze header row

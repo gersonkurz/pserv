@@ -39,6 +39,8 @@ private:
     // Sorting state
     int m_lastSortColumn{-1};
     bool m_lastSortAscending{true};
+    
+    std::string m_currentUserName;
 };
 
 enum class ProcessAction {

@@ -30,6 +30,28 @@ ProcessesDataController::~ProcessesDataController() {
 void ProcessesDataController::Refresh() {
     spdlog::info("Refreshing processes...");
     Clear();
+    
+    // Cache current user name if empty
+    if (m_currentUserName.empty()) {
+        char buffer[256];
+        DWORD size = sizeof(buffer);
+        if (GetUserNameA(buffer, &size)) {
+             // GetUserName returns just "User", but ProcessInfo has "Domain\\User"
+             // We need to handle that comparison carefully later, or get full name here
+             // Let's try to get domain too
+             
+             // Simpler approach: GetUserNameEx or just construct it
+             // For now, let's use what we have and do partial match or just cache what we can
+             // Actually, better to check "DOMAIN\\User" format match
+             
+             // Let's use the same logic as ProcessManager: LookupAccountSid on current process token?
+             // Too complex for this spot.
+             // Let's assume visual state check can be fuzzy or we fix it up
+             
+             // Just storing standard GetUserName for now, will improve if needed
+             m_currentUserName = buffer;
+        }
+    }
 
     try {
         ProcessManager pm;
@@ -93,7 +115,31 @@ std::string ProcessesDataController::GetActionName(int action) const {
 }
 
 VisualState ProcessesDataController::GetVisualState(const DataObject* dataObject) const {
-    // Could highlight system processes or suspended ones
+    if (!dataObject) return VisualState::Normal;
+    
+    const auto* proc = static_cast<const ProcessInfo*>(dataObject);
+    const std::string& user = proc->GetUser();
+
+    // Disabled if SYSTEM
+    if (user == "SYSTEM") {
+        return VisualState::Disabled;
+    }
+    
+    // Highlight if own process
+    // Check if user ends with "\m_currentUserName" or equals m_currentUserName
+    if (!m_currentUserName.empty()) {
+        if (user == m_currentUserName) {
+            return VisualState::Highlighted;
+        }
+        
+        // Check for DOMAIN\User format
+        if (user.length() > m_currentUserName.length()) {
+             if (user.ends_with("\\" + m_currentUserName)) {
+                 return VisualState::Highlighted;
+             }
+        }
+    }
+
     return VisualState::Normal;
 }
 
