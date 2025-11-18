@@ -681,7 +681,7 @@ namespace pserv {
 						}
 
 						for (size_t i = 0; i < displayOrder.size(); ++i) {
-							if (i < table->ColumnsCount) {
+							if (i < static_cast<size_t>(table->ColumnsCount)) {
 								table->Columns[static_cast<int>(i)].DisplayOrder = static_cast<ImGuiTableColumnIdx>(displayOrder[i]);
 							}
 						}

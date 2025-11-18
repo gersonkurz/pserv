@@ -167,9 +167,9 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="controllers\devices_data_controller.h" />
     <ClInclude Include="core\data_controller_library.h" />
     <ClInclude Include="precomp.h" />
-    <ClInclude Include="framework.h" />
     <ClInclude Include="pserv5.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
