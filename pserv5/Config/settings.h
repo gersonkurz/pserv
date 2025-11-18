@@ -44,6 +44,7 @@ public:
     DisplayTable processesTable{ this, "ProcessesTable" };
     DisplayTable windowsTable{ this, "WindowsTable" };
     DisplayTable modulesTable{ this, "ModulesTable" };
+    DisplayTable uninstallerTable{ this, "UninstallerTable" };
 
     DisplayTable* getSectionFor(const std::string& name)
     {
@@ -66,6 +67,10 @@ public:
         if (name == "Modules")
         {
             return &modulesTable;
+        }
+        if (name == "Uninstaller")
+        {
+            return &uninstallerTable;
         }
         return nullptr;
     }

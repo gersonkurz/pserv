@@ -69,7 +69,7 @@ This document outlines the plan to modernize pserv from version 4 (C# WPF) to ve
 - DLL enumeration across all processes
 - **Needs**: UI integration, and full feature verification.
 
-**Phase 8: Uninstaller View** - NOT STARTED
+**Phase 8: Uninstaller View** - IN PROGRESS
 - InstalledProgramInfo model + UninstallerDataController
 - Registry-based installed programs listing
 
@@ -84,7 +84,7 @@ This document outlines the plan to modernize pserv from version 4 (C# WPF) to ve
 - WiX MSI installer project
 - Documentation and release preparation
 
-**Estimated Completion: ~60% (Phase 7 in progress)**
+**Estimated Completion: ~70% (Phase 8 in progress)**
 
 ---
 

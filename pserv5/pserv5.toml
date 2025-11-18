@@ -1,11 +1,11 @@
 [Application]
-ActiveView = 'Windows'
+ActiveView = 'Uninstaller'
 FontSize = 1800
 Theme = 'Dark'
 
 [DevicesTable]
 ColumnOrder = '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17'
-ColumnWidths = '285,786,81,93,73,182,93,317,93,93,93,93,93,93,93,93,93,93'
+ColumnWidths = '250,150,80,80,80,100,300,300,100,100,80,80,80,80,80,80,80,80'
 SortAscending = true
 SortColumn = -1
 
@@ -26,19 +26,25 @@ SortColumn = -1
 
 [ServicesTable]
 ColumnOrder = '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17'
-ColumnWidths = '285,786,81,93,73,182,93,317,93,93,93,93,93,93,93,93,93,93'
+ColumnWidths = '250,150,80,80,80,100,300,300,100,100,80,80,80,80,80,80,80,80'
+SortAscending = true
+SortColumn = -1
+
+[UninstallerTable]
+ColumnOrder = '0,1,2,3,4,5,6,7,8,9'
+ColumnWidths = '250,100,150,300,300,100,100,200,150,150'
 SortAscending = true
 SortColumn = -1
 
 [Window]
-Height = 1130
+Height = 800
 Maximized = false
-PositionX = 1128
-PositionY = 383
-Width = 1690
+PositionX = 1203
+PositionY = 773
+Width = 1200
 
 [WindowsTable]
 ColumnOrder = '0,1,2,3,4,5,6,7,8,9,10'
-ColumnWidths = '250,180,120,100,80,200,400,300,150,120,80'
+ColumnWidths = '100,250,150,100,120,100,100,80,80,80,150'
 SortAscending = true
 SortColumn = -1

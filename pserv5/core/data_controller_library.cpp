@@ -5,6 +5,7 @@
 #include <controllers/processes_data_controller.h>
 #include <controllers/windows_data_controller.h>
 #include <controllers/modules_data_controller.h>
+#include <controllers/uninstaller_data_controller.h>
 
 namespace
 {
@@ -32,6 +33,7 @@ namespace pserv
 			dataControllers.push_back(new ProcessesDataController());
 			dataControllers.push_back(new WindowsDataController());
 			dataControllers.push_back(new ModulesDataController());
+			dataControllers.push_back(new UninstallerDataController());
 		}
 		return dataControllers;
 	}
