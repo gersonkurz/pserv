@@ -749,17 +749,19 @@ namespace pserv {
 				// Get visual state from controller
 				VisualState visualState = controller->GetVisualState(dataObject);
 
+				// Pre-calculate highlight color for reuse
+				ImVec4 highlightColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+				highlightColor.x *= 0.6f; // Reduce red
+				highlightColor.y *= 0.8f; // Reduce green
+				highlightColor.z = 1.0f;  // Full blue
+
 				// Apply text color based on visual state
 				if (visualState == VisualState::Disabled) {
 					// Gray out disabled items
 					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 				}
 				else if (visualState == VisualState::Highlighted) {
-					// Highlight special items (blue-ish, theme-aware)
-					ImVec4 highlightColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-					highlightColor.x *= 0.6f; // Reduce red
-					highlightColor.y *= 0.8f; // Reduce green
-					highlightColor.z = 1.0f;  // Full blue
+					// Highlight special items
 					ImGui::PushStyleColor(ImGuiCol_Text, highlightColor);
 				}
 
@@ -818,6 +820,13 @@ namespace pserv {
 						}
 
 						// Context menu for selected objects
+						// BUG FIX: Temporarily pop row text color so context menu uses default color
+						bool stylePopped = false;
+						if (visualState != VisualState::Normal) {
+							ImGui::PopStyleColor();
+							stylePopped = true;
+						}
+
 						if (ImGui::BeginPopupContextItem()) {
 							// If right-clicked on non-selected item, select only that one
 							if (!isSelected) {
@@ -849,6 +858,16 @@ namespace pserv {
 								}
 							}
 							ImGui::EndPopup();
+						}
+
+						// Re-push row text color for subsequent columns
+						if (stylePopped) {
+							if (visualState == VisualState::Disabled) {
+								ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+							}
+							else if (visualState == VisualState::Highlighted) {
+								ImGui::PushStyleColor(ImGuiCol_Text, highlightColor);
+							}
 						}
 					}
 					else {

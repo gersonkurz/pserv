@@ -8,6 +8,7 @@ namespace pserv {
 
 WindowsDataController::WindowsDataController()
     : DataController("Windows", "Window")
+    , m_pPropertiesDialog(new WindowPropertiesDialog())
 {
     m_columns = {
         DataObjectColumn("InternalID", "InternalID"),
@@ -29,6 +30,7 @@ WindowsDataController::WindowsDataController()
 
 WindowsDataController::~WindowsDataController() {
     Clear();
+    delete m_pPropertiesDialog;
 }
 
 void WindowsDataController::Refresh() {
@@ -70,6 +72,9 @@ std::vector<int> WindowsDataController::GetAvailableActions(const DataObject* da
     std::vector<int> actions;
     if (!dataObject) return actions;
 
+    actions.push_back(static_cast<int>(WindowAction::Properties));
+    actions.push_back(static_cast<int>(WindowAction::Separator));
+
     actions.push_back(static_cast<int>(WindowAction::Show));
     actions.push_back(static_cast<int>(WindowAction::Hide));
     actions.push_back(static_cast<int>(WindowAction::Minimize));
@@ -86,6 +91,7 @@ std::vector<int> WindowsDataController::GetAvailableActions(const DataObject* da
 
 std::string WindowsDataController::GetActionName(int action) const {
     switch (static_cast<WindowAction>(action)) {
+        case WindowAction::Properties: return "Properties";
         case WindowAction::Show: return "Show";
         case WindowAction::Hide: return "Hide";
         case WindowAction::Minimize: return "Minimize";
@@ -117,6 +123,16 @@ void WindowsDataController::DispatchAction(int action, DataActionDispatchContext
     if (context.m_selectedObjects.empty()) return;
 
     auto winAction = static_cast<WindowAction>(action);
+
+    if (winAction == WindowAction::Properties) {
+        std::vector<WindowInfo*> selected;
+        for (const auto* obj : context.m_selectedObjects) {
+            selected.push_back(const_cast<WindowInfo*>(static_cast<const WindowInfo*>(obj)));
+        }
+        m_pPropertiesDialog->Open(selected);
+        return;
+    }
+
     int successCount = 0;
 
     for (const auto* obj : context.m_selectedObjects) {
@@ -158,7 +174,9 @@ void WindowsDataController::DispatchAction(int action, DataActionDispatchContext
 }
 
 void WindowsDataController::RenderPropertiesDialog() {
-    // No properties dialog for windows yet
+    if (m_pPropertiesDialog && m_pPropertiesDialog->IsOpen()) {
+        m_pPropertiesDialog->Render();
+    }
 }
 
 void WindowsDataController::Sort(int columnIndex, bool ascending) {

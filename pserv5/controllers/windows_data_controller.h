@@ -1,18 +1,22 @@
 #pragma once
 #include "../core/data_controller.h"
 #include "../models/window_info.h"
+#include "../dialogs/window_properties_dialog.h"
 #include <vector>
 
 namespace pserv {
 
 enum class WindowAction {
-    Show = 0,
+    Properties,  // New
+    Separator1,  // Placeholder for logic
+    Show,
     Hide,
     Minimize,
     Maximize,
     Restore,
-    Close,
+    Separator2,  // Placeholder for logic
     BringToFront,
+    Close,
     Separator = -1
 };
 
@@ -36,7 +40,8 @@ public:
 
 private:
     std::vector<WindowInfo*> m_windows;
-    std::vector<DataObject*> m_dataObjects; // Base pointers for DataController interface
+    std::vector<DataObject*> m_dataObjects;
+    WindowPropertiesDialog* m_pPropertiesDialog;
     
     void Clear();
 };
