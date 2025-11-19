@@ -98,10 +98,10 @@ void UninstallerDataController::DispatchAction(int action, DataActionDispatchCon
 
     switch (uninstallerAction) {
         case UninstallerAction::Properties: {
-            // Cast away constness for the dialog, as it expects non-const pointers
-            std::vector<InstalledProgramInfo*> programsToOpen;
+            // Dialog accepts const pointers (read-only)
+            std::vector<const InstalledProgramInfo*> programsToOpen;
             for (const auto* obj : context.m_selectedObjects) {
-                programsToOpen.push_back(const_cast<InstalledProgramInfo*>(static_cast<const InstalledProgramInfo*>(obj)));
+                programsToOpen.push_back(static_cast<const InstalledProgramInfo*>(obj));
             }
             m_pPropertiesDialog->Open(programsToOpen);
             break;

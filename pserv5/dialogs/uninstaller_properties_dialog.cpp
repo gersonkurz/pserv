@@ -8,7 +8,7 @@
 
 namespace pserv {
 
-void UninstallerPropertiesDialog::Open(const std::vector<InstalledProgramInfo*>& programs) {
+void UninstallerPropertiesDialog::Open(const std::vector<const InstalledProgramInfo*>& programs) {
     if (programs.empty()) {
         Close();
         return;
@@ -56,7 +56,7 @@ void UninstallerPropertiesDialog::Close() {
     ImGui::CloseCurrentPopup();
 }
 
-void UninstallerPropertiesDialog::RenderSingleProgramProperties(InstalledProgramInfo* program) {
+void UninstallerPropertiesDialog::RenderSingleProgramProperties(const InstalledProgramInfo* program) {
     ImGui::Text("Display Name: %s", program->GetDisplayName().c_str());
     ImGui::Text("Version: %s", program->GetDisplayVersion().c_str());
     ImGui::Text("Publisher: %s", program->GetPublisher().c_str());
