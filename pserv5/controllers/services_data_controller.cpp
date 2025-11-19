@@ -127,6 +127,8 @@ namespace pserv {
 			std::string valB = b->GetProperty(columnIndex);
 
 			// For numeric columns, do numeric comparison
+			// IMPORTANT: These hardcoded indices depend on the column order in m_columns (lines 17-36 and 43-62).
+			// If you add, remove, or reorder columns in the constructor, you MUST update these indices.
 			// Numeric columns: ProcessId(4), TagId(11), Win32ExitCode(12), ServiceSpecificExitCode(13), CheckPoint(14), WaitHint(15), ServiceFlags(16)
 			if (columnIndex == 4 || columnIndex == 11 || (columnIndex >= 12 && columnIndex <= 16)) {
 				try {
