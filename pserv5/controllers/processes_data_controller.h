@@ -30,7 +30,6 @@ private:
     void Sort(int columnIndex, bool ascending) override;
 
     std::vector<ProcessInfo*> m_processes;
-    std::vector<DataObjectColumn> m_columns;
     ProcessPropertiesDialog* m_pPropertiesDialog{ nullptr };
     
     // Sorting state
