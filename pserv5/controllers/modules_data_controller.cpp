@@ -148,22 +148,30 @@ void ModulesDataController::Sort(int columnIndex, bool ascending) {
         [columnIndex, ascending](const ModuleInfo* a, const ModuleInfo* b) {
         int comparison = 0;
         switch (columnIndex) {
-            case 0: // Base Address
-                comparison = (reinterpret_cast<uintptr_t>(a->GetBaseAddress()) < reinterpret_cast<uintptr_t>(b->GetBaseAddress())) ? -1 : 
-                             (reinterpret_cast<uintptr_t>(a->GetBaseAddress()) > reinterpret_cast<uintptr_t>(b->GetBaseAddress()));
+            case 0: { // Base Address
+                uintptr_t addrA = reinterpret_cast<uintptr_t>(a->GetBaseAddress());
+                uintptr_t addrB = reinterpret_cast<uintptr_t>(b->GetBaseAddress());
+                comparison = (addrA > addrB) - (addrA < addrB);
                 break;
-            case 1: // Size
-                comparison = (a->GetSize() < b->GetSize()) ? -1 : (a->GetSize() > b->GetSize());
+            }
+            case 1: { // Size
+                DWORD sizeA = a->GetSize();
+                DWORD sizeB = b->GetSize();
+                comparison = (sizeA > sizeB) - (sizeA < sizeB);
                 break;
+            }
             case 2: // Name
                 comparison = a->GetName().compare(b->GetName());
                 break;
             case 3: // Path
                 comparison = a->GetPath().compare(b->GetPath());
                 break;
-            case 4: // Process ID
-                comparison = (a->GetProcessId() < b->GetProcessId()) ? -1 : (a->GetProcessId() > b->GetProcessId());
+            case 4: { // Process ID
+                uint32_t pidA = a->GetProcessId();
+                uint32_t pidB = b->GetProcessId();
+                comparison = (pidA > pidB) - (pidA < pidB);
                 break;
+            }
         }
 
         return ascending ? (comparison < 0) : (comparison > 0);
