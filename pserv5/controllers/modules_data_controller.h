@@ -32,7 +32,6 @@ public:
 private:
     std::vector<DataObjectColumn> m_columns;
     std::vector<ModuleInfo*> m_modules;
-    std::vector<DataObject*> m_dataObjects; // Base pointers for DataController interface
 
     void Clear();
 };

@@ -10,6 +10,16 @@
 
 namespace pserv {
 
+// Cache structure for module information by file path
+struct CachedModuleInfo {
+    std::string name;      // Base name (e.g., "kernel32.dll")
+    std::string path;      // Full path UTF-8 (e.g., "C:\Windows\System32\kernel32.dll")
+    DWORD size;            // SizeOfImage
+};
+
+// Static cache for module information by wide path
+static std::unordered_map<std::wstring, CachedModuleInfo> s_moduleCache;
+
 std::string ModuleManager::RetrieveModuleBaseName(HANDLE hProcess, HMODULE hModule) {
     std::wstring wName(MAX_PATH, L'\0');
     DWORD result = ::GetModuleBaseNameW(hProcess, hModule, wName.data(), static_cast<DWORD>(wName.size()));
@@ -53,23 +63,59 @@ std::vector<ModuleInfo*> ModuleManager::EnumerateModules(uint32_t processId) {
     hModules.resize(cbNeeded / sizeof(HMODULE));
 
     for (HMODULE hModule : hModules) {
-        MODULEINFO moduleInfo{};
-        if (::GetModuleInformation(hProcess.get(), hModule, &moduleInfo, sizeof(moduleInfo))) {
-            std::string moduleName = RetrieveModuleBaseName(hProcess.get(), hModule);
-            std::string modulePath = RetrieveModuleFileName(hProcess.get(), hModule);
+        // First, get the full path (we need this as our cache key)
+        std::wstring wPath(MAX_PATH, L'\0');
+        DWORD pathResult = ::GetModuleFileNameExW(hProcess.get(), hModule, wPath.data(), static_cast<DWORD>(wPath.size()));
+        if (pathResult == 0) {
+            spdlog::warn("GetModuleFileNameExW failed for module {:#x} in process {}: {}",
+                reinterpret_cast<uintptr_t>(hModule), processId, pserv::utils::GetLastWin32ErrorMessage());
+            continue;
+        }
+        wPath.resize(pathResult);
 
-            // Only add if we got at least a name or path
-            if (!moduleName.empty() || !modulePath.empty()) {
+        // Check cache
+        auto cacheIt = s_moduleCache.find(wPath);
+        if (cacheIt != s_moduleCache.end()) {
+            // Cache hit! Use cached data, only need base address from this process
+            MODULEINFO moduleInfo{};
+            if (::GetModuleInformation(hProcess.get(), hModule, &moduleInfo, sizeof(moduleInfo))) {
+                const CachedModuleInfo& cached = cacheIt->second;
                 modules.push_back(new ModuleInfo(
                     processId,
                     moduleInfo.lpBaseOfDll,
-                    moduleInfo.SizeOfImage,
-                    moduleName,
-                    modulePath
+                    cached.size,
+                    cached.name,
+                    cached.path
                 ));
             }
         } else {
-            spdlog::warn("GetModuleInformation failed for module {:#x} in process {}: {}", reinterpret_cast<uintptr_t>(hModule), processId, pserv::utils::GetLastWin32ErrorMessage());
+            // Cache miss - do full enumeration
+            MODULEINFO moduleInfo{};
+            if (::GetModuleInformation(hProcess.get(), hModule, &moduleInfo, sizeof(moduleInfo))) {
+                std::string moduleName = RetrieveModuleBaseName(hProcess.get(), hModule);
+                std::string modulePath = pserv::utils::WideToUtf8(wPath);
+
+                // Only add if we got at least a name or path
+                if (!moduleName.empty() || !modulePath.empty()) {
+                    // Add to cache
+                    CachedModuleInfo cached;
+                    cached.name = moduleName;
+                    cached.path = modulePath;
+                    cached.size = moduleInfo.SizeOfImage;
+                    s_moduleCache[wPath] = cached;
+
+                    modules.push_back(new ModuleInfo(
+                        processId,
+                        moduleInfo.lpBaseOfDll,
+                        moduleInfo.SizeOfImage,
+                        moduleName,
+                        modulePath
+                    ));
+                }
+            } else {
+                spdlog::warn("GetModuleInformation failed for module {:#x} in process {}: {}",
+                    reinterpret_cast<uintptr_t>(hModule), processId, pserv::utils::GetLastWin32ErrorMessage());
+            }
         }
     }
 

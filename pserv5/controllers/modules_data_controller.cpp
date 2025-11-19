@@ -36,7 +36,7 @@ void ModulesDataController::Refresh() {
     for (ProcessInfo* proc : processes) {
         // Enumerate modules for this process
         std::vector<ModuleInfo*> processModules = ModuleManager::EnumerateModules(proc->GetPid());
-        
+
         // Add to our main list
         m_modules.insert(m_modules.end(), processModules.begin(), processModules.end());
 
@@ -45,13 +45,7 @@ void ModulesDataController::Refresh() {
     }
     processes.clear(); // Clear the vector of invalidated pointers
 
-    // Update base class pointers
-    m_dataObjects.reserve(m_modules.size());
-    for (auto* mod : m_modules) {
-        m_dataObjects.push_back(mod);
-    }
-
-    spdlog::info("Refreshed {} modules across all processes", m_modules.size());
+    spdlog::info("Refreshed {} modules from {} processes", m_modules.size(), processes.size());
     m_bLoaded = true;
 }
 
@@ -60,7 +54,6 @@ void ModulesDataController::Clear() {
         delete mod;
     }
     m_modules.clear();
-    m_dataObjects.clear();
     m_bLoaded = false;
 }
 
@@ -69,7 +62,7 @@ const std::vector<DataObjectColumn>& ModulesDataController::GetColumns() const {
 }
 
 const std::vector<DataObject*>& ModulesDataController::GetDataObjects() const {
-    return m_dataObjects;
+    return reinterpret_cast<const std::vector<DataObject*>&>(m_modules);
 }
 
 std::vector<int> ModulesDataController::GetAvailableActions(const DataObject* dataObject) const {

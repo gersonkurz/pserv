@@ -757,14 +757,6 @@ namespace pserv {
 			// Get data objects AFTER sorting
 			pAllDataObjects = &controller->GetDataObjects();
 
-			// Log first few items from controller to verify order
-			if (!pAllDataObjects->empty() && pAllDataObjects->size() >= 2) {
-				spdlog::info("[UI] Rendering '{}' - First item from controller: '{}'",
-					controllerName, (*pAllDataObjects)[0]->GetProperty(0));
-				spdlog::info("[UI] Rendering '{}' - Second item from controller: '{}'",
-					controllerName, (*pAllDataObjects)[1]->GetProperty(0));
-			}
-
 			// Filter data objects based on search text
 			if (m_filterText[0] != '\0') {
 				for (const auto* dataObject : *pAllDataObjects) {
