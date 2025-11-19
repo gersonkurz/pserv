@@ -192,6 +192,7 @@
     <ClInclude Include="core\data_controller.h" />
     <ClInclude Include="core\exporters\exporter_interface.h" />
     <ClInclude Include="core\exporters\exporter_registry.h" />
+    <ClInclude Include="core\exporters\json_exporter.h" />
     <ClInclude Include="controllers\services_data_controller.h" />
     <ClInclude Include="models\service_info.h" />
     <ClInclude Include="windows_api\service_manager.h" />
@@ -224,6 +225,7 @@
     <ClCompile Include="core\data_controller.cpp" />
     <ClCompile Include="core\data_controller_library.cpp" />
     <ClCompile Include="core\exporters\exporter_registry.cpp" />
+    <ClCompile Include="core\exporters\json_exporter.cpp" />
     <ClCompile Include="precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
