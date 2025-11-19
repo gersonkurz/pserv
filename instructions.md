@@ -270,6 +270,58 @@ if (!hSCM) throw std::runtime_error(GetLastWin32ErrorMessage());
 // Automatic CloseServiceHandle() on scope exit
 ```
 
+## Current Work: Column Type System Refactoring
+
+**Problem Statement:**
+- All columns are left-aligned (numbers should be right-aligned)
+- Memory sizes stored/sorted as strings ("57,44 MB") instead of numerically
+- Code duplication: Uninstaller has FormatSize() + numeric sorting, Processes doesn't
+- Column metadata is minimal (just display name + property ID)
+- Generic string sorting everywhere, hardcoded index checks for numeric columns
+
+**Goal:**
+Columns should have type information (String vs Numeric) and display format (Raw vs HumanReadableSize) to enable proper alignment, sorting, and reduce code duplication.
+
+### Implementation Plan
+
+**COLUMN-001: Extend Column Metadata**
+- Add `ColumnDataType` enum to `core/data_object_column.h` (String, Integer, UnsignedInteger, Size, Time)
+- Add `ColumnAlignment` enum (Left, Right)
+- Extend `DataObjectColumn` class with type and alignment fields
+- Update all controller constructors to specify types for each column
+- Non-breaking: Pure metadata addition, no behavior change
+
+**COLUMN-002: Centralize Size Formatting**
+- Create `utils/format_utils.h` and `utils/format_utils.cpp`
+- Move `FormatSize()` from `windows_api/uninstaller_manager.cpp` to new utility
+- Make it shared: `std::string FormatSize(uint64_t bytes)`
+- Update UninstallerManager to use centralized version
+- Non-breaking: Code consolidation only
+
+**COLUMN-003: Refactor ProcessInfo for Raw Values**
+- Change ProcessInfo to store raw SIZE_T values for memory fields
+- Add typed getters: `GetWorkingSetSizeBytes()`, `GetPrivatePageCountBytes()`, etc.
+- Keep `GetProperty(int)` for display (formats using FormatSize())
+- Update ProcessManager to populate raw values instead of pre-formatting
+- Breaking: Changes ProcessInfo internal storage
+
+**COLUMN-004: Smart Sorting in Controllers**
+- Update controller `Sort()` methods to check column data type from metadata
+- For Size/Integer columns: get raw numeric value, compare numerically
+- For String columns: compare as strings (existing behavior)
+- Remove hardcoded column index checks (e.g., `if (columnIndex == 4)`)
+- Use metadata-driven approach: `if (columns[columnIndex].GetDataType() == ColumnDataType::Size)`
+- Breaking: Changes sort behavior (but fixes bugs)
+
+**COLUMN-005: UI Alignment from Metadata**
+- Update `main_window.cpp` table rendering
+- Read column alignment from `DataObjectColumn` metadata
+- Apply to `ImGui::TableSetupColumn()` with `ImGuiTableColumnFlags_WidthFixed` + alignment
+- Right-align numeric columns, left-align string columns
+- Breaking: Changes visual appearance
+
+**Status:** Not started. Will implement phases sequentially with verification after each.
+
 ## Future Work
 
 The core application is feature-complete. Remaining tasks for future releases:
