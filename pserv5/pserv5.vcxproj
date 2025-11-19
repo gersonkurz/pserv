@@ -218,6 +218,7 @@
     <ClInclude Include="..\imgui\backends\imgui_impl_dx11.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="core\data_controller.cpp" />
     <ClCompile Include="core\data_controller_library.cpp" />
     <ClCompile Include="precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
