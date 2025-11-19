@@ -770,8 +770,8 @@ namespace pserv {
 				filteredDataObjects.assign(pAllDataObjects->begin(), pAllDataObjects->end());
 			}
 
-			// Display rows
-			for (const auto* dataObject : filteredDataObjects) {
+			// Lambda to render a single row (shared between clipper and non-clipper paths)
+			auto renderRow = [&](const DataObject* dataObject) {
 				ImGui::TableNextRow();
 				ImGui::PushID(dataObject);
 
@@ -911,6 +911,25 @@ namespace pserv {
 				}
 
 				ImGui::PopID();
+			};
+
+			// Display rows - use clipper for large datasets (>1000 items)
+			const bool useClipper = filteredDataObjects.size() > 1000;
+
+			if (useClipper) {
+				// Virtual scrolling for large lists
+				ImGuiListClipper clipper;
+				clipper.Begin(static_cast<int>(filteredDataObjects.size()));
+				while (clipper.Step()) {
+					for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+						renderRow(filteredDataObjects[row]);
+					}
+				}
+			} else {
+				// Direct rendering for small lists
+				for (const auto* dataObject : filteredDataObjects) {
+					renderRow(dataObject);
+				}
 			}
 
 			ImGui::EndTable();
