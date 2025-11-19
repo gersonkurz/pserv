@@ -64,20 +64,22 @@ std::vector<int> ModulesDataController::GetAvailableActions(const DataObject* da
     std::vector<int> actions;
     if (!dataObject) return actions;
 
-    actions.push_back(static_cast<int>(ModuleAction::CopyInfo));
     actions.push_back(static_cast<int>(ModuleAction::OpenContainingFolder));
-    actions.push_back(static_cast<int>(ModuleAction::Separator));
     // actions.push_back(static_cast<int>(ModuleAction::Properties)); // TBD
+
+    // Add common export/copy actions
+    AddCommonExportActions(actions);
 
     return actions;
 }
 
 std::string ModulesDataController::GetActionName(int action) const {
     switch (static_cast<ModuleAction>(action)) {
-        case ModuleAction::CopyInfo: return "Copy Info";
         case ModuleAction::OpenContainingFolder: return "Open Containing Folder";
         // case ModuleAction::Properties: return "Properties";
-        default: return "";
+        default:
+            std::string commonName = GetCommonActionName(action);
+            return !commonName.empty() ? commonName : "";
     }
 }
 
@@ -93,24 +95,6 @@ void ModulesDataController::DispatchAction(int action, DataActionDispatchContext
     const ModuleInfo* module = static_cast<const ModuleInfo*>(context.m_selectedObjects[0]); // Actions typically on single selection
 
     switch (modAction) {
-        case ModuleAction::CopyInfo: {
-            // Build a string with module info to copy
-            std::string info = std::format(
-                "Name: {}\n" 
-                "Path: {}\n" 
-                "Base Address: {:#x}\n" 
-                "Size: {}\n" 
-                "Process ID: {}",
-                module->GetName(),
-                module->GetPath(),
-                reinterpret_cast<uintptr_t>(module->GetBaseAddress()),
-                module->GetSize(),
-                module->GetProcessId()
-            );
-            ImGui::SetClipboardText(info.c_str());
-            spdlog::info("Copied info for module: {}", module->GetName());
-            break;
-        }
         case ModuleAction::OpenContainingFolder: {
             std::string path = module->GetPath();
             if (!path.empty()) {
@@ -131,6 +115,11 @@ void ModulesDataController::DispatchAction(int action, DataActionDispatchContext
         //     // TBD: Open ModulePropertiesDialog
         //     break;
         // }
+
+        default:
+            // Delegate to base class for common actions
+            DispatchCommonAction(action, context);
+            break;
     }
 }
 

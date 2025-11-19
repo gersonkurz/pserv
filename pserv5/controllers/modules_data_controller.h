@@ -7,8 +7,7 @@
 namespace pserv {
 
 enum class ModuleAction {
-    CopyInfo = 0,
-    OpenContainingFolder,
+    OpenContainingFolder = 0,
     Properties, // TBD: Implement ModulePropertiesDialog later
     Separator = -1
 };

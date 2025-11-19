@@ -68,23 +68,33 @@ void DataController::Sort(int columnIndex, bool ascending) {
 
 void DataController::AddCommonExportActions(std::vector<int>& actions) const {
     const auto& exporters = ExporterRegistry::Instance().GetExporters();
-    if (exporters.empty()) return;
+    if (exporters.empty()) {
+        spdlog::debug("AddCommonExportActions: No exporters registered");
+        return;
+    }
 
-    // Add separator if actions list not empty
-    if (!actions.empty()) {
+    // Add separator if actions list not empty and last action isn't already a separator
+    if (!actions.empty() && actions.back() != -1) {
         actions.push_back(static_cast<int>(CommonAction::Separator));
     }
 
+    spdlog::debug("AddCommonExportActions: Found {} exporters", exporters.size());
+
     // Add Copy/Export action pairs for each registered exporter
     for (const auto* exporter : exporters) {
+        spdlog::debug("AddCommonExportActions: Checking exporter '{}'", exporter->GetFormatName());
         if (exporter->GetFormatName() == "JSON") {
             actions.push_back(static_cast<int>(CommonAction::CopyAsJson));
             actions.push_back(static_cast<int>(CommonAction::ExportToJson));
+            spdlog::debug("AddCommonExportActions: Added JSON actions");
         } else if (exporter->GetFormatName() == "Plain Text") {
             actions.push_back(static_cast<int>(CommonAction::CopyAsTxt));
             actions.push_back(static_cast<int>(CommonAction::ExportToTxt));
+            spdlog::debug("AddCommonExportActions: Added Plain Text actions");
         }
     }
+
+    spdlog::debug("AddCommonExportActions: Total actions after: {}", actions.size());
 }
 
 std::string DataController::GetCommonActionName(int action) const {

@@ -79,6 +79,9 @@ std::vector<int> WindowsDataController::GetAvailableActions(const DataObject* da
     actions.push_back(static_cast<int>(WindowAction::BringToFront));
     actions.push_back(static_cast<int>(WindowAction::Close));
 
+    // Add common export/copy actions
+    AddCommonExportActions(actions);
+
     return actions;
 }
 
@@ -92,7 +95,9 @@ std::string WindowsDataController::GetActionName(int action) const {
         case WindowAction::Restore: return "Restore";
         case WindowAction::BringToFront: return "Bring To Front";
         case WindowAction::Close: return "Close";
-        default: return "";
+        default:
+            std::string commonName = GetCommonActionName(action);
+            return !commonName.empty() ? commonName : "";
     }
 }
 
@@ -155,11 +160,15 @@ void WindowsDataController::DispatchAction(int action, DataActionDispatchContext
             case WindowAction::Close:
                 result = WindowManager::CloseWindow(hwnd);
                 break;
+            default:
+                // Delegate to base class for common actions
+                DispatchCommonAction(action, context);
+                return;
         }
-        
+
         if (result) successCount++;
     }
-    
+
     if (successCount > 0) {
         // Auto-refresh to show new state
         Refresh();

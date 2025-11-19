@@ -93,6 +93,9 @@ std::vector<int> ProcessesDataController::GetAvailableActions(const DataObject* 
     actions.push_back(static_cast<int>(ProcessAction::Separator));
     actions.push_back(static_cast<int>(ProcessAction::Terminate));
 
+    // Add common export/copy actions
+    AddCommonExportActions(actions);
+
     return actions;
 }
 
@@ -107,7 +110,9 @@ std::string ProcessesDataController::GetActionName(int action) const {
         case ProcessAction::SetPriorityNormal: return "Set Priority: Normal";
         case ProcessAction::SetPriorityBelowNormal: return "Set Priority: Below Normal";
         case ProcessAction::SetPriorityLow: return "Set Priority: Low";
-        default: return "";
+        default:
+            std::string commonName = GetCommonActionName(action);
+            return !commonName.empty() ? commonName : "";
     }
 }
 
@@ -236,6 +241,19 @@ void ProcessesDataController::DispatchAction(int action, DataActionDispatchConte
         }
         spdlog::info("Set priority for {}/{} processes", success, pids.size());
         Refresh(); // Refresh to show new priority
+    }
+
+    // If not handled above, delegate to base class for common actions
+    if (processAction != ProcessAction::Properties &&
+        processAction != ProcessAction::Terminate &&
+        processAction != ProcessAction::OpenLocation &&
+        processAction != ProcessAction::SetPriorityRealtime &&
+        processAction != ProcessAction::SetPriorityHigh &&
+        processAction != ProcessAction::SetPriorityAboveNormal &&
+        processAction != ProcessAction::SetPriorityNormal &&
+        processAction != ProcessAction::SetPriorityBelowNormal &&
+        processAction != ProcessAction::SetPriorityLow) {
+        DispatchCommonAction(action, context);
     }
 }
 

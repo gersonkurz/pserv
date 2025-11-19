@@ -178,6 +178,9 @@ namespace pserv {
 		actions.push_back(static_cast<int>(ServiceAction::UninstallService));
 		actions.push_back(static_cast<int>(ServiceAction::DeleteRegistryKey));
 
+		// Add common export/copy actions
+		AddCommonExportActions(actions);
+
 		return actions;
 	}
 
@@ -727,6 +730,11 @@ namespace pserv {
 			}
 		}
 		break;
+
+		default:
+			// Delegate to base class for common actions
+			DispatchCommonAction(action, dispatchContext);
+			break;
 		}
 	}
 
@@ -767,6 +775,11 @@ namespace pserv {
 		case ServiceAction::Properties:
 			return "Properties...";
 		default:
+			// Check if it's a common action
+			std::string commonName = GetCommonActionName(action);
+			if (!commonName.empty()) {
+				return commonName;
+			}
 			return "Unknown Action";
 		}
 	}

@@ -73,6 +73,9 @@ std::vector<int> UninstallerDataController::GetAvailableActions(const DataObject
     actions.push_back(static_cast<int>(UninstallerAction::Separator));
     actions.push_back(static_cast<int>(UninstallerAction::Uninstall));
 
+    // Add common export/copy actions
+    AddCommonExportActions(actions);
+
     return actions;
 }
 
@@ -80,7 +83,9 @@ std::string UninstallerDataController::GetActionName(int action) const {
     switch (static_cast<UninstallerAction>(action)) {
         case UninstallerAction::Properties: return "Properties...";
         case UninstallerAction::Uninstall: return "Uninstall";
-        default: return "";
+        default:
+            std::string commonName = GetCommonActionName(action);
+            return !commonName.empty() ? commonName : "";
     }
 }
 
@@ -155,6 +160,11 @@ void UninstallerDataController::DispatchAction(int action, DataActionDispatchCon
             }
             break;
         }
+
+        default:
+            // Delegate to base class for common actions
+            DispatchCommonAction(action, context);
+            break;
     }
 }
 

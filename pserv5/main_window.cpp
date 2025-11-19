@@ -869,7 +869,7 @@ namespace pserv {
 								const auto& action = actions[i];
 
 								// Handle separator
-								if (action < 0) {
+								if (action == -1) {
 									ImGui::Separator();
 									continue;
 								}
