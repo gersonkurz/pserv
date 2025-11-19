@@ -1025,8 +1025,6 @@ namespace pserv {
 		}
 		lastSaveTime = now;
 
-		spdlog::debug("Proceeding with save");
-
 		auto configSection = config::theSettings.getSectionFor(m_pCurrentController->GetControllerName());
 		if (!configSection)
 		{
@@ -1034,29 +1032,48 @@ namespace pserv {
 			return;
 		}
 
-		// Save column widths
+		// Build current state strings
 		std::ostringstream widthsStream;
 		for (int i = 0; i < m_pCurrentTable->ColumnsCount; ++i) {
 			if (i > 0) widthsStream << ",";
 			widthsStream << m_pCurrentTable->Columns[i].WidthGiven;
 		}
-		spdlog::debug("Column widths: {}", widthsStream.str());
-		configSection->columnWidths.set(widthsStream.str());
+		std::string currentWidths = widthsStream.str();
 
-		// Save column display order
 		std::ostringstream orderStream;
 		for (int i = 0; i < m_pCurrentTable->ColumnsCount; ++i) {
 			if (i > 0) orderStream << ",";
 			orderStream << static_cast<int>(m_pCurrentTable->Columns[i].DisplayOrder);
 		}
-		spdlog::debug("Column order: {}", orderStream.str());
-		configSection->columnOrder.set(orderStream.str());
+		std::string currentOrder = orderStream.str();
 
-		// Save to config backend
+		// Check if state actually changed
+		static std::string lastWidths;
+		static std::string lastOrder;
+		static std::string lastController;
+		std::string currentController = m_pCurrentController->GetControllerName();
+
+		if (!force && currentController == lastController &&
+		    currentWidths == lastWidths && currentOrder == lastOrder) {
+			spdlog::trace("Skipping save: table state unchanged");
+			return;
+		}
+
+		// Update cache
+		lastController = currentController;
+		lastWidths = currentWidths;
+		lastOrder = currentOrder;
+
+		spdlog::debug("Proceeding with save");
+		spdlog::debug("Column widths: {}", currentWidths);
+		spdlog::debug("Column order: {}", currentOrder);
+
+		// Save to config
+		configSection->columnWidths.set(currentWidths);
+		configSection->columnOrder.set(currentOrder);
 		configSection->save(*m_pConfigBackend);
 
-		spdlog::info("Current table state saved: widths={}, order={}",
-			widthsStream.str(), orderStream.str());
+		spdlog::info("Current table state saved: widths={}, order={}", currentWidths, currentOrder);
 	}
 
 	bool MainWindow::IsWindowMaximized() const {
