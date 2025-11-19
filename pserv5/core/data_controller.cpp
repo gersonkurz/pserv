@@ -1,6 +1,8 @@
 #include "precomp.h"
 #include "data_controller.h"
+#include "exporters/exporter_registry.h"
 #include <algorithm>
+#include <spdlog/spdlog.h>
 
 namespace pserv {
 
@@ -59,6 +61,109 @@ void DataController::Sort(int columnIndex, bool ascending) {
         int cmp = strA.compare(strB);
         return ascending ? (cmp < 0) : (cmp > 0);
     });
+}
+
+void DataController::AddCommonExportActions(std::vector<int>& actions) const {
+    const auto& exporters = ExporterRegistry::Instance().GetExporters();
+    if (exporters.empty()) return;
+
+    // Add separator if actions list not empty
+    if (!actions.empty()) {
+        actions.push_back(static_cast<int>(CommonAction::Separator));
+    }
+
+    // Add Copy/Export action pairs for each registered exporter
+    for (const auto* exporter : exporters) {
+        if (exporter->GetFormatName() == "JSON") {
+            actions.push_back(static_cast<int>(CommonAction::CopyAsJson));
+            actions.push_back(static_cast<int>(CommonAction::ExportToJson));
+        } else if (exporter->GetFormatName() == "Plain Text") {
+            actions.push_back(static_cast<int>(CommonAction::CopyAsTxt));
+            actions.push_back(static_cast<int>(CommonAction::ExportToTxt));
+        }
+    }
+}
+
+std::string DataController::GetCommonActionName(int action) const {
+    switch (static_cast<CommonAction>(action)) {
+        case CommonAction::ExportToJson:
+            return "Export to JSON...";
+        case CommonAction::CopyAsJson:
+            return "Copy as JSON";
+        case CommonAction::ExportToTxt:
+            return "Export to TXT...";
+        case CommonAction::CopyAsTxt:
+            return "Copy as TXT";
+        default:
+            return "";
+    }
+}
+
+void DataController::DispatchCommonAction(int action, DataActionDispatchContext& context) {
+    if (context.m_selectedObjects.empty()) {
+        spdlog::warn("DispatchCommonAction: No objects selected");
+        return;
+    }
+
+    // Determine which exporter to use based on action
+    IExporter* exporter = nullptr;
+    bool bCopyToClipboard = false;
+
+    auto commonAction = static_cast<CommonAction>(action);
+    switch (commonAction) {
+        case CommonAction::CopyAsJson:
+            exporter = ExporterRegistry::Instance().FindExporter("JSON");
+            bCopyToClipboard = true;
+            break;
+        case CommonAction::ExportToJson:
+            exporter = ExporterRegistry::Instance().FindExporter("JSON");
+            bCopyToClipboard = false;
+            break;
+        case CommonAction::CopyAsTxt:
+            exporter = ExporterRegistry::Instance().FindExporter("Plain Text");
+            bCopyToClipboard = true;
+            break;
+        case CommonAction::ExportToTxt:
+            exporter = ExporterRegistry::Instance().FindExporter("Plain Text");
+            bCopyToClipboard = false;
+            break;
+        default:
+            spdlog::warn("DispatchCommonAction: Unknown action {}", action);
+            return;
+    }
+
+    if (!exporter) {
+        spdlog::error("DispatchCommonAction: Exporter not found");
+        MessageBoxA(context.m_hWnd, "Exporter not available", "Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    // Export data
+    std::string exportedData;
+    try {
+        if (context.m_selectedObjects.size() == 1) {
+            exportedData = exporter->ExportSingle(context.m_selectedObjects[0], m_columns);
+        } else {
+            exportedData = exporter->ExportMultiple(context.m_selectedObjects, m_columns);
+        }
+    } catch (const std::exception& e) {
+        spdlog::error("Export failed: {}", e.what());
+        MessageBoxA(context.m_hWnd,
+            std::format("Export failed: {}", e.what()).c_str(),
+            "Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    if (bCopyToClipboard) {
+        // Copy to clipboard
+        ImGui::SetClipboardText(exportedData.c_str());
+        spdlog::info("Copied {} object(s) as {} to clipboard",
+            context.m_selectedObjects.size(), exporter->GetFormatName());
+    } else {
+        // Export to file - will be implemented in EXPORT-001 (file_dialogs.h)
+        spdlog::warn("Export to file not yet implemented");
+        MessageBoxA(context.m_hWnd, "Export to file not yet implemented", "TODO", MB_OK | MB_ICONINFORMATION);
+    }
 }
 
 } // namespace pserv

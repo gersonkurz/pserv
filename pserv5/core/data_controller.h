@@ -31,6 +31,16 @@ namespace pserv {
 		Disabled     // Grayed out (e.g., disabled services, inaccessible processes)
 	};
 
+	// Common actions available across all controllers (export/copy functionality)
+	// Use negative IDs to avoid collision with controller-specific actions
+	enum class CommonAction {
+		Separator = -1,
+		ExportToJson = -1000,
+		CopyAsJson = -1001,
+		ExportToTxt = -1002,
+		CopyAsTxt = -1003
+	};
+
 	class DataController {
 	protected:
 		std::string m_controllerName;
@@ -58,6 +68,11 @@ namespace pserv {
 
 		// Generic sort implementation using column metadata and GetTypedProperty()
 		void Sort(int columnIndex, bool ascending);
+
+		// Common export/copy functionality
+		void AddCommonExportActions(std::vector<int>& actions) const;
+		void DispatchCommonAction(int action, DataActionDispatchContext& context);
+		std::string GetCommonActionName(int action) const;
 
 		const std::vector<DataObjectColumn>& GetColumns() const { return m_columns; }
 		const std::string& GetControllerName() const { return m_controllerName; }

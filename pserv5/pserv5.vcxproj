@@ -174,6 +174,7 @@
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="main_window.h" />
+    <ClInclude Include="utils\file_dialogs.h" />
     <ClInclude Include="utils\logging.h" />
     <ClInclude Include="utils\string_utils.h" />
     <ClInclude Include="utils\win32_error.h" />
@@ -189,6 +190,8 @@
     <ClInclude Include="core\data_object.h" />
     <ClInclude Include="core\data_object_column.h" />
     <ClInclude Include="core\data_controller.h" />
+    <ClInclude Include="core\exporters\exporter_interface.h" />
+    <ClInclude Include="core\exporters\exporter_registry.h" />
     <ClInclude Include="controllers\services_data_controller.h" />
     <ClInclude Include="models\service_info.h" />
     <ClInclude Include="windows_api\service_manager.h" />
@@ -220,6 +223,7 @@
   <ItemGroup>
     <ClCompile Include="core\data_controller.cpp" />
     <ClCompile Include="core\data_controller_library.cpp" />
+    <ClCompile Include="core\exporters\exporter_registry.cpp" />
     <ClCompile Include="precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -228,6 +232,7 @@
     </ClCompile>
     <ClCompile Include="pserv5.cpp" />
     <ClCompile Include="main_window.cpp" />
+    <ClCompile Include="utils\file_dialogs.cpp" />
     <ClCompile Include="utils\logging.cpp" />
     <ClCompile Include="core\async_operation.cpp" />
     <ClCompile Include="controllers\services_data_controller.cpp" />

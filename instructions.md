@@ -282,46 +282,6 @@ if (!hSCM) throw std::runtime_error(GetLastWin32ErrorMessage());
 **Goal:**
 Columns should have type information (String vs Numeric) and display format (Raw vs HumanReadableSize) to enable proper alignment, sorting, and reduce code duplication.
 
-### Implementation Plan
-
-**COLUMN-001: Extend Column Metadata**
-- Add `ColumnDataType` enum to `core/data_object_column.h` (String, Integer, UnsignedInteger, Size, Time)
-- Add `ColumnAlignment` enum (Left, Right)
-- Extend `DataObjectColumn` class with type and alignment fields
-- Update all controller constructors to specify types for each column
-- Non-breaking: Pure metadata addition, no behavior change
-
-**COLUMN-002: Centralize Size Formatting**
-- Create `utils/format_utils.h` and `utils/format_utils.cpp`
-- Move `FormatSize()` from `windows_api/uninstaller_manager.cpp` to new utility
-- Make it shared: `std::string FormatSize(uint64_t bytes)`
-- Update UninstallerManager to use centralized version
-- Non-breaking: Code consolidation only
-
-**COLUMN-003: Refactor ProcessInfo for Raw Values**
-- Change ProcessInfo to store raw SIZE_T values for memory fields
-- Add typed getters: `GetWorkingSetSizeBytes()`, `GetPrivatePageCountBytes()`, etc.
-- Keep `GetProperty(int)` for display (formats using FormatSize())
-- Update ProcessManager to populate raw values instead of pre-formatting
-- Breaking: Changes ProcessInfo internal storage
-
-**COLUMN-004: Smart Sorting in Controllers**
-- Update controller `Sort()` methods to check column data type from metadata
-- For Size/Integer columns: get raw numeric value, compare numerically
-- For String columns: compare as strings (existing behavior)
-- Remove hardcoded column index checks (e.g., `if (columnIndex == 4)`)
-- Use metadata-driven approach: `if (columns[columnIndex].GetDataType() == ColumnDataType::Size)`
-- Breaking: Changes sort behavior (but fixes bugs)
-
-**COLUMN-005: UI Alignment from Metadata**
-- Update `main_window.cpp` table rendering
-- Read column alignment from `DataObjectColumn` metadata
-- Apply to `ImGui::TableSetupColumn()` with `ImGuiTableColumnFlags_WidthFixed` + alignment
-- Right-align numeric columns, left-align string columns
-- Breaking: Changes visual appearance
-
-**Status:** Not started. Will implement phases sequentially with verification after each.
-
 ## Future Work
 
 The core application is feature-complete. Remaining tasks for future releases:
@@ -340,6 +300,160 @@ The core application is feature-complete. Remaining tasks for future releases:
 
 All completed refinement tasks (TASK-001 through TASK-010) are documented in Git history.
 
+## EXPORT-001 through EXPORT-006: Common Export/Copy Actions
+
+**Problem Statement:**
+Users need to export and copy data in multiple formats (JSON, plaintext) across all views. Currently, each controller implements ad-hoc copying (e.g., ModulesDataController::CopyInfo with hardcoded formatting). This leads to:
+- Code duplication across controllers
+- Inconsistent output formats
+- No unified export-to-file functionality
+- No JSON export capability
+
+**Goal:**
+Create a generic export system with pluggable formatters that works for all data types. Controllers can add standardized "Export to JSON", "Copy as JSON", "Export to TXT", "Copy as TXT" context menu entries with zero per-controller implementation code.
+
+**Design:**
+```cpp
+// Core abstraction
+class IExporter {
+    virtual std::string ExportSingle(const DataObject*, const std::vector<DataObjectColumn>&) = 0;
+    virtual std::string ExportMultiple(const std::vector<const DataObject*>&, const std::vector<DataObjectColumn>&) = 0;
+    virtual std::string GetFormatName() const = 0;  // "JSON", "Plain Text", etc.
+    virtual std::string GetFileExtension() const = 0;  // ".json", ".txt"
+};
+
+// Implementations
+class JsonExporter : public IExporter;       // Uses RapidJSON
+class PlainTextExporter : public IExporter;  // Human-readable key: value format
+
+// Action enum in data_controller.h
+enum class CommonAction {
+    Separator = -1,
+    ExportToJson = -1000,
+    CopyAsJson = -1001,
+    ExportToTxt = -1002,
+    CopyAsTxt = -1003
+};
+
+// Helper in DataController base class
+void AddCommonExportActions(std::vector<int>& actions) const;
+void DispatchCommonAction(int action, DataActionDispatchContext& context);
+```
+
+**Milestones:**
+
+### EXPORT-001: Create IExporter interface and base infrastructure
+- Create `core/exporters/exporter_interface.h` with IExporter abstract class
+- Add `core/exporters/exporter_registry.h/.cpp` to manage available exporters
+- Add CommonAction enum to `core/data_controller.h`
+- Add helper methods to DataController base class:
+  * `AddCommonExportActions(std::vector<int>& actions)` - appends common actions
+  * `DispatchCommonAction(int action, DataActionDispatchContext& context)` - handles dispatch
+- Create `utils/file_dialogs.h/.cpp` with SaveFileDialog() wrapper using IFileSaveDialog COM
+
+**Success criteria:**
+- Interface compiles
+- ExporterRegistry singleton can register/retrieve exporters
+- SaveFileDialog() can prompt for file path with filter
+
+### EXPORT-002: Implement JsonExporter
+- Create `core/exporters/json_exporter.h/.cpp`
+- Implement ExportSingle():
+  * Create JSON object with property name -> value mapping
+  * Use column metadata from GetColumns() to enumerate properties
+  * Call GetProperty(columnIndex) for each column
+  * Pretty-print with 2-space indentation
+- Implement ExportMultiple():
+  * Create JSON array of objects
+  * Use ExportSingle() for each object
+- Register in ExporterRegistry during static initialization
+
+**Success criteria:**
+- Single object exports to valid, pretty-printed JSON
+- Multiple objects export to JSON array
+- All columns from controller metadata included
+- Empty/null values handled gracefully
+
+### EXPORT-003: Implement PlainTextExporter
+- Create `core/exporters/plaintext_exporter.h/.cpp`
+- Implement ExportSingle():
+  * Format as "PropertyName: Value\n" for each column
+  * Use column display names from metadata
+  * Add blank line between objects
+- Implement ExportMultiple():
+  * Call ExportSingle() for each object with separator
+  * Add object count header ("Exported 5 services:")
+- Register in ExporterRegistry
+
+**Success criteria:**
+- Single object exports to human-readable text
+- Multiple objects clearly separated
+- Format matches existing ad-hoc implementations (e.g., ModulesDataController::CopyInfo)
+
+### EXPORT-004: Integrate common actions into DataController base
+- Implement DataController::AddCommonExportActions():
+  * Query ExporterRegistry for available exporters
+  * Add separator if actions list not empty
+  * For each exporter, add Copy/Export action pairs
+  * Use negative action IDs (< -1000) to avoid collision with controller-specific actions
+- Implement DataController::DispatchCommonAction():
+  * Route to appropriate exporter based on action ID
+  * For Copy actions: call exporter, put result in clipboard via ImGui::SetClipboardText()
+  * For Export actions: show SaveFileDialog, write result to file
+  * Handle errors with MessageBox and spdlog
+
+**Success criteria:**
+- Base class can dispatch common actions without derived class involvement
+- Clipboard operations work
+- File save with proper extension filtering works
+- Errors logged and shown to user
+
+### EXPORT-005: Update all controllers to use common actions
+- Modify GetAvailableActions() in all 5 controllers:
+  * ServicesDataController
+  * ProcessesDataController
+  * WindowsDataController
+  * ModulesDataController (remove existing CopyInfo action)
+  * UninstallerDataController
+- Call AddCommonExportActions() at end of action list
+- Modify DispatchAction() to call DispatchCommonAction() for unhandled actions:
+  ```cpp
+  default:
+      // Delegate to base class for common actions
+      DispatchCommonAction(action, context);
+      break;
+  ```
+
+**Success criteria:**
+- All 5 controllers show Export/Copy options for JSON and TXT
+- ModulesDataController's ad-hoc CopyInfo removed, replaced by generic version
+- No code duplication across controllers
+
+### EXPORT-006: Test and document
+- Test each controller's export functionality:
+  * Single object export/copy
+  * Multiple object export/copy
+  * Empty selection handling
+  * Large datasets (100+ objects)
+  * Special characters in data (quotes, newlines, Unicode)
+- Verify JSON validity with online validator
+- Update instructions.md with Export System section
+- Add usage example to architecture documentation
+
+**Success criteria:**
+- All views can export/copy in both formats
+- JSON is valid and parseable
+- Text format is readable and consistent
+- Documentation complete
+
+**Implementation Notes:**
+- RapidJSON already included at `..\rapidjson\include`
+- Use RapidJSON's StringBuffer + PrettyWriter for output
+- Export should respect column order from controller metadata
+- File dialog should remember last used directory (persist in config?)
+- Consider adding XML exporter in future (for pserv4 compatibility)
+- Consider adding CSV exporter for spreadsheet import
+
 ## Historical Context
 
 - **1998 (v1)**: Custom Windows library
@@ -349,3 +463,7 @@ All completed refinement tasks (TASK-001 through TASK-010) are documented in Git
 - **2025 (v5)**: C++20 with ImGui (this version)
 
 pserv5 maintains feature parity with pserv4 while eliminating .NET runtime dependency and improving performance.
+
+## UNsorted 
+
+- Synchronize MatchesFilter to lowercase
