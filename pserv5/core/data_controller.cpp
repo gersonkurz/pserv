@@ -1,8 +1,11 @@
 #include "precomp.h"
 #include "data_controller.h"
 #include "exporters/exporter_registry.h"
+#include "../utils/file_dialogs.h"
+#include "../utils/string_utils.h"
 #include <algorithm>
 #include <spdlog/spdlog.h>
+#include <fstream>
 
 namespace pserv {
 
@@ -160,9 +163,56 @@ void DataController::DispatchCommonAction(int action, DataActionDispatchContext&
         spdlog::info("Copied {} object(s) as {} to clipboard",
             context.m_selectedObjects.size(), exporter->GetFormatName());
     } else {
-        // Export to file - will be implemented in EXPORT-001 (file_dialogs.h)
-        spdlog::warn("Export to file not yet implemented");
-        MessageBoxA(context.m_hWnd, "Export to file not yet implemented", "TODO", MB_OK | MB_ICONINFORMATION);
+        // Export to file
+        std::wstring defaultFileName = utils::Utf8ToWide(
+            std::format("export_{}", m_controllerName));
+
+        std::vector<utils::FileTypeFilter> filters{
+            { std::format(L"{} Files", utils::Utf8ToWide(exporter->GetFormatName())),
+              std::format(L"*{}", utils::Utf8ToWide(exporter->GetFileExtension())) },
+            { L"All Files", L"*.*" }
+        };
+
+        std::wstring filePath;
+        if (utils::SaveFileDialog(context.m_hWnd,
+                                   L"Export Data",
+                                   defaultFileName,
+                                   filters,
+                                   0,
+                                   filePath)) {
+            // Write to file
+            try {
+                std::ofstream outFile{ filePath, std::ios::binary };
+                if (!outFile) {
+                    throw std::runtime_error("Failed to open file for writing");
+                }
+
+                outFile.write(exportedData.c_str(), exportedData.size());
+                outFile.close();
+
+                if (outFile.fail()) {
+                    throw std::runtime_error("Failed to write data to file");
+                }
+
+                spdlog::info("Exported {} object(s) as {} to file: {}",
+                    context.m_selectedObjects.size(),
+                    exporter->GetFormatName(),
+                    utils::WideToUtf8(filePath));
+
+                MessageBoxA(context.m_hWnd,
+                    std::format("Successfully exported {} object(s) to file.",
+                        context.m_selectedObjects.size()).c_str(),
+                    "Export Complete", MB_OK | MB_ICONINFORMATION);
+            }
+            catch (const std::exception& e) {
+                spdlog::error("File export failed: {}", e.what());
+                MessageBoxA(context.m_hWnd,
+                    std::format("Failed to export to file: {}", e.what()).c_str(),
+                    "Export Error", MB_OK | MB_ICONERROR);
+            }
+        } else {
+            spdlog::debug("Export cancelled by user");
+        }
     }
 }
 
