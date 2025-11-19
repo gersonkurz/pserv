@@ -270,101 +270,23 @@ if (!hSCM) throw std::runtime_error(GetLastWin32ErrorMessage());
 // Automatic CloseServiceHandle() on scope exit
 ```
 
-## Refinement Tasks
+## Future Work
 
-### Bug Fixes (High Priority)
+The core application is feature-complete. Remaining tasks for future releases:
 
-**TASK-001: Fix Uninstaller Refresh Timing** ✅ COMPLETED
-- File: `controllers/uninstaller_data_controller.cpp:152-156`
-- Issue: Called `Refresh()` immediately after launching uninstaller, list became stale
-- Fix: Added `m_bNeedsRefresh` flag to base `DataController` class
-- Fix: Controller sets flag instead of calling Refresh() directly
-- Fix: UI layer (`main_window.cpp:590-610`) highlights Refresh button in orange when flag is set
-- Pattern: Client controls when refresh happens, controller just signals the need
-
-**TASK-002: Fix Uninstaller String Parsing** ✅ COMPLETED
-- File: `controllers/uninstaller_data_controller.cpp:122-154`
-- Issue: Naive parsing didn't handle quoted paths with spaces correctly
-- Example: `"C:\Program Files\Foo\uninstall.exe" /S` broke on first space inside quotes
-- Fix: Use Windows `CommandLineToArgvW` API for proper quote handling
-- Fix: WIL's `unique_hlocal_ptr` handles memory cleanup automatically
-- Fix: Rebuild arguments with proper quoting for ShellExecuteW
-
-**TASK-003: Fix Uninstaller Size Sorting** ✅ COMPLETED
-- Files: `models/installed_program_info.{h,cpp}`, `windows_api/uninstaller_manager.{h,cpp}`, `controllers/uninstaller_data_controller.cpp:196-202`
-- Issue: Estimated Size column sorted lexicographically ("100 KB" < "90 KB")
-- Fix: Added `m_estimatedSizeBytes` uint64_t field to model for numeric storage
-- Fix: Read EstimatedSize from registry as DWORD (KB), convert to bytes
-- Fix: Added `FormatSize()` helper for human-readable display (e.g., "4.50 GB")
-- Fix: Sort uses numeric comparison on bytes, not formatted string
-- Result: Proper numeric sorting (90 MB > 10 GB is false, as expected)
-
-**TASK-004: Remove Implicit Refresh in GetDataObjects()** ✅ COMPLETED
-- Files: `controllers/processes_data_controller.h:22-29`, `controllers/services_data_controller.h:53-60`
-- Issue: Broke const correctness by calling `Refresh()` inside const getter
-- Fix: Removed all implicit refresh logic from `GetDataObjects()` implementations
-- Note: `main_window.cpp:578-586` already handles lazy refresh correctly via `IsLoaded()` check
-
-**TASK-005: Fix Processes Username Caching** ✅ COMPLETED
-- File: `controllers/processes_data_controller.cpp:44-50`
-- Issue: Cached username once, never invalidated if user switches or app runs as service
-- Fix: Re-query username on every refresh (negligible performance impact vs process enumeration)
-- Now handles user switch scenarios and service context changes
-
-### Architectural Issues (Medium Priority)
-
-**TASK-006: Redesign Modules Controller** ✅ COMPLETED
-- Files: `controllers/modules_data_controller.{h,cpp}`, `windows_api/module_manager.cpp`, `main_window.cpp`
-- Issue: Dual-vector pattern inconsistency, slow enumeration, sluggish scrolling with 22k+ items
-- Fix: Single-vector pattern with reinterpret_cast (consistency with other controllers)
-- Fix: Path-based caching in ModuleManager (~20% speedup, 90%+ cache hit rate for common DLLs)
-- Fix: ImGuiListClipper for virtual scrolling (threshold: 1000+ items, only renders visible rows)
-- Decision: Keep global enumeration for duplicate DLL detection use case
-- Result: Acceptable performance, smooth UI
-
-**TASK-007: Uninstaller Properties Dialog Const-Correctness**
-- File: `controllers/uninstaller_data_controller.cpp:107-112`
-- Issue: Casts away const to pass to dialog
-- Root cause: Dialog expects non-const pointers for editing
-- Fix: Make dialog accept const pointers (it's read-only) or document mutability contract
-
-**TASK-008: Services Controller Column Order Comments**
-- File: `controllers/services_data_controller.cpp:16-36`
-- Issue: Comment says "order matches ServiceProperty enum" but relies on positional magic
-- Risk: Adding column breaks numeric sort logic (line 128)
-- Fix: Use explicit enum values in sort switch, not column index assumptions
-
-### Code Quality (Low Priority)
-
-**TASK-009: Processes Controller Incomplete Sort**
-- File: `controllers/processes_data_controller.cpp:276`
-- Issue: PageFaultCount case commented out with "Need getter"
-- Fix: Either add getter to ProcessInfo or remove column
-
-**TASK-010: Modules Controller Verbose Comparison**
-- File: `controllers/modules_data_controller.cpp:159-160`
-- Issue: Ternary chain for pointer comparison could be simplified
-- Current: `(a < b) ? -1 : (a > b)`
-- Better: `(a < b) - (a > b)` or `std::compare_three_way`
-
-**TASK-011: Inconsistent Sort Patterns**
-- Files: All `*_data_controller.cpp` Sort() methods
-- Issue: Mix of approaches - some parse strings, some access typed getters
-- Fix: Standardize on one pattern (prefer typed getters for numeric columns)
-
-### Future Work
-
-**TASK-012: Command-Line Interface**
+**Command-Line Interface**
 - Headless mode support
 - XML export/import for all views
 - Service automation commands
 - Reference: pserv4 XML format for compatibility
 
-**TASK-013: Polish & Beta Release**
+**Polish & Beta Release**
 - Memory leak detection (Application Verifier)
 - Performance profiling (identify hotspots)
 - WiX MSI installer project
 - Code signing for enterprise distribution
+
+All completed refinement tasks (TASK-001 through TASK-010) are documented in Git history.
 
 ## Historical Context
 
