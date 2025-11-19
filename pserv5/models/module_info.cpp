@@ -32,6 +32,22 @@ void ModuleInfo::Update(const DataObject& other) {
     // If mutable properties were introduced, they would be updated here.
 }
 
+PropertyValue ModuleInfo::GetTypedProperty(int propertyId) const {
+    switch (propertyId) {
+        case 0: // Base Address
+            return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_baseAddress));
+        case 1: // Size
+            return static_cast<uint64_t>(m_size);
+        case 2: // Name
+        case 3: // Path
+            return GetProperty(propertyId);
+        case 4: // Process ID
+            return static_cast<uint64_t>(m_processId);
+        default:
+            return std::monostate{};
+    }
+}
+
 std::string ModuleInfo::GetProperty(int column) const {
     switch (column) {
         case 0: return std::format("{:#x}", reinterpret_cast<uintptr_t>(m_baseAddress));

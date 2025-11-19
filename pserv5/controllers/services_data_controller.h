@@ -31,8 +31,6 @@ enum class ServiceAction : int32_t {
 class ServicesDataController : public DataController {
 private:
     std::vector<ServiceInfo*> m_services;
-    int m_lastSortColumn{-1};
-    bool m_lastSortAscending{true};
     DWORD m_serviceType{SERVICE_WIN32 | SERVICE_DRIVER};  // Default: all services
     ServicePropertiesDialog* m_pPropertiesDialog{ nullptr };  // Service properties dialog
 
@@ -44,7 +42,6 @@ public:
 public:
     // DataController interface
     void Refresh() override;
-    void Sort(int columnIndex, bool ascending) override;
 
     // Get service objects
     const std::vector<ServiceInfo*>& GetServices() const { return m_services; }

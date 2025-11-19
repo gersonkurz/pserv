@@ -26,7 +26,6 @@ public:
     VisualState GetVisualState(const DataObject* dataObject) const override;
     void DispatchAction(int action, DataActionDispatchContext& context) override;
     void RenderPropertiesDialog() override;
-    void Sort(int columnIndex, bool ascending) override;
 
 private:
     std::vector<ModuleInfo*> m_modules;

@@ -138,41 +138,4 @@ void ModulesDataController::RenderPropertiesDialog() {
     // No properties dialog for modules yet
 }
 
-void ModulesDataController::Sort(int columnIndex, bool ascending) {
-    if (columnIndex < 0 || columnIndex >= static_cast<int>(GetColumns().size())) return;
-
-    const auto& columns = GetColumns();
-    ColumnDataType dataType = columns[columnIndex].DataType;
-
-    std::sort(m_modules.begin(), m_modules.end(),
-        [columnIndex, ascending, dataType](const ModuleInfo* a, const ModuleInfo* b) {
-        // Use column metadata to determine sorting strategy
-        if (dataType == ColumnDataType::UnsignedInteger) {
-            uint64_t valA = 0, valB = 0;
-
-            // 0=BaseAddress, 4=ProcessID
-            switch (columnIndex) {
-                case 0: valA = reinterpret_cast<uintptr_t>(a->GetBaseAddress());
-                        valB = reinterpret_cast<uintptr_t>(b->GetBaseAddress()); break;
-                case 4: valA = a->GetProcessId(); valB = b->GetProcessId(); break;
-                default: valA = 0; valB = 0; break;
-            }
-
-            return ascending ? (valA < valB) : (valA > valB);
-        }
-        else if (dataType == ColumnDataType::Size) {
-            // 1=Size
-            uint64_t sizeA = a->GetSize();
-            uint64_t sizeB = b->GetSize();
-            return ascending ? (sizeA < sizeB) : (sizeA > sizeB);
-        }
-
-        // String comparison for all other types
-        std::string valA = a->GetProperty(columnIndex);
-        std::string valB = b->GetProperty(columnIndex);
-        int cmp = valA.compare(valB);
-        return ascending ? (cmp < 0) : (cmp > 0);
-    });
-}
-
 } // namespace pserv

@@ -16,7 +16,7 @@ std::string WindowInfo::GetId() const {
 
 void WindowInfo::Update(const DataObject& other) {
     const auto& otherWin = static_cast<const WindowInfo&>(other);
-    
+
     m_title = otherWin.m_title;
     m_className = otherWin.m_className;
     m_rect = otherWin.m_rect;
@@ -29,6 +29,31 @@ void WindowInfo::Update(const DataObject& other) {
 
     SetRunning(otherWin.IsRunning());
     SetDisabled(otherWin.IsDisabled());
+}
+
+PropertyValue WindowInfo::GetTypedProperty(int propertyId) const {
+    switch (static_cast<WindowProperty>(propertyId)) {
+        case WindowProperty::InternalID:
+            return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_hwnd));
+        case WindowProperty::Style:
+            return static_cast<uint64_t>(m_style);
+        case WindowProperty::ExStyle:
+            return static_cast<uint64_t>(m_exStyle);
+        case WindowProperty::ID:
+            return static_cast<uint64_t>(m_windowId);
+        case WindowProperty::ProcessID:
+            return static_cast<uint64_t>(m_processId);
+        case WindowProperty::ThreadID:
+            return static_cast<uint64_t>(m_threadId);
+        case WindowProperty::Title:
+        case WindowProperty::Class:
+        case WindowProperty::Size:
+        case WindowProperty::Position:
+        case WindowProperty::Process:
+            return GetProperty(propertyId);
+        default:
+            return std::monostate{};
+    }
 }
 
 std::string WindowInfo::GetProperty(int propertyId) const {

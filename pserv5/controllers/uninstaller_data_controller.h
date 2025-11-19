@@ -27,14 +27,12 @@ public:
     std::string GetActionName(int action) const override;
     void DispatchAction(int action, DataActionDispatchContext& context) override;
     void RenderPropertiesDialog() override;
-    void Sort(int columnIndex, bool ascending) override;
 
 private:
     std::vector<InstalledProgramInfo*> m_programs;
     UninstallerPropertiesDialog* m_pPropertiesDialog;
 
-    int m_lastSortColumn = -1;
-    bool m_lastSortAscending = true;
+    void Clear();
 };
 
 } // namespace pserv

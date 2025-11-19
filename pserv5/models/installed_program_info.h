@@ -22,8 +22,9 @@ public:
 
     // DataObject overrides
     std::string GetId() const override;
-    void Update(const DataObject& other) override; 
+    void Update(const DataObject& other) override;
     std::string GetProperty(int columnIndex) const override;
+    PropertyValue GetTypedProperty(int propertyId) const override;
     bool MatchesFilter(const std::string& filter) const override;
 
     // Getters

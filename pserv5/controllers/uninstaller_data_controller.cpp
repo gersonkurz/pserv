@@ -164,42 +164,4 @@ void UninstallerDataController::RenderPropertiesDialog() {
     }
 }
 
-void UninstallerDataController::Sort(int columnIndex, bool ascending) {
-    if (columnIndex < 0 || columnIndex >= static_cast<int>(GetColumns().size())) return;
-
-    spdlog::info("[UNINSTALLER] Sort called: column={}, ascending={}, items={}",
-        columnIndex, ascending, m_programs.size());
-
-    m_lastSortColumn = columnIndex;
-    m_lastSortAscending = ascending;
-
-    const auto& columns = GetColumns();
-    ColumnDataType dataType = columns[columnIndex].DataType;
-
-    std::sort(m_programs.begin(), m_programs.end(),
-        [columnIndex, ascending, dataType](const InstalledProgramInfo* a, const InstalledProgramInfo* b) {
-        // Use column metadata to determine sorting strategy
-        if (dataType == ColumnDataType::Size) {
-            // 6=EstimatedSize
-            uint64_t sizeA = a->GetEstimatedSizeBytes();
-            uint64_t sizeB = b->GetEstimatedSizeBytes();
-            return ascending ? (sizeA < sizeB) : (sizeA > sizeB);
-        }
-
-        // String comparison for all other types
-        std::string valA = a->GetProperty(columnIndex);
-        std::string valB = b->GetProperty(columnIndex);
-        int cmp = valA.compare(valB);
-        return ascending ? (cmp < 0) : (cmp > 0);
-    });
-
-    // Log first few items after sort for verification
-    if (!m_programs.empty()) {
-        spdlog::info("[UNINSTALLER] After sort - First item: '{}'", m_programs[0]->GetDisplayName());
-        if (m_programs.size() > 1) {
-            spdlog::info("[UNINSTALLER] After sort - Second item: '{}'", m_programs[1]->GetDisplayName());
-        }
-    }
-}
-
 } // namespace pserv

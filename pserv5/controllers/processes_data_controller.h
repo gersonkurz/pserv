@@ -27,15 +27,10 @@ public:
 
 private:
     void Clear();
-    void Sort(int columnIndex, bool ascending) override;
 
     std::vector<ProcessInfo*> m_processes;
     ProcessPropertiesDialog* m_pPropertiesDialog{ nullptr };
-    
-    // Sorting state
-    int m_lastSortColumn{-1};
-    bool m_lastSortAscending{true};
-    
+
     std::string m_currentUserName;
 };
 

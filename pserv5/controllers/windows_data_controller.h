@@ -28,8 +28,7 @@ public:
     // Base class overrides
     void Refresh() override;
     const std::vector<DataObject*>& GetDataObjects() const override;
-    
-    void Sort(int columnIndex, bool ascending) override;
+
     VisualState GetVisualState(const DataObject* dataObject) const override;
     
     std::vector<int> GetAvailableActions(const DataObject* dataObject) const override;

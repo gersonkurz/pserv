@@ -103,54 +103,6 @@ namespace pserv {
 		}
 	}
 
-	void ServicesDataController::Sort(int columnIndex, bool ascending) {
-		if (columnIndex < 0 || columnIndex >= static_cast<int>(GetColumns().size())) {
-			spdlog::warn("Invalid column index for sorting: {}", columnIndex);
-			return;
-		}
-
-		// Remember last sort for refresh
-		m_lastSortColumn = columnIndex;
-		m_lastSortAscending = ascending;
-
-		spdlog::info("[SERVICES] Sort called: column={}, ascending={}, items={}",
-			columnIndex, ascending, m_services.size());
-
-		const auto& columns = GetColumns();
-		ColumnDataType dataType = columns[columnIndex].DataType;
-
-		std::sort(m_services.begin(), m_services.end(), [columnIndex, ascending, dataType](const ServiceInfo* a, const ServiceInfo* b) {
-			std::string valA = a->GetProperty(columnIndex);
-			std::string valB = b->GetProperty(columnIndex);
-
-			// Use column metadata to determine sorting strategy
-			if (dataType == ColumnDataType::UnsignedInteger || dataType == ColumnDataType::Integer) {
-				try {
-					long long numA = valA.empty() ? 0 : std::stoll(valA);
-					long long numB = valB.empty() ? 0 : std::stoll(valB);
-					return ascending ? (numA < numB) : (numA > numB);
-				}
-				catch (...) {
-					// Fall back to string comparison if parsing fails
-					int cmp = valA.compare(valB);
-					return ascending ? (cmp < 0) : (cmp > 0);
-				}
-			}
-
-			// String comparison for other columns
-			int cmp = valA.compare(valB);
-			return ascending ? (cmp < 0) : (cmp > 0);
-			});
-
-		// Log first few items after sort for verification
-		if (!m_services.empty()) {
-			spdlog::info("[SERVICES] After sort - First item: '{}'", m_services[0]->GetDisplayName());
-			if (m_services.size() > 1) {
-				spdlog::info("[SERVICES] After sort - Second item: '{}'", m_services[1]->GetDisplayName());
-			}
-		}
-	}
-
 	void ServicesDataController::Clear() {
 		for (auto* service : m_services) {
 			delete service;

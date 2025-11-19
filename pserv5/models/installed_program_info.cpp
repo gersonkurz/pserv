@@ -44,6 +44,25 @@ void InstalledProgramInfo::Update(const DataObject& other) {
     // But we must override the pure virtual function
 }
 
+PropertyValue InstalledProgramInfo::GetTypedProperty(int propertyId) const {
+    switch (propertyId) {
+        case 6: // Estimated Size
+            return m_estimatedSizeBytes;
+        case 0: // Display Name
+        case 1: // Version
+        case 2: // Publisher
+        case 3: // Install Location
+        case 4: // Uninstall String
+        case 5: // Install Date
+        case 7: // Comments
+        case 8: // Help Link
+        case 9: // URL Info About
+            return GetProperty(propertyId);
+        default:
+            return std::monostate{};
+    }
+}
+
 std::string InstalledProgramInfo::GetProperty(int columnIndex) const {
     switch (columnIndex) {
         case 0: return m_displayName;

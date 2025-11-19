@@ -49,6 +49,52 @@ void ProcessInfo::Update(const DataObject& other) {
     m_name = otherProcess.m_name;
 }
 
+PropertyValue ProcessInfo::GetTypedProperty(int propertyId) const {
+    switch (static_cast<ProcessProperty>(propertyId)) {
+        case ProcessProperty::Name:
+        case ProcessProperty::User:
+        case ProcessProperty::Priority:
+        case ProcessProperty::Path:
+        case ProcessProperty::CommandLine:
+            return GetProperty(propertyId);
+
+        case ProcessProperty::PID:
+            return static_cast<uint64_t>(m_pid);
+        case ProcessProperty::ParentPID:
+            return static_cast<uint64_t>(m_parentPid);
+        case ProcessProperty::ThreadCount:
+            return static_cast<uint64_t>(m_threadCount);
+        case ProcessProperty::HandleCount:
+            return static_cast<uint64_t>(m_handleCount);
+        case ProcessProperty::SessionId:
+            return static_cast<uint64_t>(m_sessionId);
+        case ProcessProperty::PageFaultCount:
+            return static_cast<uint64_t>(m_pageFaultCount);
+
+        case ProcessProperty::WorkingSetSize:
+            return static_cast<uint64_t>(m_workingSetSize);
+        case ProcessProperty::PeakWorkingSetSize:
+            return static_cast<uint64_t>(m_peakWorkingSetSize);
+        case ProcessProperty::PrivatePageCount:
+            return static_cast<uint64_t>(m_privatePageCount);
+        case ProcessProperty::VirtualSize:
+            return static_cast<uint64_t>(m_virtualSize);
+        case ProcessProperty::PagedPoolUsage:
+            return static_cast<uint64_t>(m_quotaPagedPoolUsage);
+        case ProcessProperty::NonPagedPoolUsage:
+            return static_cast<uint64_t>(m_quotaNonPagedPoolUsage);
+
+        case ProcessProperty::StartTime:
+        case ProcessProperty::TotalCPUTime:
+        case ProcessProperty::UserCPUTime:
+        case ProcessProperty::KernelCPUTime:
+            return GetProperty(propertyId);
+
+        default:
+            return std::monostate{};
+    }
+}
+
 std::string ProcessInfo::GetProperty(int propertyId) const {
     switch (static_cast<ProcessProperty>(propertyId)) {
         case ProcessProperty::Name:

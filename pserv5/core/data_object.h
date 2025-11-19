@@ -1,8 +1,12 @@
 #pragma once
 #include "IRefCounted.h"
 #include <string>
+#include <variant>
 
 namespace pserv {
+    // Type-safe property value for sorting and comparison
+    using PropertyValue = std::variant<std::monostate, int64_t, uint64_t, std::string>;
+
     class DataObject : public RefCountImpl {
     private:
         bool m_bIsRunning{false};
@@ -17,6 +21,7 @@ namespace pserv {
         virtual std::string GetId() const = 0;
         virtual void Update(const DataObject& other) = 0;
         virtual std::string GetProperty(int propertyId) const = 0;
+        virtual PropertyValue GetTypedProperty(int propertyId) const = 0;
         virtual bool MatchesFilter(const std::string& filter) const = 0;
 
         bool IsRunning() const { return m_bIsRunning; }

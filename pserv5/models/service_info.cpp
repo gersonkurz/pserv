@@ -69,6 +69,39 @@ namespace pserv {
 		m_serviceFlags = otherService->m_serviceFlags;
 	}
 
+	PropertyValue ServiceInfo::GetTypedProperty(int propertyId) const {
+		switch (static_cast<ServiceProperty>(propertyId)) {
+		case ServiceProperty::ProcessId:
+			return static_cast<uint64_t>(m_processId);
+		case ServiceProperty::TagId:
+			return static_cast<uint64_t>(m_tagId);
+		case ServiceProperty::Win32ExitCode:
+			return static_cast<uint64_t>(m_win32ExitCode);
+		case ServiceProperty::ServiceSpecificExitCode:
+			return static_cast<uint64_t>(m_serviceSpecificExitCode);
+		case ServiceProperty::CheckPoint:
+			return static_cast<uint64_t>(m_checkPoint);
+		case ServiceProperty::WaitHint:
+			return static_cast<uint64_t>(m_waitHint);
+		case ServiceProperty::ServiceFlags:
+			return static_cast<uint64_t>(m_serviceFlags);
+		case ServiceProperty::Name:
+		case ServiceProperty::DisplayName:
+		case ServiceProperty::Status:
+		case ServiceProperty::StartType:
+		case ServiceProperty::ServiceType:
+		case ServiceProperty::BinaryPathName:
+		case ServiceProperty::Description:
+		case ServiceProperty::User:
+		case ServiceProperty::LoadOrderGroup:
+		case ServiceProperty::ErrorControl:
+		case ServiceProperty::ControlsAccepted:
+			return GetProperty(propertyId);
+		default:
+			return std::monostate{};
+		}
+	}
+
 	std::string ServiceInfo::GetProperty(int propertyId) const {
 		switch (static_cast<ServiceProperty>(propertyId)) {
 		case ServiceProperty::Name:

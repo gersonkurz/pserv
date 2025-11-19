@@ -49,13 +49,15 @@ namespace pserv {
 
 		// Core abstract methods
 		virtual void Refresh() = 0;
-		virtual void Sort(int columnIndex, bool ascending) = 0;
 		virtual const std::vector<DataObject*>& GetDataObjects() const = 0;
 		virtual VisualState GetVisualState(const DataObject* service) const = 0;
 		virtual std::vector<int> GetAvailableActions(const DataObject* service) const = 0;
 		virtual std::string GetActionName(int action) const = 0;
 		virtual void DispatchAction(int action, DataActionDispatchContext& context) = 0;
 		virtual void RenderPropertiesDialog() = 0;
+
+		// Generic sort implementation using column metadata and GetTypedProperty()
+		void Sort(int columnIndex, bool ascending);
 
 		const std::vector<DataObjectColumn>& GetColumns() const { return m_columns; }
 		const std::string& GetControllerName() const { return m_controllerName; }
@@ -67,5 +69,7 @@ namespace pserv {
 	protected:
 		bool m_bLoaded{ false };
 		bool m_bNeedsRefresh{ false };
+		int m_lastSortColumn{ -1 };
+		bool m_lastSortAscending{ true };
 	};
 }
