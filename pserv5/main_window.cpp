@@ -587,14 +587,26 @@ namespace pserv {
 
 		ImGui::Separator();
 		{
+			// Highlight refresh button if controller flagged that refresh is needed
+			if (controller->NeedsRefresh()) {
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.9f, 0.6f, 0.0f, 1.0f));  // Orange
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.7f, 0.1f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.5f, 0.0f, 1.0f));
+			}
+
 			const auto buttonName{ std::format("Refresh {}", controllerName) };
 			if (ImGui::Button(buttonName.c_str())) {
 				try {
 					controller->Refresh();
+					controller->ClearRefreshFlag();
 				}
 				catch (const std::exception& e) {
 					spdlog::error("Failed to refresh {}: {}", controllerName, e.what());
 				}
+			}
+
+			if (controller->NeedsRefresh()) {
+				ImGui::PopStyleColor(3);
 			}
 		}
 

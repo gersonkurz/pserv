@@ -1,5 +1,5 @@
 [Application]
-ActiveView = 'Uninstaller'
+ActiveView = 'Services'
 FontSize = 1800
 Theme = 'Dark'
 

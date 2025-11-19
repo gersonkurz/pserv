@@ -21,10 +21,6 @@ public:
 
     const std::vector<DataObject*>& GetDataObjects() const override
     {
-        if (m_processes.empty())
-        {
-            const_cast<ProcessesDataController*>(this)->Refresh();
-        }
         return reinterpret_cast<const std::vector<DataObject*>&>(m_processes);
     }
 

@@ -52,10 +52,6 @@ public:
 
     const std::vector<DataObject*>& GetDataObjects() const override
     {
-        if (m_services.empty())
-        {
-			const_cast<ServicesDataController*>(this)->Refresh();
-        }
 		return reinterpret_cast<const std::vector<DataObject*>&>(m_services);
     }
 

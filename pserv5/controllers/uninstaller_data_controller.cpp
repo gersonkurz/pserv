@@ -150,10 +150,9 @@ void UninstallerDataController::DispatchAction(int action, DataActionDispatchCon
                     spdlog::error("Failed to launch uninstaller for '{}': {}", program->GetDisplayName(), errorMsg);
                     MessageBoxA(context.m_hWnd, std::format("Failed to launch uninstaller. Error: {}.", errorMsg).c_str(), "Uninstallation Error", MB_OK | MB_ICONERROR);
                 } else {
-                    // Uninstaller launched successfully. Refresh the list after a delay or on next activation.
-                    spdlog::info("Uninstaller launched for '{}'. Refreshing view.", program->GetDisplayName());
-                    // For now, simply trigger a refresh after the uninstaller is launched.
-                    Refresh(); 
+                    // Uninstaller launched successfully. Signal that refresh is needed.
+                    spdlog::info("Uninstaller launched for '{}'. User should refresh after uninstaller completes.", program->GetDisplayName());
+                    m_bNeedsRefresh = true;
                 }
             }
             break;
