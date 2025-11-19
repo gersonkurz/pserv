@@ -7,22 +7,21 @@
 namespace pserv {
 
 WindowsDataController::WindowsDataController()
-    : DataController("Windows", "Window")
-    , m_pPropertiesDialog(new WindowPropertiesDialog())
+    : DataController{"Windows", "Window", {
+        {"InternalID", "InternalID", ColumnDataType::UnsignedInteger},
+        {"Title", "Title", ColumnDataType::String},
+        {"Class", "Class", ColumnDataType::String},
+        {"Size", "Size", ColumnDataType::String},
+        {"Position", "Position", ColumnDataType::String},
+        {"Style", "Style", ColumnDataType::UnsignedInteger},
+        {"ExStyle", "ExStyle", ColumnDataType::UnsignedInteger},
+        {"ID", "ID", ColumnDataType::UnsignedInteger},
+        {"ProcessID", "ProcessID", ColumnDataType::UnsignedInteger},
+        {"ThreadID", "ThreadID", ColumnDataType::UnsignedInteger},
+        {"Process", "Process", ColumnDataType::String}
+    } }
+    , m_pPropertiesDialog{new WindowPropertiesDialog()}
 {
-    m_columns = {
-        DataObjectColumn("InternalID", "InternalID"),
-        DataObjectColumn("Title", "Title"),
-        DataObjectColumn("Class", "Class"),
-        DataObjectColumn("Size", "Size"),
-        DataObjectColumn("Position", "Position"),
-        DataObjectColumn("Style", "Style"),
-        DataObjectColumn("ExStyle", "ExStyle"),
-        DataObjectColumn("ID", "ID"),
-        DataObjectColumn("ProcessID", "ProcessID"),
-        DataObjectColumn("ThreadID", "ThreadID"),
-        DataObjectColumn("Process", "Process")
-    };
 }
 
 WindowsDataController::~WindowsDataController() {
@@ -58,11 +57,6 @@ void WindowsDataController::Clear() {
     m_dataObjects.clear();
     m_bLoaded = false;
 }
-
-const std::vector<DataObjectColumn>& WindowsDataController::GetColumns() const {
-    return m_columns;
-}
-
 const std::vector<DataObject*>& WindowsDataController::GetDataObjects() const {
     return m_dataObjects;
 }

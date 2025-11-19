@@ -8,28 +8,27 @@
 namespace pserv {
 
 ProcessesDataController::ProcessesDataController()
-    : DataController("Processes", "Process")
-    , m_pPropertiesDialog(new ProcessPropertiesDialog())
+    : DataController{"Processes", "Process", {
+        {"Name", "Name", ColumnDataType::String},
+        {"PID", "PID", ColumnDataType::UnsignedInteger},
+        {"User", "User", ColumnDataType::String},
+        {"Priority", "Priority", ColumnDataType::String},
+        {"Threads", "ThreadCount", ColumnDataType::UnsignedInteger},
+        {"Working Set", "WorkingSetSize", ColumnDataType::Size},
+        {"Private Bytes", "PrivatePageCount", ColumnDataType::Size},
+        {"Path", "Path", ColumnDataType::String},
+        {"Command Line", "CommandLine", ColumnDataType::String},
+        {"Handles", "HandleCount", ColumnDataType::UnsignedInteger},
+        {"Start Time", "StartTime", ColumnDataType::Time},
+        {"CPU Time", "TotalCPUTime", ColumnDataType::Time},
+        {"Kernel Time", "KernelCPUTime", ColumnDataType::Time},
+        {"User Time", "UserCPUTime", ColumnDataType::Time},
+        {"Paged Pool", "PagedPoolUsage", ColumnDataType::Size},
+        {"Non-Paged Pool", "NonPagedPoolUsage", ColumnDataType::Size},
+        {"Page Faults", "PageFaultCount", ColumnDataType::UnsignedInteger}
+    } }
+    , m_pPropertiesDialog{new ProcessPropertiesDialog()}
 {
-    m_columns = {
-        DataObjectColumn("Name", "Name"),
-        DataObjectColumn("PID", "PID"),
-        DataObjectColumn("User", "User"),
-        DataObjectColumn("Priority", "Priority"),
-        DataObjectColumn("Threads", "ThreadCount"),
-        DataObjectColumn("Working Set", "WorkingSetSize"),
-        DataObjectColumn("Private Bytes", "PrivatePageCount"),
-        DataObjectColumn("Path", "Path"),
-        DataObjectColumn("Command Line", "CommandLine"),
-        DataObjectColumn("Handles", "HandleCount"),
-        DataObjectColumn("Start Time", "StartTime"),
-        DataObjectColumn("CPU Time", "TotalCPUTime"),
-        DataObjectColumn("Kernel Time", "KernelCPUTime"),
-        DataObjectColumn("User Time", "UserCPUTime"),
-        DataObjectColumn("Paged Pool", "PagedPoolUsage"),
-        DataObjectColumn("Non-Paged Pool", "NonPagedPoolUsage"),
-        DataObjectColumn("Page Faults", "PageFaultCount")
-    };
 }
 
 ProcessesDataController::~ProcessesDataController() {
@@ -72,10 +71,6 @@ void ProcessesDataController::Clear() {
     }
     m_processes.clear();
     m_bLoaded = false;
-}
-
-const std::vector<DataObjectColumn>& ProcessesDataController::GetColumns() const {
-    return m_columns;
 }
 
 std::vector<int> ProcessesDataController::GetAvailableActions(const DataObject* dataObject) const {

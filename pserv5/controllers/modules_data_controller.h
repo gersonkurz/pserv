@@ -20,7 +20,6 @@ public:
 
     // DataController interface
     void Refresh() override;
-    const std::vector<DataObjectColumn>& GetColumns() const override;
     const std::vector<DataObject*>& GetDataObjects() const override;
     std::vector<int> GetAvailableActions(const DataObject* dataObject) const override;
     std::string GetActionName(int action) const override;
@@ -30,7 +29,6 @@ public:
     void Sort(int columnIndex, bool ascending) override;
 
 private:
-    std::vector<DataObjectColumn> m_columns;
     std::vector<ModuleInfo*> m_modules;
 
     void Clear();

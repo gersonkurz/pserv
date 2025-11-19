@@ -9,57 +9,55 @@
 namespace pserv {
 
 	ServicesDataController::ServicesDataController()
-		: DataController{ "Services", "Service" }, m_serviceType{ SERVICE_WIN32 }, m_pPropertiesDialog{ new ServicePropertiesDialog() }
+		: DataController{"Services", "Service", {
+			{"Display Name", "DisplayName", ColumnDataType::String},
+			{"Name", "Name", ColumnDataType::String},
+			{"Status", "Status", ColumnDataType::String},
+			{"Start Type", "StartType", ColumnDataType::String},
+			{"Process ID", "ProcessId", ColumnDataType::UnsignedInteger},
+			{"Service Type", "ServiceType", ColumnDataType::String},
+			{"Binary Path Name", "BinaryPathName", ColumnDataType::String},
+			{"Description", "Description", ColumnDataType::String},
+			{"User", "User", ColumnDataType::String},
+			{"Load Order Group", "LoadOrderGroup", ColumnDataType::String},
+			{"Error Control", "ErrorControl", ColumnDataType::String},
+			{"Tag ID", "TagId", ColumnDataType::UnsignedInteger},
+			{"Win32 Exit Code", "Win32ExitCode", ColumnDataType::UnsignedInteger},
+			{"Service Specific Exit Code", "ServiceSpecificExitCode", ColumnDataType::UnsignedInteger},
+			{"Check Point", "CheckPoint", ColumnDataType::UnsignedInteger},
+			{"Wait Hint", "WaitHint", ColumnDataType::UnsignedInteger},
+			{"Service Flags", "ServiceFlags", ColumnDataType::UnsignedInteger},
+			{"Controls Accepted", "ControlsAccepted", ColumnDataType::String}
+		} }
+		, m_serviceType{SERVICE_WIN32}
+		, m_pPropertiesDialog{new ServicePropertiesDialog()}
 	{
-		
-
-		// Define columns - order matches ServiceProperty enum
-		m_columns = {
-			DataObjectColumn("Display Name", "DisplayName"),
-			DataObjectColumn("Name", "Name"),
-			DataObjectColumn("Status", "Status"),
-			DataObjectColumn("Start Type", "StartType"),
-			DataObjectColumn("Process ID", "ProcessId"),
-			DataObjectColumn("Service Type", "ServiceType"),
-			DataObjectColumn("Binary Path Name", "BinaryPathName"),
-			DataObjectColumn("Description", "Description"),
-			DataObjectColumn("User", "User"),
-			DataObjectColumn("Load Order Group", "LoadOrderGroup"),
-			DataObjectColumn("Error Control", "ErrorControl"),
-			DataObjectColumn("Tag ID", "TagId"),
-			DataObjectColumn("Win32 Exit Code", "Win32ExitCode"),
-			DataObjectColumn("Service Specific Exit Code", "ServiceSpecificExitCode"),
-			DataObjectColumn("Check Point", "CheckPoint"),
-			DataObjectColumn("Wait Hint", "WaitHint"),
-			DataObjectColumn("Service Flags", "ServiceFlags"),
-			DataObjectColumn("Controls Accepted", "ControlsAccepted")
-		};
 	}
 
 	ServicesDataController::ServicesDataController(DWORD serviceType, const char* viewName, const char* itemName)
-		: DataController{ viewName, itemName }, m_serviceType{ serviceType }, m_pPropertiesDialog{ new ServicePropertiesDialog() }
+		: DataController{viewName, itemName, {
+			{"Display Name", "DisplayName", ColumnDataType::String},
+			{"Name", "Name", ColumnDataType::String},
+			{"Status", "Status", ColumnDataType::String},
+			{"Start Type", "StartType", ColumnDataType::String},
+			{"Process ID", "ProcessId", ColumnDataType::UnsignedInteger},
+			{"Service Type", "ServiceType", ColumnDataType::String},
+			{"Binary Path Name", "BinaryPathName", ColumnDataType::String},
+			{"Description", "Description", ColumnDataType::String},
+			{"User", "User", ColumnDataType::String},
+			{"Load Order Group", "LoadOrderGroup", ColumnDataType::String},
+			{"Error Control", "ErrorControl", ColumnDataType::String},
+			{"Tag ID", "TagId", ColumnDataType::UnsignedInteger},
+			{"Win32 Exit Code", "Win32ExitCode", ColumnDataType::UnsignedInteger},
+			{"Service Specific Exit Code", "ServiceSpecificExitCode", ColumnDataType::UnsignedInteger},
+			{"Check Point", "CheckPoint", ColumnDataType::UnsignedInteger},
+			{"Wait Hint", "WaitHint", ColumnDataType::UnsignedInteger},
+			{"Service Flags", "ServiceFlags", ColumnDataType::UnsignedInteger},
+			{"Controls Accepted", "ControlsAccepted", ColumnDataType::String}
+		} }
+		, m_serviceType{serviceType}
+		, m_pPropertiesDialog{new ServicePropertiesDialog()}
 	{
-		// Define columns - order matches ServiceProperty enum
-		m_columns = {
-			DataObjectColumn("Display Name", "DisplayName"),
-			DataObjectColumn("Name", "Name"),
-			DataObjectColumn("Status", "Status"),
-			DataObjectColumn("Start Type", "StartType"),
-			DataObjectColumn("Process ID", "ProcessId"),
-			DataObjectColumn("Service Type", "ServiceType"),
-			DataObjectColumn("Binary Path Name", "BinaryPathName"),
-			DataObjectColumn("Description", "Description"),
-			DataObjectColumn("User", "User"),
-			DataObjectColumn("Load Order Group", "LoadOrderGroup"),
-			DataObjectColumn("Error Control", "ErrorControl"),
-			DataObjectColumn("Tag ID", "TagId"),
-			DataObjectColumn("Win32 Exit Code", "Win32ExitCode"),
-			DataObjectColumn("Service Specific Exit Code", "ServiceSpecificExitCode"),
-			DataObjectColumn("Check Point", "CheckPoint"),
-			DataObjectColumn("Wait Hint", "WaitHint"),
-			DataObjectColumn("Service Flags", "ServiceFlags"),
-			DataObjectColumn("Controls Accepted", "ControlsAccepted")
-		};
 	}
 
 	ServicesDataController::~ServicesDataController() {
@@ -91,10 +89,6 @@ namespace pserv {
 			spdlog::error("Failed to refresh services: {}", e.what());
 			throw;
 		}
-	}
-
-	const std::vector<DataObjectColumn>& ServicesDataController::GetColumns() const {
-		return m_columns;
 	}
 
 	void ServicesDataController::RenderPropertiesDialog()

@@ -21,7 +21,6 @@ public:
     void Refresh() override;
     void Clear();
 
-    const std::vector<DataObjectColumn>& GetColumns() const override;
     const std::vector<DataObject*>& GetDataObjects() const override;
     VisualState GetVisualState(const DataObject* dataObject) const override; // No special states for now
     std::vector<int> GetAvailableActions(const DataObject* dataObject) const override;

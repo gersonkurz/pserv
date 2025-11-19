@@ -13,21 +13,20 @@
 namespace pserv {
 
 UninstallerDataController::UninstallerDataController()
-    : DataController("Uninstaller", "Program")
-    , m_pPropertiesDialog(new UninstallerPropertiesDialog())
+    : DataController{"Uninstaller", "Program", {
+        {"Display Name", "DisplayName", ColumnDataType::String},
+        {"Version", "Version", ColumnDataType::String},
+        {"Publisher", "Publisher", ColumnDataType::String},
+        {"Install Location", "InstallLocation", ColumnDataType::String},
+        {"Uninstall String", "UninstallString", ColumnDataType::String},
+        {"Install Date", "InstallDate", ColumnDataType::String},
+        {"Estimated Size", "EstimatedSize", ColumnDataType::Size},
+        {"Comments", "Comments", ColumnDataType::String},
+        {"Help Link", "HelpLink", ColumnDataType::String},
+        {"URL Info About", "URLInfoAbout", ColumnDataType::String}
+    } }
+    , m_pPropertiesDialog{new UninstallerPropertiesDialog()}
 {
-    m_columns = {
-        DataObjectColumn("Display Name", "DisplayName"),
-        DataObjectColumn("Version", "Version"),
-        DataObjectColumn("Publisher", "Publisher"),
-        DataObjectColumn("Install Location", "InstallLocation"),
-        DataObjectColumn("Uninstall String", "UninstallString"),
-        DataObjectColumn("Install Date", "InstallDate"),
-        DataObjectColumn("Estimated Size", "EstimatedSize"),
-        DataObjectColumn("Comments", "Comments"),
-        DataObjectColumn("Help Link", "HelpLink"),
-        DataObjectColumn("URL Info About", "URLInfoAbout")
-    };
 }
 
 UninstallerDataController::~UninstallerDataController() {
@@ -57,11 +56,6 @@ void UninstallerDataController::Clear() {
     m_programs.clear();
     m_bLoaded = false;
 }
-
-const std::vector<DataObjectColumn>& UninstallerDataController::GetColumns() const {
-    return m_columns;
-}
-
 const std::vector<DataObject*>& UninstallerDataController::GetDataObjects() const {
     return reinterpret_cast<const std::vector<DataObject*>&>(m_programs);
 }

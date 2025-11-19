@@ -13,7 +13,6 @@ public:
 
     // DataController interface
     void Refresh() override;
-    const std::vector<DataObjectColumn>& GetColumns() const override;
     std::vector<int> GetAvailableActions(const DataObject* dataObject) const override;
     void DispatchAction(int action, DataActionDispatchContext& context) override;
     std::string GetActionName(int action) const override;

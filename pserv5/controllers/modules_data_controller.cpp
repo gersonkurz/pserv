@@ -11,15 +11,14 @@
 namespace pserv {
 
 ModulesDataController::ModulesDataController()
-    : DataController("Modules", "Module")
+    : DataController{"Modules", "Module", {
+        {"Base Address", "Base Address", ColumnDataType::UnsignedInteger},
+        {"Size", "Size", ColumnDataType::Size},
+        {"Name", "Name", ColumnDataType::String},
+        {"Path", "Path", ColumnDataType::String},
+        {"Process ID", "ProcessID", ColumnDataType::UnsignedInteger}
+    } }
 {
-    m_columns = {
-        DataObjectColumn("Base Address", "Base Address"),
-        DataObjectColumn("Size", "Size"),
-        DataObjectColumn("Name", "Name"),
-        DataObjectColumn("Path", "Path"),
-        DataObjectColumn("Process ID", "ProcessID")
-    };
 }
 
 ModulesDataController::~ModulesDataController() {
@@ -55,10 +54,6 @@ void ModulesDataController::Clear() {
     }
     m_modules.clear();
     m_bLoaded = false;
-}
-
-const std::vector<DataObjectColumn>& ModulesDataController::GetColumns() const {
-    return m_columns;
 }
 
 const std::vector<DataObject*>& ModulesDataController::GetDataObjects() const {
