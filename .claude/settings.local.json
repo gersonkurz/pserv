@@ -1,8 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell -Command \"(Get-Content ''C:\\Projects\\2025\\11\\pserv5\\instructions.md'' | Measure-Object -Line).Lines\")",
-      "Bash(powershell -Command:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

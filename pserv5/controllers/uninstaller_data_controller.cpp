@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <imgui.h>
 #include <shellapi.h>
+#include <wil/resource.h>
 
 namespace pserv {
 
@@ -122,26 +123,36 @@ void UninstallerDataController::DispatchAction(int action, DataActionDispatchCon
             std::string confirmMsg = std::format("Are you sure you want to uninstall '{}'?\n\nThis will launch the program's uninstaller.", program->GetDisplayName());
             if (MessageBoxA(context.m_hWnd, confirmMsg.c_str(), "Confirm Uninstallation", MB_YESNO | MB_ICONWARNING) == IDYES) {
                 spdlog::info("Launching uninstaller for '{}': {}", program->GetDisplayName(), program->GetUninstallString());
-                
-                // Need to parse the uninstall string. It can be just a path, or start with msiexec.exe, rundll32.exe, etc.
+
+                // Parse the uninstall string using Windows API for proper quote handling
                 std::string uninstallCmd = program->GetUninstallString();
-                std::string command = uninstallCmd;
-                std::string args;
+                std::wstring wUninstallCmd = pserv::utils::Utf8ToWide(uninstallCmd);
 
-                size_t firstSpace = uninstallCmd.find(' ');
-                if (firstSpace != std::string::npos) {
-                    command = uninstallCmd.substr(0, firstSpace);
-                    args = uninstallCmd.substr(firstSpace + 1);
+                int argc = 0;
+                wil::unique_hlocal_ptr<LPWSTR[]> argv(CommandLineToArgvW(wUninstallCmd.c_str(), &argc));
+
+                if (!argv || argc == 0) {
+                    spdlog::error("Failed to parse uninstall command: {}", uninstallCmd);
+                    MessageBoxA(context.m_hWnd, "Failed to parse uninstall command.", "Uninstallation Error", MB_OK | MB_ICONERROR);
+                    break;
                 }
 
-                // Remove quotes from command if present
-                if (command.length() >= 2 && command.front() == '"' && command.back() == '"') {
-                    command = command.substr(1, command.length() - 2);
-                }
+                // First argument is the command, rest are arguments
+                std::wstring wCommand = argv.get()[0];
+                std::wstring wArgs;
 
-                // Convert to wide strings for ShellExecuteW
-                std::wstring wCommand = pserv::utils::Utf8ToWide(command);
-                std::wstring wArgs = pserv::utils::Utf8ToWide(args);
+                // Rebuild arguments from remaining tokens
+                for (int i = 1; i < argc; ++i) {
+                    if (i > 1) wArgs += L" ";
+
+                    // Quote arguments that contain spaces
+                    std::wstring arg = argv.get()[i];
+                    if (arg.find(L' ') != std::wstring::npos) {
+                        wArgs += L"\"" + arg + L"\"";
+                    } else {
+                        wArgs += arg;
+                    }
+                }
 
                 // ShellExecuteW will handle elevation if needed and is generally robust
                 HINSTANCE result = ShellExecuteW(context.m_hWnd, L"open", wCommand.c_str(), wArgs.empty() ? nullptr : wArgs.c_str(), nullptr, SW_SHOWNORMAL);

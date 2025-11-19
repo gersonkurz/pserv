@@ -282,11 +282,13 @@ if (!hSCM) throw std::runtime_error(GetLastWin32ErrorMessage());
 - Fix: UI layer (`main_window.cpp:590-610`) highlights Refresh button in orange when flag is set
 - Pattern: Client controls when refresh happens, controller just signals the need
 
-**TASK-002: Fix Uninstaller String Parsing**
-- File: `controllers/uninstaller_data_controller.cpp:126-140`
-- Issue: Naive parsing doesn't handle quoted paths with spaces correctly
-- Example: `"C:\Program Files\Foo\uninstall.exe" /S` breaks on first space inside quotes
-- Fix: Proper quote-aware parsing or use `CommandLineToArgvW` Win32 API
+**TASK-002: Fix Uninstaller String Parsing** ✅ COMPLETED
+- File: `controllers/uninstaller_data_controller.cpp:122-154`
+- Issue: Naive parsing didn't handle quoted paths with spaces correctly
+- Example: `"C:\Program Files\Foo\uninstall.exe" /S` broke on first space inside quotes
+- Fix: Use Windows `CommandLineToArgvW` API for proper quote handling
+- Fix: WIL's `unique_hlocal_ptr` handles memory cleanup automatically
+- Fix: Rebuild arguments with proper quoting for ShellExecuteW
 
 **TASK-003: Fix Uninstaller Size Sorting**
 - File: `controllers/uninstaller_data_controller.cpp:186-189`
