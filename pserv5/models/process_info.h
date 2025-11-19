@@ -82,6 +82,7 @@ public:
     SIZE_T GetVirtualSize() const { return m_virtualSize; }
     DWORD GetHandleCount() const { return m_handleCount; }
     DWORD GetSessionId() const { return m_sessionId; }
+    DWORD GetPageFaultCount() const { return m_pageFaultCount; }
 
     // Setters
     void SetParentPid(DWORD pid) { m_parentPid = pid; }

@@ -272,7 +272,7 @@ void ProcessesDataController::Sort(int columnIndex, bool ascending) {
                      case 1: valA = a->GetPid(); valB = b->GetPid(); break;
                      case 4: valA = a->GetThreadCount(); valB = b->GetThreadCount(); break;
                      case 9: valA = a->GetHandleCount(); valB = b->GetHandleCount(); break;
-                     // case 16: valA = a->GetPageFaultCount(); valB = b->GetPageFaultCount(); break; // Need getter
+                     case 16: valA = a->GetPageFaultCount(); valB = b->GetPageFaultCount(); break;
                  }
              } catch (...) {}
              
