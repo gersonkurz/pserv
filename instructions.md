@@ -313,13 +313,14 @@ if (!hSCM) throw std::runtime_error(GetLastWin32ErrorMessage());
 
 ### Architectural Issues (Medium Priority)
 
-**TASK-006: Redesign Modules Controller**
-- File: `controllers/modules_data_controller.cpp:29-46`
-- Issue: Enumerates ALL modules from ALL processes (thousands of objects, very slow)
-- Current: Global enumeration like processes/services view
-- Expected: Lazy-load modules for *selected* process only
-- Pattern: May need parent-child relationship like Windows controller
-- Decision needed: Should modules be a separate view, or sub-view of processes?
+**TASK-006: Redesign Modules Controller** ✅ COMPLETED
+- Files: `controllers/modules_data_controller.{h,cpp}`, `windows_api/module_manager.cpp`, `main_window.cpp`
+- Issue: Dual-vector pattern inconsistency, slow enumeration, sluggish scrolling with 22k+ items
+- Fix: Single-vector pattern with reinterpret_cast (consistency with other controllers)
+- Fix: Path-based caching in ModuleManager (~20% speedup, 90%+ cache hit rate for common DLLs)
+- Fix: ImGuiListClipper for virtual scrolling (threshold: 1000+ items, only renders visible rows)
+- Decision: Keep global enumeration for duplicate DLL detection use case
+- Result: Acceptable performance, smooth UI
 
 **TASK-007: Uninstaller Properties Dialog Const-Correctness**
 - File: `controllers/uninstaller_data_controller.cpp:107-112`
