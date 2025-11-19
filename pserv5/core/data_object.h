@@ -20,6 +20,7 @@ namespace pserv {
         virtual ~DataObject() = default;
         virtual std::string GetProperty(int propertyId) const = 0;
         virtual PropertyValue GetTypedProperty(int propertyId) const = 0;
+        // Note: filter is expected to be pre-lowercased for performance (done once at call site)
         virtual bool MatchesFilter(const std::string& filter) const = 0;
 
         bool IsRunning() const { return m_bIsRunning; }

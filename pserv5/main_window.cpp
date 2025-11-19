@@ -759,8 +759,9 @@ namespace pserv {
 
 			// Filter data objects based on search text
 			if (m_filterText[0] != '\0') {
+				std::string lowerFilter = utils::ToLower(m_filterText);
 				for (const auto* dataObject : *pAllDataObjects) {
-					if (dataObject->MatchesFilter(m_filterText)) {
+					if (dataObject->MatchesFilter(lowerFilter)) {
 						filteredDataObjects.push_back(dataObject);
 					}
 				}

@@ -82,13 +82,11 @@ std::string InstalledProgramInfo::GetProperty(int columnIndex) const {
 
 bool InstalledProgramInfo::MatchesFilter(const std::string& filter) const {
     if (filter.empty()) return true;
-    
-    // Simple case-insensitive search in Display Name and Publisher
-    std::string lowerFilter = pserv::utils::ToLower(filter);
-    
-    if (pserv::utils::ToLower(m_displayName).find(lowerFilter) != std::string::npos) return true;
-    if (pserv::utils::ToLower(m_publisher).find(lowerFilter) != std::string::npos) return true;
-    
+
+    // filter is pre-lowercased by caller
+    if (pserv::utils::ToLower(m_displayName).find(filter) != std::string::npos) return true;
+    if (pserv::utils::ToLower(m_publisher).find(filter) != std::string::npos) return true;
+
     return false;
 }
 

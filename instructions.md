@@ -464,6 +464,4 @@ void DispatchCommonAction(int action, DataActionDispatchContext& context);
 
 pserv5 maintains feature parity with pserv4 while eliminating .NET runtime dependency and improving performance.
 
-## UNsorted 
-
-- Synchronize MatchesFilter to lowercase
+## UNsorted

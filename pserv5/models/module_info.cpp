@@ -57,10 +57,10 @@ std::string ModuleInfo::GetProperty(int column) const {
 }
 
 bool ModuleInfo::MatchesFilter(const std::string& filter) const {
-    std::string lowerFilter = pserv::utils::ToLower(filter);
-    return pserv::utils::ToLower(m_name).find(lowerFilter) != std::string::npos ||
-           pserv::utils::ToLower(m_path).find(lowerFilter) != std::string::npos ||
-           std::to_string(m_processId).find(lowerFilter) != std::string::npos;
+    // filter is pre-lowercased by caller
+    return pserv::utils::ToLower(m_name).find(filter) != std::string::npos ||
+           pserv::utils::ToLower(m_path).find(filter) != std::string::npos ||
+           std::to_string(m_processId).find(filter) != std::string::npos;
 }
 
 } // namespace pserv

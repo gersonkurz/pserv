@@ -65,16 +65,15 @@ std::string WindowInfo::GetProperty(int propertyId) const {
 
 bool WindowInfo::MatchesFilter(const std::string& filter) const {
     if (filter.empty()) return true;
-    
-    std::string filterLower = utils::ToLower(filter);
 
-    if (utils::ToLower(m_title).find(filterLower) != std::string::npos) return true;
-    if (utils::ToLower(m_className).find(filterLower) != std::string::npos) return true;
-    if (utils::ToLower(m_processName).find(filterLower) != std::string::npos) return true;
-    
-    // Hex HWND match
-    std::string hwndStr = std::format("{:X}", reinterpret_cast<uintptr_t>(m_hwnd));
-    if (utils::ToLower(hwndStr).find(filterLower) != std::string::npos) return true;
+    // filter is pre-lowercased by caller
+    if (utils::ToLower(m_title).find(filter) != std::string::npos) return true;
+    if (utils::ToLower(m_className).find(filter) != std::string::npos) return true;
+    if (utils::ToLower(m_processName).find(filter) != std::string::npos) return true;
+
+    // Hex HWND match (using lowercase hex to match pre-lowercased filter)
+    std::string hwndStr = std::format("{:x}", reinterpret_cast<uintptr_t>(m_hwnd));
+    if (hwndStr.find(filter) != std::string::npos) return true;
 
     return false;
 }

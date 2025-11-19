@@ -30,13 +30,12 @@ namespace pserv {
 	{
 		if (filter.empty()) return true;
 
-		std::string filterLower = utils::ToLower(filter);
-
-		if (utils::ToLower(m_name).find(filterLower) != std::string::npos) return true;
-		if (utils::ToLower(m_displayName).find(filterLower) != std::string::npos) return true;
-		if (utils::ToLower(m_description).find(filterLower) != std::string::npos) return true;
-		if (utils::ToLower(m_binaryPathName).find(filterLower) != std::string::npos) return true;
-		if (utils::ToLower(m_user).find(filterLower) != std::string::npos) return true;
+		// filter is pre-lowercased by caller
+		if (utils::ToLower(m_name).find(filter) != std::string::npos) return true;
+		if (utils::ToLower(m_displayName).find(filter) != std::string::npos) return true;
+		if (utils::ToLower(m_description).find(filter) != std::string::npos) return true;
+		if (utils::ToLower(m_binaryPathName).find(filter) != std::string::npos) return true;
+		if (utils::ToLower(m_user).find(filter) != std::string::npos) return true;
 
 		return false;
 	}

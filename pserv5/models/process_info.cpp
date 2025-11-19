@@ -119,14 +119,12 @@ std::string ProcessInfo::GetProperty(int propertyId) const {
 
 bool ProcessInfo::MatchesFilter(const std::string& filter) const {
     if (filter.empty()) return true;
-    
-    // Case-insensitive search in Name, PID, User, Path
-    std::string filterLower = utils::ToLower(filter);
 
-    if (utils::ToLower(m_name).find(filterLower) != std::string::npos) return true;
-    if (std::to_string(m_pid).find(filterLower) != std::string::npos) return true;
-    if (utils::ToLower(m_user).find(filterLower) != std::string::npos) return true;
-    if (utils::ToLower(m_path).find(filterLower) != std::string::npos) return true;
+    // filter is pre-lowercased by caller
+    if (utils::ToLower(m_name).find(filter) != std::string::npos) return true;
+    if (std::to_string(m_pid).find(filter) != std::string::npos) return true;
+    if (utils::ToLower(m_user).find(filter) != std::string::npos) return true;
+    if (utils::ToLower(m_path).find(filter) != std::string::npos) return true;
 
     return false;
 }
