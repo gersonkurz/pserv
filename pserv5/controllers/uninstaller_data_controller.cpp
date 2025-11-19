@@ -40,12 +40,6 @@ void UninstallerDataController::Refresh() {
     Clear();
 
     m_programs = UninstallerManager::EnumerateInstalledPrograms();
-    
-    // Update base class pointers
-    m_dataObjects.reserve(m_programs.size());
-    for (auto* program : m_programs) {
-        m_dataObjects.push_back(program);
-    }
 
     // Re-apply last sort order if any
     if (m_lastSortColumn >= 0) {
@@ -61,7 +55,6 @@ void UninstallerDataController::Clear() {
         delete program;
     }
     m_programs.clear();
-    m_dataObjects.clear();
     m_bLoaded = false;
 }
 
@@ -70,7 +63,7 @@ const std::vector<DataObjectColumn>& UninstallerDataController::GetColumns() con
 }
 
 const std::vector<DataObject*>& UninstallerDataController::GetDataObjects() const {
-    return m_dataObjects;
+    return reinterpret_cast<const std::vector<DataObject*>&>(m_programs);
 }
 
 VisualState UninstallerDataController::GetVisualState(const DataObject* dataObject) const {
@@ -180,6 +173,9 @@ void UninstallerDataController::RenderPropertiesDialog() {
 void UninstallerDataController::Sort(int columnIndex, bool ascending) {
     if (columnIndex < 0 || columnIndex >= static_cast<int>(m_columns.size())) return;
 
+    spdlog::info("[UNINSTALLER] Sort called: column={}, ascending={}, items={}",
+        columnIndex, ascending, m_programs.size());
+
     m_lastSortColumn = columnIndex;
     m_lastSortAscending = ascending;
 
@@ -193,9 +189,12 @@ void UninstallerDataController::Sort(int columnIndex, bool ascending) {
             case 3: comparison = a->GetInstallLocation().compare(b->GetInstallLocation()); break;
             case 4: comparison = a->GetUninstallString().compare(b->GetUninstallString()); break;
             case 5: comparison = a->GetInstallDate().compare(b->GetInstallDate()); break;
-            case 6: // Estimated Size - need numeric comparison if possible
-                // For now, string compare. Future: parse to actual numbers.
-                comparison = a->GetEstimatedSize().compare(b->GetEstimatedSize());
+            case 6: // Estimated Size - numeric comparison
+                {
+                    uint64_t sizeA = a->GetEstimatedSizeBytes();
+                    uint64_t sizeB = b->GetEstimatedSizeBytes();
+                    comparison = (sizeA < sizeB) ? -1 : (sizeA > sizeB) ? 1 : 0;
+                }
                 break;
             case 7: comparison = a->GetComments().compare(b->GetComments()); break;
             case 8: comparison = a->GetHelpLink().compare(b->GetHelpLink()); break;
@@ -205,6 +204,14 @@ void UninstallerDataController::Sort(int columnIndex, bool ascending) {
 
         return ascending ? (comparison < 0) : (comparison > 0);
     });
+
+    // Log first few items after sort for verification
+    if (!m_programs.empty()) {
+        spdlog::info("[UNINSTALLER] After sort - First item: '{}'", m_programs[0]->GetDisplayName());
+        if (m_programs.size() > 1) {
+            spdlog::info("[UNINSTALLER] After sort - Second item: '{}'", m_programs[1]->GetDisplayName());
+        }
+    }
 }
 
 } // namespace pserv

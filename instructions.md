@@ -290,10 +290,14 @@ if (!hSCM) throw std::runtime_error(GetLastWin32ErrorMessage());
 - Fix: WIL's `unique_hlocal_ptr` handles memory cleanup automatically
 - Fix: Rebuild arguments with proper quoting for ShellExecuteW
 
-**TASK-003: Fix Uninstaller Size Sorting**
-- File: `controllers/uninstaller_data_controller.cpp:186-189`
-- Issue: Estimated Size column sorts lexicographically ("100 KB" < "90 KB")
-- Fix: Parse numeric value from formatted string, or store raw bytes in model for sorting
+**TASK-003: Fix Uninstaller Size Sorting** ✅ COMPLETED
+- Files: `models/installed_program_info.{h,cpp}`, `windows_api/uninstaller_manager.{h,cpp}`, `controllers/uninstaller_data_controller.cpp:196-202`
+- Issue: Estimated Size column sorted lexicographically ("100 KB" < "90 KB")
+- Fix: Added `m_estimatedSizeBytes` uint64_t field to model for numeric storage
+- Fix: Read EstimatedSize from registry as DWORD (KB), convert to bytes
+- Fix: Added `FormatSize()` helper for human-readable display (e.g., "4.50 GB")
+- Fix: Sort uses numeric comparison on bytes, not formatted string
+- Result: Proper numeric sorting (90 MB > 10 GB is false, as expected)
 
 **TASK-004: Remove Implicit Refresh in GetDataObjects()** ✅ COMPLETED
 - Files: `controllers/processes_data_controller.h:22-29`, `controllers/services_data_controller.h:53-60`

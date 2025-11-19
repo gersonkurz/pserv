@@ -84,6 +84,8 @@ namespace pserv {
 			if (m_lastSortColumn >= 0) {
 				Sort(m_lastSortColumn, m_lastSortAscending);
 			}
+
+			m_bLoaded = true;
 		}
 		catch (const std::exception& e) {
 			spdlog::error("Failed to refresh services: {}", e.what());
@@ -117,7 +119,8 @@ namespace pserv {
 		m_lastSortColumn = columnIndex;
 		m_lastSortAscending = ascending;
 
-		spdlog::debug("Sorting by column {} ({})", columnIndex, ascending ? "ascending" : "descending");
+		spdlog::info("[SERVICES] Sort called: column={}, ascending={}, items={}",
+			columnIndex, ascending, m_services.size());
 
 		std::sort(m_services.begin(), m_services.end(), [columnIndex, ascending](const ServiceInfo* a, const ServiceInfo* b) {
 			std::string valA = a->GetProperty(columnIndex);
@@ -142,6 +145,14 @@ namespace pserv {
 			int cmp = valA.compare(valB);
 			return ascending ? (cmp < 0) : (cmp > 0);
 			});
+
+		// Log first few items after sort for verification
+		if (!m_services.empty()) {
+			spdlog::info("[SERVICES] After sort - First item: '{}'", m_services[0]->GetDisplayName());
+			if (m_services.size() > 1) {
+				spdlog::info("[SERVICES] After sort - Second item: '{}'", m_services[1]->GetDisplayName());
+			}
+		}
 	}
 
 	void ServicesDataController::Clear() {
@@ -149,6 +160,7 @@ namespace pserv {
 			delete service;
 		}
 		m_services.clear();
+		m_bLoaded = false;
 	}
 
 	std::vector<int> ServicesDataController::GetAvailableActions(const DataObject* dataObject) const {

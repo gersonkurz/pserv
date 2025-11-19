@@ -32,7 +32,6 @@ public:
 
 private:
     std::vector<InstalledProgramInfo*> m_programs;
-    std::vector<DataObject*> m_dataObjects; // Pointers to programs for base class
     UninstallerPropertiesDialog* m_pPropertiesDialog;
 
     int m_lastSortColumn = -1;

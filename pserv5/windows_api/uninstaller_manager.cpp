@@ -76,6 +76,13 @@ void UninstallerManager::EnumerateProgramsInKey(
             continue;
         }
 
+        // Get estimated size in KB (registry stores as DWORD)
+        DWORD sizeKB = GetRegistryDwordValue(hSubKey.get(), L"EstimatedSize");
+        uint64_t sizeBytes = static_cast<uint64_t>(sizeKB) * 1024;
+
+        // Format size as string for display
+        std::string sizeStr = FormatSize(sizeBytes);
+
         programs.push_back(new InstalledProgramInfo(
             displayName,
             GetRegistryStringValue(hSubKey.get(), L"DisplayVersion"),
@@ -83,10 +90,11 @@ void UninstallerManager::EnumerateProgramsInKey(
             GetRegistryStringValue(hSubKey.get(), L"InstallLocation"),
             GetRegistryStringValue(hSubKey.get(), L"UninstallString"),
             GetRegistryStringValue(hSubKey.get(), L"InstallDate"),
-            GetRegistryStringValue(hSubKey.get(), L"EstimatedSize"),
+            sizeStr,
             GetRegistryStringValue(hSubKey.get(), L"Comments"),
             GetRegistryStringValue(hSubKey.get(), L"HelpLink"),
-            GetRegistryStringValue(hSubKey.get(), L"URLInfoAbout")
+            GetRegistryStringValue(hSubKey.get(), L"URLInfoAbout"),
+            sizeBytes
         ));
     }
 }
@@ -113,6 +121,39 @@ std::string UninstallerManager::GetRegistryStringValue(
     // Ensure null termination and convert to UTF-8
     data[dataSize / sizeof(wchar_t) - 1] = L'\0';
     return pserv::utils::WideToUtf8(data.data());
+}
+
+DWORD UninstallerManager::GetRegistryDwordValue(
+    HKEY hKey,
+    const std::wstring& valueName) {
+
+    DWORD type;
+    DWORD value = 0;
+    DWORD dataSize = sizeof(DWORD);
+
+    LSTATUS status = RegQueryValueExW(hKey, valueName.c_str(), nullptr, &type, reinterpret_cast<LPBYTE>(&value), &dataSize);
+    if (status != ERROR_SUCCESS || type != REG_DWORD) {
+        return 0;
+    }
+
+    return value;
+}
+
+std::string UninstallerManager::FormatSize(uint64_t bytes) {
+    if (bytes == 0) {
+        return "";
+    }
+
+    const char* units[] = { "B", "KB", "MB", "GB", "TB" };
+    int unitIndex = 0;
+    double size = static_cast<double>(bytes);
+
+    while (size >= 1024.0 && unitIndex < 4) {
+        size /= 1024.0;
+        unitIndex++;
+    }
+
+    return std::format("{:.2f} {}", size, units[unitIndex]);
 }
 
 } // namespace pserv

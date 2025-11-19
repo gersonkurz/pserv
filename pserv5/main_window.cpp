@@ -620,22 +620,6 @@ namespace pserv {
 			ImGui::InputTextWithHint(label.c_str(), hint.c_str(), m_filterText, IM_ARRAYSIZE(m_filterText));
 		}
 
-		// Filter data objects based on search text
-		const auto& allDataObjects = controller->GetDataObjects();
-		std::vector<const DataObject*> filteredDataObjects;
-
-		if (m_filterText[0] != '\0') {
-			for (const auto* dataObject : allDataObjects) {
-				if (dataObject->MatchesFilter(m_filterText)) {
-					filteredDataObjects.push_back(dataObject);
-				}
-			}
-		}
-		else {
-			// No filter - show all data Objects
-			filteredDataObjects.assign(allDataObjects.begin(), allDataObjects.end());
-		}
-
 		ImGui::Separator();
 
 		// Reserve space for status bar at the bottom (one line of text + padding)
@@ -644,6 +628,10 @@ namespace pserv {
 
 		// Display data objects in a table
 		const auto& columns = controller->GetColumns();
+
+		// Declare these here so they're available for status bar later
+		std::vector<const DataObject*> filteredDataObjects;
+		const std::vector<DataObject*>* pAllDataObjects = nullptr;
 		ImGuiTableFlags flags = ImGuiTableFlags_Sortable |
 			ImGuiTableFlags_RowBg |
 			ImGuiTableFlags_Borders |
@@ -757,10 +745,37 @@ namespace pserv {
 						int columnIndex = spec.ColumnIndex;
 						bool ascending = (spec.SortDirection == ImGuiSortDirection_Ascending);
 
+						spdlog::info("[SORT] Controller '{}': Sorting by column {} ({})",
+							controllerName, columnIndex, ascending ? "ascending" : "descending");
 						controller->Sort(columnIndex, ascending);
+						spdlog::info("[SORT] Controller '{}': Sort() completed", controllerName);
 					}
 					sortSpecs->SpecsDirty = false;
 				}
+			}
+
+			// Get data objects AFTER sorting
+			pAllDataObjects = &controller->GetDataObjects();
+
+			// Log first few items from controller to verify order
+			if (!pAllDataObjects->empty() && pAllDataObjects->size() >= 2) {
+				spdlog::info("[UI] Rendering '{}' - First item from controller: '{}'",
+					controllerName, (*pAllDataObjects)[0]->GetProperty(0));
+				spdlog::info("[UI] Rendering '{}' - Second item from controller: '{}'",
+					controllerName, (*pAllDataObjects)[1]->GetProperty(0));
+			}
+
+			// Filter data objects based on search text
+			if (m_filterText[0] != '\0') {
+				for (const auto* dataObject : *pAllDataObjects) {
+					if (dataObject->MatchesFilter(m_filterText)) {
+						filteredDataObjects.push_back(dataObject);
+					}
+				}
+			}
+			else {
+				// No filter - show all data Objects
+				filteredDataObjects.assign(pAllDataObjects->begin(), pAllDataObjects->end());
 			}
 
 			// Display rows
@@ -917,19 +932,21 @@ namespace pserv {
 
 		// Calculate statistics
 		size_t visibleCount = filteredDataObjects.size();
-		size_t totalCount = allDataObjects.size();
+		size_t totalCount = pAllDataObjects ? pAllDataObjects->size() : 0;
 		size_t selectedCount = m_dispatchContext.m_selectedObjects.size();
 		size_t highlightedCount = 0;
 		size_t disabledCount = 0;
 		size_t filteredCount = totalCount - visibleCount;
 
-		for (const auto* dataObject : allDataObjects) {
-			VisualState state = controller->GetVisualState(dataObject);
-			if (state == VisualState::Highlighted) {
-				highlightedCount++;
-			}
-			else if (state == VisualState::Disabled) {
-				disabledCount++;
+		if (pAllDataObjects) {
+			for (const auto* dataObject : *pAllDataObjects) {
+				VisualState state = controller->GetVisualState(dataObject);
+				if (state == VisualState::Highlighted) {
+					highlightedCount++;
+				}
+				else if (state == VisualState::Disabled) {
+					disabledCount++;
+				}
 			}
 		}
 

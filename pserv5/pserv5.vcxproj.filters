@@ -136,6 +136,51 @@
     <ClInclude Include="targetver.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="windows_api\process_manager.h">
+      <Filter>windows_api</Filter>
+    </ClInclude>
+    <ClInclude Include="windows_api\module_manager.h">
+      <Filter>windows_api</Filter>
+    </ClInclude>
+    <ClInclude Include="windows_api\uninstaller_manager.h">
+      <Filter>windows_api</Filter>
+    </ClInclude>
+    <ClInclude Include="windows_api\window_manager.h">
+      <Filter>windows_api</Filter>
+    </ClInclude>
+    <ClInclude Include="controllers\modules_data_controller.h">
+      <Filter>controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="controllers\processes_data_controller.h">
+      <Filter>controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="controllers\uninstaller_data_controller.h">
+      <Filter>controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="controllers\windows_data_controller.h">
+      <Filter>controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="dialogs\uninstaller_properties_dialog.h">
+      <Filter>dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="dialogs\process_properties_dialog.h">
+      <Filter>dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="dialogs\window_properties_dialog.h">
+      <Filter>dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="models\module_info.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="models\process_info.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="models\window_info.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="models\installed_program_info.h">
+      <Filter>models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dialogs\service_properties_dialog.cpp">
@@ -191,6 +236,51 @@
     </ClCompile>
     <ClCompile Include="pserv5.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="windows_api\process_manager.cpp">
+      <Filter>windows_api</Filter>
+    </ClCompile>
+    <ClCompile Include="windows_api\module_manager.cpp">
+      <Filter>windows_api</Filter>
+    </ClCompile>
+    <ClCompile Include="windows_api\uninstaller_manager.cpp">
+      <Filter>windows_api</Filter>
+    </ClCompile>
+    <ClCompile Include="windows_api\window_manager.cpp">
+      <Filter>windows_api</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\modules_data_controller.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\processes_data_controller.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\uninstaller_data_controller.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\windows_data_controller.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="dialogs\uninstaller_properties_dialog.cpp">
+      <Filter>dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="dialogs\process_properties_dialog.cpp">
+      <Filter>dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="dialogs\window_properties_dialog.cpp">
+      <Filter>dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="models\module_info.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="models\process_info.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="models\window_info.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="models\installed_program_info.cpp">
+      <Filter>models</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

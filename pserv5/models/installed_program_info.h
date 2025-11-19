@@ -17,7 +17,8 @@ public:
         std::string estimatedSize,
         std::string comments,
         std::string helpLink,
-        std::string urlInfoAbout);
+        std::string urlInfoAbout,
+        uint64_t estimatedSizeBytes = 0);
 
     // DataObject overrides
     std::string GetId() const override;
@@ -33,6 +34,7 @@ public:
     const std::string& GetUninstallString() const { return m_uninstallString; }
     const std::string& GetInstallDate() const { return m_installDate; }
     const std::string& GetEstimatedSize() const { return m_estimatedSize; }
+    uint64_t GetEstimatedSizeBytes() const { return m_estimatedSizeBytes; }
     const std::string& GetComments() const { return m_comments; }
     const std::string& GetHelpLink() const { return m_helpLink; }
     const std::string& GetUrlInfoAbout() const { return m_urlInfoAbout; }
@@ -45,6 +47,7 @@ private:
     std::string m_uninstallString;
     std::string m_installDate;
     std::string m_estimatedSize;
+    uint64_t m_estimatedSizeBytes;
     std::string m_comments;
     std::string m_helpLink;
     std::string m_urlInfoAbout;

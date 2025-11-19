@@ -15,7 +15,8 @@ InstalledProgramInfo::InstalledProgramInfo(
     std::string estimatedSize,
     std::string comments,
     std::string helpLink,
-    std::string urlInfoAbout)
+    std::string urlInfoAbout,
+    uint64_t estimatedSizeBytes)
     : m_displayName(std::move(displayName))
     , m_displayVersion(std::move(displayVersion))
     , m_publisher(std::move(publisher))
@@ -23,6 +24,7 @@ InstalledProgramInfo::InstalledProgramInfo(
     , m_uninstallString(std::move(uninstallString))
     , m_installDate(std::move(installDate))
     , m_estimatedSize(std::move(estimatedSize))
+    , m_estimatedSizeBytes(estimatedSizeBytes)
     , m_comments(std::move(comments))
     , m_helpLink(std::move(helpLink))
     , m_urlInfoAbout(std::move(urlInfoAbout))

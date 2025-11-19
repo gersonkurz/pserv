@@ -25,6 +25,14 @@ private:
     static std::string GetRegistryStringValue(
         HKEY hKey,
         const std::wstring& valueName);
+
+    // Helper to read a DWORD value from a registry key.
+    static DWORD GetRegistryDwordValue(
+        HKEY hKey,
+        const std::wstring& valueName);
+
+    // Helper to format bytes into human-readable size (KB, MB, GB, etc.)
+    static std::string FormatSize(uint64_t bytes);
 };
 
 } // namespace pserv
