@@ -40,14 +40,13 @@ ProcessesDataController::~ProcessesDataController() {
 void ProcessesDataController::Refresh() {
     spdlog::info("Refreshing processes...");
     Clear();
-    
-    // Cache current user name if empty
-    if (m_currentUserName.empty()) {
-        char buffer[256];
-        DWORD size = sizeof(buffer);
-        if (GetUserNameA(buffer, &size)) {
-             m_currentUserName = buffer;
-        }
+
+    // Query current user name (always, in case of user switch)
+    m_currentUserName.clear();
+    char buffer[256];
+    DWORD size = sizeof(buffer);
+    if (GetUserNameA(buffer, &size)) {
+        m_currentUserName = buffer;
     }
 
     try {

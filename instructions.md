@@ -305,10 +305,11 @@ if (!hSCM) throw std::runtime_error(GetLastWin32ErrorMessage());
 - Fix: Removed all implicit refresh logic from `GetDataObjects()` implementations
 - Note: `main_window.cpp:578-586` already handles lazy refresh correctly via `IsLoaded()` check
 
-**TASK-005: Fix Processes Username Caching**
-- File: `controllers/processes_data_controller.cpp:45-51`
-- Issue: Caches username once, never invalidates if user switches or app runs as service
-- Fix: Re-query username on each refresh, or document limitation
+**TASK-005: Fix Processes Username Caching** ✅ COMPLETED
+- File: `controllers/processes_data_controller.cpp:44-50`
+- Issue: Cached username once, never invalidated if user switches or app runs as service
+- Fix: Re-query username on every refresh (negligible performance impact vs process enumeration)
+- Now handles user switch scenarios and service context changes
 
 ### Architectural Issues (Medium Priority)
 
