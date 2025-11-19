@@ -24,8 +24,6 @@ public:
     virtual ~WindowInfo() = default;
 
     // DataObject implementation
-    std::string GetId() const override;
-    void Update(const DataObject& other) override;
     std::string GetProperty(int propertyId) const override;
     PropertyValue GetTypedProperty(int propertyId) const override;
     bool MatchesFilter(const std::string& filter) const override;

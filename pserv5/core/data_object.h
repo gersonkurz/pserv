@@ -18,8 +18,6 @@ namespace pserv {
 
     public:
         virtual ~DataObject() = default;
-        virtual std::string GetId() const = 0;
-        virtual void Update(const DataObject& other) = 0;
         virtual std::string GetProperty(int propertyId) const = 0;
         virtual PropertyValue GetTypedProperty(int propertyId) const = 0;
         virtual bool MatchesFilter(const std::string& filter) const = 0;

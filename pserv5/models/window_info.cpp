@@ -5,30 +5,8 @@
 namespace pserv {
 
 WindowInfo::WindowInfo(HWND hwnd)
-    : m_hwnd(hwnd)
+    : m_hwnd{ hwnd }
 {
-}
-
-std::string WindowInfo::GetId() const {
-    // Use HWND as unique ID (formatted as hex string)
-    return std::format("{:016X}", reinterpret_cast<uintptr_t>(m_hwnd));
-}
-
-void WindowInfo::Update(const DataObject& other) {
-    const auto& otherWin = static_cast<const WindowInfo&>(other);
-
-    m_title = otherWin.m_title;
-    m_className = otherWin.m_className;
-    m_rect = otherWin.m_rect;
-    m_style = otherWin.m_style;
-    m_exStyle = otherWin.m_exStyle;
-    m_windowId = otherWin.m_windowId;
-    m_processId = otherWin.m_processId;
-    m_threadId = otherWin.m_threadId;
-    m_processName = otherWin.m_processName;
-
-    SetRunning(otherWin.IsRunning());
-    SetDisabled(otherWin.IsDisabled());
 }
 
 PropertyValue WindowInfo::GetTypedProperty(int propertyId) const {

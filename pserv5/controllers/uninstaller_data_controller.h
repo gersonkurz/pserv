@@ -31,8 +31,6 @@ public:
 private:
     std::vector<InstalledProgramInfo*> m_programs;
     UninstallerPropertiesDialog* m_pPropertiesDialog;
-
-    void Clear();
 };
 
 } // namespace pserv

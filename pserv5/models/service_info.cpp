@@ -46,29 +46,6 @@ namespace pserv {
 		SetRunning(m_currentState == SERVICE_RUNNING);
 	}
 
-	void ServiceInfo::Update(const DataObject& other) {
-		const auto* otherService = dynamic_cast<const ServiceInfo*>(&other);
-		if (!otherService) return;
-
-		m_displayName = otherService->m_displayName;
-		SetCurrentState(otherService->m_currentState);
-		m_startType = otherService->m_startType;
-		m_processId = otherService->m_processId;
-		m_serviceType = otherService->m_serviceType;
-		m_binaryPathName = otherService->m_binaryPathName;
-		m_description = otherService->m_description;
-		m_controlsAccepted = otherService->m_controlsAccepted;
-		m_user = otherService->m_user;
-		m_loadOrderGroup = otherService->m_loadOrderGroup;
-		m_errorControl = otherService->m_errorControl;
-		m_tagId = otherService->m_tagId;
-		m_win32ExitCode = otherService->m_win32ExitCode;
-		m_serviceSpecificExitCode = otherService->m_serviceSpecificExitCode;
-		m_checkPoint = otherService->m_checkPoint;
-		m_waitHint = otherService->m_waitHint;
-		m_serviceFlags = otherService->m_serviceFlags;
-	}
-
 	PropertyValue ServiceInfo::GetTypedProperty(int propertyId) const {
 		switch (static_cast<ServiceProperty>(propertyId)) {
 		case ServiceProperty::ProcessId:

@@ -7,7 +7,19 @@
 #include <format>
 #include <set>
 
+namespace
+{
+    std::string GetInstalledProgramInfoGetId(const pserv::InstalledProgramInfo* program) {
+        // A combination of DisplayName and UninstallString should be unique enough
+        return std::format("{}_{}", program->GetDisplayName(), program->GetUninstallString());
+    }
+
+}
+
 namespace pserv {
+
+
+
 
 std::vector<InstalledProgramInfo*> UninstallerManager::EnumerateInstalledPrograms() {
     std::vector<InstalledProgramInfo*> programs;
@@ -23,7 +35,7 @@ std::vector<InstalledProgramInfo*> UninstallerManager::EnumerateInstalledProgram
     // Filter out duplicates. Programs can appear in multiple locations (e.g., user-specific vs. machine-wide)
     std::vector<InstalledProgramInfo*> uniquePrograms;
     for (InstalledProgramInfo* program : programs) {
-        std::string id = program->GetId();
+        const auto id = GetInstalledProgramInfoGetId(program);
         if (uniqueIds.find(id) == uniqueIds.end()) {
             uniqueIds.insert(id);
             uniquePrograms.push_back(program);

@@ -12,43 +12,6 @@ ProcessInfo::ProcessInfo(DWORD pid, std::string name)
     SetRunning(true);
 }
 
-std::string ProcessInfo::GetId() const {
-    // Unique ID is composed of PID and Name to handle PID reuse reuse cases
-    // though strictly speaking PID is unique at any point in time.
-    // Using just PID string is simpler for now.
-    return std::to_string(m_pid);
-}
-
-void ProcessInfo::Update(const DataObject& other) {
-    const auto& otherProcess = static_cast<const ProcessInfo&>(other);
-    
-    // Update all mutable properties
-    m_parentPid = otherProcess.m_parentPid;
-    m_threadCount = otherProcess.m_threadCount;
-    m_priorityClass = otherProcess.m_priorityClass;
-    m_user = otherProcess.m_user;
-    m_path = otherProcess.m_path;
-    m_commandLine = otherProcess.m_commandLine;
-    m_workingSetSize = otherProcess.m_workingSetSize;
-    m_peakWorkingSetSize = otherProcess.m_peakWorkingSetSize;
-    m_privatePageCount = otherProcess.m_privatePageCount;
-    m_virtualSize = otherProcess.m_virtualSize;
-    m_handleCount = otherProcess.m_handleCount;
-    m_sessionId = otherProcess.m_sessionId;
-    
-    // Update new fields
-    m_creationTime = otherProcess.m_creationTime;
-    m_exitTime = otherProcess.m_exitTime;
-    m_kernelTime = otherProcess.m_kernelTime;
-    m_userTime = otherProcess.m_userTime;
-    m_quotaPagedPoolUsage = otherProcess.m_quotaPagedPoolUsage;
-    m_quotaNonPagedPoolUsage = otherProcess.m_quotaNonPagedPoolUsage;
-    m_pageFaultCount = otherProcess.m_pageFaultCount;
-
-    // Name and PID are immutable for the same object ID usually, but update name just in case
-    m_name = otherProcess.m_name;
-}
-
 PropertyValue ProcessInfo::GetTypedProperty(int propertyId) const {
     switch (static_cast<ProcessProperty>(propertyId)) {
         case ProcessProperty::Name:
