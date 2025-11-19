@@ -900,7 +900,17 @@ namespace pserv {
 						}
 					}
 					else {
-						// Other columns: just display text
+						// Other columns: apply alignment based on column metadata
+						ColumnAlignment alignment = columns[i].GetAlignment();
+						if (alignment == ColumnAlignment::Right) {
+							// Right-align: calculate text width and offset
+							float textWidth = ImGui::CalcTextSize(value.c_str()).x;
+							float columnWidth = ImGui::GetColumnWidth(static_cast<int>(i));
+							float offset = columnWidth - textWidth - ImGui::GetStyle().ItemSpacing.x;
+							if (offset > 0) {
+								ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
+							}
+						}
 						ImGui::TextUnformatted(value.c_str());
 					}
 				}
