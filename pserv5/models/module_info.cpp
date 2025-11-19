@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include "module_info.h"
 #include "../utils/string_utils.h"
+#include "../utils/format_utils.h"
 #include <format>
 
 namespace pserv {
@@ -34,7 +35,7 @@ void ModuleInfo::Update(const DataObject& other) {
 std::string ModuleInfo::GetProperty(int column) const {
     switch (column) {
         case 0: return std::format("{:#x}", reinterpret_cast<uintptr_t>(m_baseAddress));
-        case 1: return std::format("{}", m_size); // TODO: Format as human-readable size
+        case 1: return utils::FormatSize(m_size);
         case 2: return m_name;
         case 3: return m_path;
         case 4: return std::to_string(m_processId);

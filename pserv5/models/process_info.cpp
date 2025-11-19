@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include "process_info.h"
 #include <utils/string_utils.h>
+#include <utils/format_utils.h>
 
 namespace pserv {
 
@@ -67,13 +68,13 @@ std::string ProcessInfo::GetProperty(int propertyId) const {
         case ProcessProperty::CommandLine:
             return m_commandLine;
         case ProcessProperty::WorkingSetSize:
-            return BytesToSizeString(m_workingSetSize);
+            return utils::FormatSize(m_workingSetSize);
         case ProcessProperty::PeakWorkingSetSize:
-            return BytesToSizeString(m_peakWorkingSetSize);
+            return utils::FormatSize(m_peakWorkingSetSize);
         case ProcessProperty::PrivatePageCount:
-            return BytesToSizeString(m_privatePageCount);
+            return utils::FormatSize(m_privatePageCount);
         case ProcessProperty::VirtualSize:
-            return BytesToSizeString(m_virtualSize);
+            return utils::FormatSize(m_virtualSize);
         case ProcessProperty::HandleCount:
             return std::to_string(m_handleCount);
         case ProcessProperty::SessionId:
@@ -97,9 +98,9 @@ std::string ProcessInfo::GetProperty(int propertyId) const {
         case ProcessProperty::KernelCPUTime:
             return DurationToString(m_kernelTime);
         case ProcessProperty::PagedPoolUsage:
-            return BytesToSizeString(m_quotaPagedPoolUsage);
+            return utils::FormatSize(m_quotaPagedPoolUsage);
         case ProcessProperty::NonPagedPoolUsage:
-            return BytesToSizeString(m_quotaNonPagedPoolUsage);
+            return utils::FormatSize(m_quotaNonPagedPoolUsage);
         case ProcessProperty::PageFaultCount:
             return std::to_string(m_pageFaultCount);
         default:
@@ -132,25 +133,6 @@ std::string ProcessInfo::GetPriorityString() const {
         case 0: return "";
         default: return std::format("Unknown ({})", m_priorityClass);
     }
-}
-
-std::string ProcessInfo::BytesToSizeString(SIZE_T bytes) {
-    const char* suffixes[] = { "B", "KB", "MB", "GB", "TB" };
-    int suffixIndex = 0;
-    double doubleBytes = static_cast<double>(bytes);
-
-    while (doubleBytes >= 1024.0 && suffixIndex < 4) {
-        doubleBytes /= 1024.0;
-        suffixIndex++;
-    }
-
-    char buffer[64];
-    if (suffixIndex == 0) {
-        snprintf(buffer, sizeof(buffer), "%d %s", static_cast<int>(doubleBytes), suffixes[suffixIndex]);
-    } else {
-        snprintf(buffer, sizeof(buffer), "%.2f %s", doubleBytes, suffixes[suffixIndex]);
-    }
-    return std::string(buffer);
 }
 
 std::string ProcessInfo::FileTimeToString(const FILETIME& ft) {

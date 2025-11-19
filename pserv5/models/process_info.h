@@ -113,7 +113,6 @@ public:
 
     // Helpers
     std::string GetPriorityString() const;
-    static std::string BytesToSizeString(SIZE_T bytes);
     static std::string FileTimeToString(const FILETIME& ft);
     static std::string DurationToString(const FILETIME& ft); // Treat FILETIME as duration
 };

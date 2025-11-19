@@ -30,9 +30,6 @@ private:
     static DWORD GetRegistryDwordValue(
         HKEY hKey,
         const std::wstring& valueName);
-
-    // Helper to format bytes into human-readable size (KB, MB, GB, etc.)
-    static std::string FormatSize(uint64_t bytes);
 };
 
 } // namespace pserv

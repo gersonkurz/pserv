@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include "uninstaller_manager.h"
 #include "../utils/string_utils.h"
+#include "../utils/format_utils.h"
 #include "../utils/win32_error.h"
 #include <spdlog/spdlog.h>
 #include <format>
@@ -81,7 +82,7 @@ void UninstallerManager::EnumerateProgramsInKey(
         uint64_t sizeBytes = static_cast<uint64_t>(sizeKB) * 1024;
 
         // Format size as string for display
-        std::string sizeStr = FormatSize(sizeBytes);
+        std::string sizeStr = utils::FormatSize(sizeBytes);
 
         programs.push_back(new InstalledProgramInfo(
             displayName,
@@ -137,23 +138,6 @@ DWORD UninstallerManager::GetRegistryDwordValue(
     }
 
     return value;
-}
-
-std::string UninstallerManager::FormatSize(uint64_t bytes) {
-    if (bytes == 0) {
-        return "";
-    }
-
-    const char* units[] = { "B", "KB", "MB", "GB", "TB" };
-    int unitIndex = 0;
-    double size = static_cast<double>(bytes);
-
-    while (size >= 1024.0 && unitIndex < 4) {
-        size /= 1024.0;
-        unitIndex++;
-    }
-
-    return std::format("{:.2f} {}", size, units[unitIndex]);
 }
 
 } // namespace pserv

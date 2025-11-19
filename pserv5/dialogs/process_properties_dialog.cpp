@@ -1,5 +1,6 @@
 #include "precomp.h"
 #include "process_properties_dialog.h"
+#include <utils/format_utils.h>
 #include <imgui.h>
 #include <format>
 
@@ -28,10 +29,10 @@ void ProcessPropertiesDialog::Open(const std::vector<ProcessInfo*>& processes) {
 
         state.threadCount = std::to_string(proc->GetThreadCount());
         state.handleCount = std::to_string(proc->GetHandleCount());
-        state.workingSet = ProcessInfo::BytesToSizeString(proc->GetWorkingSetSize());
-        state.peakWorkingSet = ProcessInfo::BytesToSizeString(proc->GetPeakWorkingSetSize());
-        state.privateBytes = ProcessInfo::BytesToSizeString(proc->GetPrivatePageCount());
-        state.virtualSize = ProcessInfo::BytesToSizeString(proc->GetVirtualSize());
+        state.workingSet = utils::FormatSize(proc->GetWorkingSetSize());
+        state.peakWorkingSet = utils::FormatSize(proc->GetPeakWorkingSetSize());
+        state.privateBytes = utils::FormatSize(proc->GetPrivatePageCount());
+        state.virtualSize = utils::FormatSize(proc->GetVirtualSize());
         
         // These might rely on the strings returned by GetProperty logic if we exposed getters
         // But since we have getters on ProcessInfo, we use them directly or helper
