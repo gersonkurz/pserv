@@ -1,10 +1,10 @@
 #include "precomp.h"
 #include "main_window.h"
 #include "Resource.h"
-#include "Config/settings.h"
-#include "utils/win32_error.h"
-#include "utils/string_utils.h"
-#include "core/async_operation.h"
+#include <Config/settings.h>
+#include <utils/win32_error.h>
+#include <utils/string_utils.h>
+#include <core/async_operation.h>
 #include <core/data_controller_library.h>
 
 #pragma comment(lib, "d3d11.lib")
@@ -361,7 +361,7 @@ namespace pserv {
 			io.FontDefault = io.Fonts->Fonts[0];
 
 			// CRITICAL: Update ImGui's FontSizeBase so it renders at the new size
-			ImGuiStyle& style = ImGui::GetStyle();
+			auto& style = ImGui::GetStyle();
 			style.FontSizeBase = fontSize;
 		}
 		else {

@@ -1,7 +1,7 @@
 #include "precomp.h"
-#include "windows_data_controller.h"
-#include "../windows_api/window_manager.h"
-#include "../utils/string_utils.h"
+#include <controllers/windows_data_controller.h>
+#include <windows_api/window_manager.h>
+#include <utils/string_utils.h>
 #include <algorithm>
 
 namespace pserv {

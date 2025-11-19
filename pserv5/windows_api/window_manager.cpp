@@ -1,7 +1,7 @@
 #include "precomp.h"
 #include "window_manager.h"
 #include <psapi.h>
-#include "../utils/string_utils.h"
+#include <utils/string_utils.h>
 
 namespace pserv {
 

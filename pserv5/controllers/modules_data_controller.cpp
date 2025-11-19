@@ -1,12 +1,8 @@
 #include "precomp.h"
-#include "modules_data_controller.h"
-#include "../windows_api/process_manager.h"
-#include "../models/process_info.h"
-#include "../utils/string_utils.h"
-#include <spdlog/spdlog.h>
-#include <format>
-#include <algorithm>
-#include <imgui.h>
+#include <controllers/modules_data_controller.h>
+#include <windows_api/process_manager.h>
+#include <models/process_info.h>
+#include <utils/string_utils.h>
 
 namespace pserv {
 
@@ -34,7 +30,7 @@ void ModulesDataController::Refresh() {
 
     for (ProcessInfo* proc : processes) {
         // Enumerate modules for this process
-        std::vector<ModuleInfo*> processModules = ModuleManager::EnumerateModules(proc->GetPid());
+        auto processModules = ModuleManager::EnumerateModules(proc->GetPid());
 
         // Add to our main list
         m_modules.insert(m_modules.end(), processModules.begin(), processModules.end());
@@ -65,7 +61,6 @@ std::vector<int> ModulesDataController::GetAvailableActions(const DataObject* da
     if (!dataObject) return actions;
 
     actions.push_back(static_cast<int>(ModuleAction::OpenContainingFolder));
-    // actions.push_back(static_cast<int>(ModuleAction::Properties)); // TBD
 
     // Add common export/copy actions
     AddCommonExportActions(actions);

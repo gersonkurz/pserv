@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <Windows.h>
-#include "../models/window_info.h"
+#include <models/window_info.h>
 
 namespace pserv {
 

@@ -1,8 +1,8 @@
 #include "precomp.h"
-#include "uninstaller_data_controller.h"
-#include "../windows_api/uninstaller_manager.h"
-#include "../utils/string_utils.h"
-#include "../utils/win32_error.h"
+#include <controllers/uninstaller_data_controller.h>
+#include <windows_api/uninstaller_manager.h>
+#include <utils/string_utils.h>
+#include <utils/win32_error.h>
 #include <spdlog/spdlog.h>
 #include <format>
 #include <algorithm>

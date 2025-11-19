@@ -1,7 +1,7 @@
 #pragma once
-#include "../core/data_controller.h"
-#include "../models/window_info.h"
-#include "../dialogs/window_properties_dialog.h"
+#include <core/data_controller.h>
+#include <models/window_info.h>
+#include <dialogs/window_properties_dialog.h>
 #include <vector>
 
 namespace pserv {

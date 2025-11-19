@@ -1,8 +1,8 @@
 #include "precomp.h"
-#include "processes_data_controller.h"
-#include "../windows_api/process_manager.h"
-#include "../core/async_operation.h"
-#include "../utils/string_utils.h"
+#include <controllers/processes_data_controller.h>
+#include <windows_api/process_manager.h>
+#include <core/async_operation.h>
+#include <utils/string_utils.h>
 #include <shellapi.h>
 
 namespace pserv {

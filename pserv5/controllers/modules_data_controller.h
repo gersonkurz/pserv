@@ -1,7 +1,7 @@
 #pragma once
-#include "../core/data_controller.h"
-#include "../models/module_info.h"
-#include "../windows_api/module_manager.h"
+#include <core/data_controller.h>
+#include <models/module_info.h>
+#include <windows_api/module_manager.h>
 #include <vector>
 
 namespace pserv {
