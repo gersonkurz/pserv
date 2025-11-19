@@ -13,35 +13,26 @@ ModuleInfo::ModuleInfo(
     const std::string& name,
     const std::string& path
 )
-    : m_processId(processId)
-    , m_baseAddress(baseAddress)
-    , m_size(size)
-    , m_name(name)
-    , m_path(path)
+    : m_processId{processId}
+    , m_baseAddress{baseAddress}
+    , m_size{size}
+    , m_name{name}
+    , m_path{path}
 {
     SetRunning(true);
     SetDisabled(false);
 }
 
-std::string ModuleInfo::GetId() const {
-    return std::format("{}_{:#x}", m_processId, reinterpret_cast<uintptr_t>(m_baseAddress));
-}
-
-void ModuleInfo::Update(const DataObject& other) {
-    // ModuleInfo properties are generally static once loaded, so no update logic for now.
-    // If mutable properties were introduced, they would be updated here.
-}
-
 PropertyValue ModuleInfo::GetTypedProperty(int propertyId) const {
-    switch (propertyId) {
-        case 0: // Base Address
+    switch (static_cast<ModuleProperty>(propertyId)) {
+        case ModuleProperty::BaseAddress:
             return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_baseAddress));
-        case 1: // Size
+        case ModuleProperty::Size:
             return static_cast<uint64_t>(m_size);
-        case 2: // Name
-        case 3: // Path
+        case ModuleProperty::Name:
+        case ModuleProperty::Path:
             return GetProperty(propertyId);
-        case 4: // Process ID
+        case ModuleProperty::ProcessId:
             return static_cast<uint64_t>(m_processId);
         default:
             return std::monostate{};
@@ -49,13 +40,19 @@ PropertyValue ModuleInfo::GetTypedProperty(int propertyId) const {
 }
 
 std::string ModuleInfo::GetProperty(int column) const {
-    switch (column) {
-        case 0: return std::format("{:#x}", reinterpret_cast<uintptr_t>(m_baseAddress));
-        case 1: return utils::FormatSize(m_size);
-        case 2: return m_name;
-        case 3: return m_path;
-        case 4: return std::to_string(m_processId);
-        default: return "";
+    switch (static_cast<ModuleProperty>(column)) {
+        case ModuleProperty::BaseAddress:
+            return std::format("{:#x}", reinterpret_cast<uintptr_t>(m_baseAddress));
+        case ModuleProperty::Size:
+            return utils::FormatSize(m_size);
+        case ModuleProperty::Name:
+            return m_name;
+        case ModuleProperty::Path:
+            return m_path;
+        case ModuleProperty::ProcessId:
+            return std::to_string(m_processId);
+        default:
+            return "";
     }
 }
 

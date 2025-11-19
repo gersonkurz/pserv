@@ -5,6 +5,19 @@
 
 namespace pserv {
 
+enum class ProgramProperty {
+    DisplayName = 0,
+    Version,
+    Publisher,
+    InstallLocation,
+    UninstallString,
+    InstallDate,
+    EstimatedSize,
+    Comments,
+    HelpLink,
+    URLInfoAbout
+};
+
 class InstalledProgramInfo : public DataObject {
 public:
     InstalledProgramInfo(
@@ -21,8 +34,6 @@ public:
         uint64_t estimatedSizeBytes = 0);
 
     // DataObject overrides
-    std::string GetId() const override;
-    void Update(const DataObject& other) override;
     std::string GetProperty(int columnIndex) const override;
     PropertyValue GetTypedProperty(int propertyId) const override;
     bool MatchesFilter(const std::string& filter) const override;
