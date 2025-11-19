@@ -165,7 +165,7 @@ void UninstallerDataController::RenderPropertiesDialog() {
 }
 
 void UninstallerDataController::Sort(int columnIndex, bool ascending) {
-    if (columnIndex < 0 || columnIndex >= static_cast<int>(m_columns.size())) return;
+    if (columnIndex < 0 || columnIndex >= static_cast<int>(GetColumns().size())) return;
 
     spdlog::info("[UNINSTALLER] Sort called: column={}, ascending={}, items={}",
         columnIndex, ascending, m_programs.size());
@@ -173,30 +173,24 @@ void UninstallerDataController::Sort(int columnIndex, bool ascending) {
     m_lastSortColumn = columnIndex;
     m_lastSortAscending = ascending;
 
-    std::sort(m_programs.begin(), m_programs.end(), 
-        [columnIndex, ascending](const InstalledProgramInfo* a, const InstalledProgramInfo* b) {
-        int comparison = 0;
-        switch (columnIndex) {
-            case 0: comparison = a->GetDisplayName().compare(b->GetDisplayName()); break;
-            case 1: comparison = a->GetDisplayVersion().compare(b->GetDisplayVersion()); break;
-            case 2: comparison = a->GetPublisher().compare(b->GetPublisher()); break;
-            case 3: comparison = a->GetInstallLocation().compare(b->GetInstallLocation()); break;
-            case 4: comparison = a->GetUninstallString().compare(b->GetUninstallString()); break;
-            case 5: comparison = a->GetInstallDate().compare(b->GetInstallDate()); break;
-            case 6: // Estimated Size - numeric comparison
-                {
-                    uint64_t sizeA = a->GetEstimatedSizeBytes();
-                    uint64_t sizeB = b->GetEstimatedSizeBytes();
-                    comparison = (sizeA < sizeB) ? -1 : (sizeA > sizeB) ? 1 : 0;
-                }
-                break;
-            case 7: comparison = a->GetComments().compare(b->GetComments()); break;
-            case 8: comparison = a->GetHelpLink().compare(b->GetHelpLink()); break;
-            case 9: comparison = a->GetUrlInfoAbout().compare(b->GetUrlInfoAbout()); break;
-            default: comparison = 0; break;
+    const auto& columns = GetColumns();
+    ColumnDataType dataType = columns[columnIndex].DataType;
+
+    std::sort(m_programs.begin(), m_programs.end(),
+        [columnIndex, ascending, dataType](const InstalledProgramInfo* a, const InstalledProgramInfo* b) {
+        // Use column metadata to determine sorting strategy
+        if (dataType == ColumnDataType::Size) {
+            // 6=EstimatedSize
+            uint64_t sizeA = a->GetEstimatedSizeBytes();
+            uint64_t sizeB = b->GetEstimatedSizeBytes();
+            return ascending ? (sizeA < sizeB) : (sizeA > sizeB);
         }
 
-        return ascending ? (comparison < 0) : (comparison > 0);
+        // String comparison for all other types
+        std::string valA = a->GetProperty(columnIndex);
+        std::string valB = b->GetProperty(columnIndex);
+        int cmp = valA.compare(valB);
+        return ascending ? (cmp < 0) : (cmp > 0);
     });
 
     // Log first few items after sort for verification

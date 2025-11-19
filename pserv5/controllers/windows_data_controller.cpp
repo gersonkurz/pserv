@@ -173,14 +173,36 @@ void WindowsDataController::RenderPropertiesDialog() {
 }
 
 void WindowsDataController::Sort(int columnIndex, bool ascending) {
-    if (columnIndex < 0 || columnIndex >= static_cast<int>(m_columns.size())) return;
+    if (columnIndex < 0 || columnIndex >= static_cast<int>(GetColumns().size())) return;
 
-    std::sort(m_dataObjects.begin(), m_dataObjects.end(), [columnIndex, ascending](const DataObject* a, const DataObject* b) {
+    const auto& columns = GetColumns();
+    ColumnDataType dataType = columns[columnIndex].DataType;
+
+    std::sort(m_dataObjects.begin(), m_dataObjects.end(), [columnIndex, ascending, dataType](const DataObject* a, const DataObject* b) {
+        // Use column metadata to determine sorting strategy
+        if (dataType == ColumnDataType::UnsignedInteger) {
+            const auto* winA = static_cast<const WindowInfo*>(a);
+            const auto* winB = static_cast<const WindowInfo*>(b);
+            uint64_t valA = 0, valB = 0;
+
+            // 0=InternalID, 5=Style, 6=ExStyle, 7=ID, 8=ProcessID, 9=ThreadID
+            switch (columnIndex) {
+                case 0: valA = reinterpret_cast<uintptr_t>(winA->GetHandle());
+                        valB = reinterpret_cast<uintptr_t>(winB->GetHandle()); break;
+                case 5: valA = winA->GetStyle(); valB = winB->GetStyle(); break;
+                case 6: valA = winA->GetExStyle(); valB = winB->GetExStyle(); break;
+                case 7: valA = winA->GetWindowId(); valB = winB->GetWindowId(); break;
+                case 8: valA = winA->GetProcessId(); valB = winB->GetProcessId(); break;
+                case 9: valA = winA->GetThreadId(); valB = winB->GetThreadId(); break;
+                default: valA = 0; valB = 0; break;
+            }
+
+            return ascending ? (valA < valB) : (valA > valB);
+        }
+
+        // String comparison for all other types
         std::string valA = a->GetProperty(columnIndex);
         std::string valB = b->GetProperty(columnIndex);
-        
-        // TODO: Numeric sort for IDs?
-        
         int cmp = valA.compare(valB);
         return ascending ? (cmp < 0) : (cmp > 0);
     });

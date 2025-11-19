@@ -34,6 +34,10 @@ public:
     const std::string& GetTitle() const { return m_title; }
     const std::string& GetClassName() const { return m_className; }
     DWORD GetProcessId() const { return m_processId; }
+    DWORD GetThreadId() const { return m_threadId; }
+    DWORD GetStyle() const { return m_style; }
+    DWORD GetExStyle() const { return m_exStyle; }
+    DWORD GetWindowId() const { return m_windowId; }
     
     // Setters
     void SetTitle(std::string title) { m_title = std::move(title); }

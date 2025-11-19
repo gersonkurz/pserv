@@ -83,6 +83,8 @@ public:
     DWORD GetHandleCount() const { return m_handleCount; }
     DWORD GetSessionId() const { return m_sessionId; }
     DWORD GetPageFaultCount() const { return m_pageFaultCount; }
+    SIZE_T GetPagedPoolUsage() const { return m_quotaPagedPoolUsage; }
+    SIZE_T GetNonPagedPoolUsage() const { return m_quotaNonPagedPoolUsage; }
 
     // Setters
     void SetParentPid(DWORD pid) { m_parentPid = pid; }

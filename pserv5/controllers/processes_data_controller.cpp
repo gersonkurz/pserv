@@ -240,40 +240,46 @@ void ProcessesDataController::DispatchAction(int action, DataActionDispatchConte
 }
 
 void ProcessesDataController::Sort(int columnIndex, bool ascending) {
-    if (columnIndex < 0 || columnIndex >= static_cast<int>(m_columns.size())) return;
+    if (columnIndex < 0 || columnIndex >= static_cast<int>(GetColumns().size())) return;
 
     m_lastSortColumn = columnIndex;
     m_lastSortAscending = ascending;
 
-    std::sort(m_processes.begin(), m_processes.end(), [columnIndex, ascending](const ProcessInfo* a, const ProcessInfo* b) {
-        // Handle numeric columns
-        // PID=1, Threads=4, Handles=9, PageFaults=16
-        // Memory columns (5,6,14,15) are currently string-sorted (TODO: fix)
-        if (columnIndex == 1 || columnIndex == 4 || columnIndex == 9 || columnIndex == 16) {
-             long long valA = 0, valB = 0;
-             try {
-                 // This is inefficient (parsing back string), but consistent with current architecture
-                 // Better way: Add GetPropertyAsLong to DataObject or specialized sort in controller
-                 // For now, parsing is "safe" enough for prototype
-                 std::string sA = a->GetProperty(columnIndex);
-                 std::string sB = b->GetProperty(columnIndex);
-                 
-                 // Clean up " KB", " MB" etc for size columns if present
-                 // Actually GetProperty returns formatted string.
-                 // Ideally we should sort by raw value.
-                 // We can cast to ProcessInfo and get raw values since we are in ProcessesDataController
-                 
-                 switch(columnIndex) {
-                     case 1: valA = a->GetPid(); valB = b->GetPid(); break;
-                     case 4: valA = a->GetThreadCount(); valB = b->GetThreadCount(); break;
-                     case 9: valA = a->GetHandleCount(); valB = b->GetHandleCount(); break;
-                     case 16: valA = a->GetPageFaultCount(); valB = b->GetPageFaultCount(); break;
-                 }
-             } catch (...) {}
-             
-             return ascending ? (valA < valB) : (valA > valB);
+    const auto& columns = GetColumns();
+    ColumnDataType dataType = columns[columnIndex].DataType;
+
+    std::sort(m_processes.begin(), m_processes.end(), [columnIndex, ascending, dataType](const ProcessInfo* a, const ProcessInfo* b) {
+        // Use column metadata to determine sorting strategy
+        if (dataType == ColumnDataType::UnsignedInteger || dataType == ColumnDataType::Integer) {
+            uint64_t valA = 0, valB = 0;
+
+            // 1=PID, 4=Threads, 9=Handles, 16=PageFaults
+            switch(columnIndex) {
+                case 1: valA = a->GetPid(); valB = b->GetPid(); break;
+                case 4: valA = a->GetThreadCount(); valB = b->GetThreadCount(); break;
+                case 9: valA = a->GetHandleCount(); valB = b->GetHandleCount(); break;
+                case 16: valA = a->GetPageFaultCount(); valB = b->GetPageFaultCount(); break;
+                default: valA = 0; valB = 0; break;
+            }
+
+            return ascending ? (valA < valB) : (valA > valB);
         }
-        
+        else if (dataType == ColumnDataType::Size) {
+            uint64_t valA = 0, valB = 0;
+
+            // 5=WorkingSet, 6=PrivateBytes, 14=PagedPool, 15=NonPagedPool
+            switch(columnIndex) {
+                case 5: valA = a->GetWorkingSetSize(); valB = b->GetWorkingSetSize(); break;
+                case 6: valA = a->GetPrivatePageCount(); valB = b->GetPrivatePageCount(); break;
+                case 14: valA = a->GetPagedPoolUsage(); valB = b->GetPagedPoolUsage(); break;
+                case 15: valA = a->GetNonPagedPoolUsage(); valB = b->GetNonPagedPoolUsage(); break;
+                default: valA = 0; valB = 0; break;
+            }
+
+            return ascending ? (valA < valB) : (valA > valB);
+        }
+
+        // String comparison for all other types (String, Time)
         std::string valA = a->GetProperty(columnIndex);
         std::string valB = b->GetProperty(columnIndex);
         int cmp = valA.compare(valB);

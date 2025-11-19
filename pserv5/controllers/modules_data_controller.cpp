@@ -139,37 +139,39 @@ void ModulesDataController::RenderPropertiesDialog() {
 }
 
 void ModulesDataController::Sort(int columnIndex, bool ascending) {
-    std::sort(m_modules.begin(), m_modules.end(), 
-        [columnIndex, ascending](const ModuleInfo* a, const ModuleInfo* b) {
-        int comparison = 0;
-        switch (columnIndex) {
-            case 0: { // Base Address
-                uintptr_t addrA = reinterpret_cast<uintptr_t>(a->GetBaseAddress());
-                uintptr_t addrB = reinterpret_cast<uintptr_t>(b->GetBaseAddress());
-                comparison = (addrA > addrB) - (addrA < addrB);
-                break;
+    if (columnIndex < 0 || columnIndex >= static_cast<int>(GetColumns().size())) return;
+
+    const auto& columns = GetColumns();
+    ColumnDataType dataType = columns[columnIndex].DataType;
+
+    std::sort(m_modules.begin(), m_modules.end(),
+        [columnIndex, ascending, dataType](const ModuleInfo* a, const ModuleInfo* b) {
+        // Use column metadata to determine sorting strategy
+        if (dataType == ColumnDataType::UnsignedInteger) {
+            uint64_t valA = 0, valB = 0;
+
+            // 0=BaseAddress, 4=ProcessID
+            switch (columnIndex) {
+                case 0: valA = reinterpret_cast<uintptr_t>(a->GetBaseAddress());
+                        valB = reinterpret_cast<uintptr_t>(b->GetBaseAddress()); break;
+                case 4: valA = a->GetProcessId(); valB = b->GetProcessId(); break;
+                default: valA = 0; valB = 0; break;
             }
-            case 1: { // Size
-                DWORD sizeA = a->GetSize();
-                DWORD sizeB = b->GetSize();
-                comparison = (sizeA > sizeB) - (sizeA < sizeB);
-                break;
-            }
-            case 2: // Name
-                comparison = a->GetName().compare(b->GetName());
-                break;
-            case 3: // Path
-                comparison = a->GetPath().compare(b->GetPath());
-                break;
-            case 4: { // Process ID
-                uint32_t pidA = a->GetProcessId();
-                uint32_t pidB = b->GetProcessId();
-                comparison = (pidA > pidB) - (pidA < pidB);
-                break;
-            }
+
+            return ascending ? (valA < valB) : (valA > valB);
+        }
+        else if (dataType == ColumnDataType::Size) {
+            // 1=Size
+            uint64_t sizeA = a->GetSize();
+            uint64_t sizeB = b->GetSize();
+            return ascending ? (sizeA < sizeB) : (sizeA > sizeB);
         }
 
-        return ascending ? (comparison < 0) : (comparison > 0);
+        // String comparison for all other types
+        std::string valA = a->GetProperty(columnIndex);
+        std::string valB = b->GetProperty(columnIndex);
+        int cmp = valA.compare(valB);
+        return ascending ? (cmp < 0) : (cmp > 0);
     });
 }
 

@@ -104,7 +104,7 @@ namespace pserv {
 	}
 
 	void ServicesDataController::Sort(int columnIndex, bool ascending) {
-		if (columnIndex < 0 || columnIndex >= static_cast<int>(m_columns.size())) {
+		if (columnIndex < 0 || columnIndex >= static_cast<int>(GetColumns().size())) {
 			spdlog::warn("Invalid column index for sorting: {}", columnIndex);
 			return;
 		}
@@ -116,15 +116,15 @@ namespace pserv {
 		spdlog::info("[SERVICES] Sort called: column={}, ascending={}, items={}",
 			columnIndex, ascending, m_services.size());
 
-		std::sort(m_services.begin(), m_services.end(), [columnIndex, ascending](const ServiceInfo* a, const ServiceInfo* b) {
+		const auto& columns = GetColumns();
+		ColumnDataType dataType = columns[columnIndex].DataType;
+
+		std::sort(m_services.begin(), m_services.end(), [columnIndex, ascending, dataType](const ServiceInfo* a, const ServiceInfo* b) {
 			std::string valA = a->GetProperty(columnIndex);
 			std::string valB = b->GetProperty(columnIndex);
 
-			// For numeric columns, do numeric comparison
-			// IMPORTANT: These hardcoded indices depend on the column order in m_columns (lines 17-36 and 43-62).
-			// If you add, remove, or reorder columns in the constructor, you MUST update these indices.
-			// Numeric columns: ProcessId(4), TagId(11), Win32ExitCode(12), ServiceSpecificExitCode(13), CheckPoint(14), WaitHint(15), ServiceFlags(16)
-			if (columnIndex == 4 || columnIndex == 11 || (columnIndex >= 12 && columnIndex <= 16)) {
+			// Use column metadata to determine sorting strategy
+			if (dataType == ColumnDataType::UnsignedInteger || dataType == ColumnDataType::Integer) {
 				try {
 					long long numA = valA.empty() ? 0 : std::stoll(valA);
 					long long numB = valB.empty() ? 0 : std::stoll(valB);
