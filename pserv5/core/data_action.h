@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+namespace pserv {
+
 class DataObject;
 class DataController;
 struct DataActionDispatchContext;
@@ -18,19 +20,29 @@ enum class ActionVisibility {
 // Actions are self-contained objects that know how to execute themselves
 // and provide metadata about their visibility and availability
 class DataAction {
+private:
+    const std::string m_name;
+    const ActionVisibility m_visibility;
+
+protected:
+    DataAction(std::string name, ActionVisibility visibility)
+        : m_name{std::move(name)}
+        , m_visibility{visibility}
+    {}
+
 public:
     virtual ~DataAction() = default;
 
     // Identity
-    virtual std::string GetName() const = 0;
+    std::string GetName() const { return m_name; }
 
     // Visibility and availability
-    virtual ActionVisibility GetVisibility() const = 0;
+    ActionVisibility GetVisibility() const { return m_visibility; }
     virtual bool IsAvailableFor(const DataObject* object) const = 0;
     virtual bool IsSeparator() const { return false; }
 
     // Execution
-    virtual void Execute(const DataActionDispatchContext& context) = 0;
+    virtual void Execute(DataActionDispatchContext& context) = 0;
 
     // UI hints
     virtual bool IsDestructive() const { return false; }  // Red button color hint
@@ -40,9 +52,10 @@ public:
 // Special action type representing a menu separator
 class DataActionSeparator final : public DataAction {
 public:
-    std::string GetName() const override { return ""; }
-    ActionVisibility GetVisibility() const override { return ActionVisibility::Both; }
+    DataActionSeparator() : DataAction{"", ActionVisibility::Both} {}
     bool IsAvailableFor(const DataObject*) const override { return true; }
     bool IsSeparator() const override { return true; }
-    void Execute(const DataActionDispatchContext&) override {}
+    void Execute(DataActionDispatchContext&) override {}
 };
+
+} // namespace pserv

@@ -32,6 +32,9 @@
     <Filter Include="src">
       <UniqueIdentifier>{a81a7add-d575-4ff5-9722-fbf8be6962fe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="actions">
+      <UniqueIdentifier>{b943704d-a8f3-41e6-9642-75eb8cdf7d3b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dialogs\service_properties_dialog.h">
@@ -181,6 +184,11 @@
     <ClInclude Include="models\installed_program_info.h">
       <Filter>models</Filter>
     </ClInclude>
+    <ClInclude Include="utils\file_dialogs.h" />
+    <ClInclude Include="core\exporters\exporter_interface.h" />
+    <ClInclude Include="core\exporters\exporter_registry.h" />
+    <ClInclude Include="core\exporters\json_exporter.h" />
+    <ClInclude Include="core\exporters\plaintext_exporter.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dialogs\service_properties_dialog.cpp">
@@ -281,6 +289,14 @@
     </ClCompile>
     <ClCompile Include="models\installed_program_info.cpp">
       <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="core\data_controller.cpp" />
+    <ClCompile Include="core\exporters\exporter_registry.cpp" />
+    <ClCompile Include="core\exporters\json_exporter.cpp" />
+    <ClCompile Include="core\exporters\plaintext_exporter.cpp" />
+    <ClCompile Include="utils\file_dialogs.cpp" />
+    <ClCompile Include="actions\service_actions.cpp">
+      <Filter>actions</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
