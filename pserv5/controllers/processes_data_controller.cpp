@@ -4,6 +4,7 @@
 #include <core/async_operation.h>
 #include <utils/string_utils.h>
 #include <actions/process_actions.h>
+#include <actions/common_actions.h>
 #include <shellapi.h>
 
 namespace pserv {
@@ -75,7 +76,10 @@ void ProcessesDataController::Clear() {
 }
 
 std::vector<std::shared_ptr<DataAction>> ProcessesDataController::GetActions() const {
-    return CreateProcessActions();
+    auto actions = CreateProcessActions();
+    auto commonActions = CreateCommonExportActions();
+    actions.insert(actions.end(), commonActions.begin(), commonActions.end());
+    return actions;
 }
 
 std::vector<int> ProcessesDataController::GetAvailableActions(const DataObject* dataObject) const {

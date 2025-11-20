@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include <controllers/services_data_controller.h>
 #include <actions/service_actions.h>
+#include <actions/common_actions.h>
 #include <windows_api/service_manager.h>
 #include <core/async_operation.h>
 #include <utils/string_utils.h>
@@ -113,7 +114,10 @@ namespace pserv {
 	}
 
 	std::vector<std::shared_ptr<DataAction>> ServicesDataController::GetActions() const {
-		return CreateServiceActions();
+		auto actions = CreateServiceActions();
+		auto commonActions = CreateCommonExportActions();
+		actions.insert(actions.end(), commonActions.begin(), commonActions.end());
+		return actions;
 	}
 
 	std::vector<int> ServicesDataController::GetAvailableActions(const DataObject* dataObject) const {

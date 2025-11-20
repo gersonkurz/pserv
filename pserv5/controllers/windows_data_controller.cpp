@@ -3,6 +3,7 @@
 #include <windows_api/window_manager.h>
 #include <utils/string_utils.h>
 #include <actions/window_actions.h>
+#include <actions/common_actions.h>
 #include <algorithm>
 
 namespace pserv {
@@ -60,7 +61,10 @@ void WindowsDataController::Clear() {
 }
 
 std::vector<std::shared_ptr<DataAction>> WindowsDataController::GetActions() const {
-    return CreateWindowActions();
+    auto actions = CreateWindowActions();
+    auto commonActions = CreateCommonExportActions();
+    actions.insert(actions.end(), commonActions.begin(), commonActions.end());
+    return actions;
 }
 
 const std::vector<DataObject*>& WindowsDataController::GetDataObjects() const {

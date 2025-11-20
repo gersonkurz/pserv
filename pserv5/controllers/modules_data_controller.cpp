@@ -4,6 +4,7 @@
 #include <models/process_info.h>
 #include <utils/string_utils.h>
 #include <actions/module_actions.h>
+#include <actions/common_actions.h>
 
 namespace pserv {
 
@@ -54,7 +55,10 @@ void ModulesDataController::Clear() {
 }
 
 std::vector<std::shared_ptr<DataAction>> ModulesDataController::GetActions() const {
-    return CreateModuleActions();
+    auto actions = CreateModuleActions();
+    auto commonActions = CreateCommonExportActions();
+    actions.insert(actions.end(), commonActions.begin(), commonActions.end());
+    return actions;
 }
 
 const std::vector<DataObject*>& ModulesDataController::GetDataObjects() const {
