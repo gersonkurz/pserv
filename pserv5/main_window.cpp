@@ -864,27 +864,34 @@ namespace pserv {
 								m_dispatchContext.m_selectedObjects.push_back(dataObject);
 							}
 
-							// Get actions that are common to all selected objects
-							auto actions = controller->GetAvailableActions(dataObject);
-							for (size_t i = 0; i < actions.size(); ++i) {
-								const auto& action = actions[i];
+							// Get all actions and filter to those available for this object
+							auto allActions = controller->GetActions();
+							for (const auto& action : allActions) {
+								// Filter to context menu actions
+								auto visibility = action->GetVisibility();
+								if ((static_cast<int>(visibility) & static_cast<int>(ActionVisibility::ContextMenu)) == 0) {
+									continue;
+								}
+
+								// Check availability for this object
+								if (!action->IsAvailableFor(dataObject)) {
+									continue;
+								}
 
 								// Handle separator
-								if (action == -1) {
+								if (action->IsSeparator()) {
 									ImGui::Separator();
 									continue;
 								}
 
-								const auto actionName = controller->GetActionName(action);
-
-								// Show count if multiple objects selected (except for copy and file system actions)
-								std::string menuLabel = actionName;
+								// Show count if multiple objects selected
+								std::string menuLabel = action->GetName();
 								if (m_dispatchContext.m_selectedObjects.size() > 1) {
 									menuLabel += std::format(" ({} selected)", m_dispatchContext.m_selectedObjects.size());
 								}
 
 								if (ImGui::MenuItem(menuLabel.c_str())) {
-									controller->DispatchAction(action, m_dispatchContext);
+									action->Execute(m_dispatchContext);
 								}
 							}
 							ImGui::EndPopup();
