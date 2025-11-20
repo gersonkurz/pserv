@@ -295,10 +295,16 @@
     <ClCompile Include="core\exporters\json_exporter.cpp" />
     <ClCompile Include="core\exporters\plaintext_exporter.cpp" />
     <ClCompile Include="utils\file_dialogs.cpp" />
+    <ClCompile Include="actions\module_actions.cpp">
+      <Filter>actions</Filter>
+    </ClCompile>
     <ClCompile Include="actions\process_actions.cpp">
       <Filter>actions</Filter>
     </ClCompile>
     <ClCompile Include="actions\service_actions.cpp">
+      <Filter>actions</Filter>
+    </ClCompile>
+    <ClCompile Include="actions\uninstaller_actions.cpp">
       <Filter>actions</Filter>
     </ClCompile>
     <ClCompile Include="actions\window_actions.cpp">

@@ -3,6 +3,7 @@
 #include <windows_api/process_manager.h>
 #include <models/process_info.h>
 #include <utils/string_utils.h>
+#include <actions/module_actions.h>
 
 namespace pserv {
 
@@ -53,7 +54,7 @@ void ModulesDataController::Clear() {
 }
 
 std::vector<std::shared_ptr<DataAction>> ModulesDataController::GetActions() const {
-    return {}; // TODO: implement
+    return CreateModuleActions();
 }
 
 const std::vector<DataObject*>& ModulesDataController::GetDataObjects() const {

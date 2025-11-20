@@ -3,6 +3,7 @@
 #include <windows_api/uninstaller_manager.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
+#include <actions/uninstaller_actions.h>
 #include <spdlog/spdlog.h>
 #include <format>
 #include <algorithm>
@@ -58,7 +59,7 @@ void UninstallerDataController::Clear() {
 }
 
 std::vector<std::shared_ptr<DataAction>> UninstallerDataController::GetActions() const {
-    return {}; // TODO: implement
+    return CreateUninstallerActions();
 }
 
 const std::vector<DataObject*>& UninstallerDataController::GetDataObjects() const {

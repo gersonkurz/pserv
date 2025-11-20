@@ -223,8 +223,10 @@
     <ClInclude Include="..\imgui\backends\imgui_impl_dx11.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="actions\module_actions.cpp" />
     <ClCompile Include="actions\process_actions.cpp" />
     <ClCompile Include="actions\service_actions.cpp" />
+    <ClCompile Include="actions\uninstaller_actions.cpp" />
     <ClCompile Include="actions\window_actions.cpp" />
     <ClCompile Include="core\data_controller.cpp" />
     <ClCompile Include="core\data_controller_library.cpp" />
