@@ -3,6 +3,7 @@
 #include <windows_api/process_manager.h>
 #include <core/async_operation.h>
 #include <utils/string_utils.h>
+#include <actions/process_actions.h>
 #include <shellapi.h>
 
 namespace pserv {
@@ -74,7 +75,7 @@ void ProcessesDataController::Clear() {
 }
 
 std::vector<std::shared_ptr<DataAction>> ProcessesDataController::GetActions() const {
-    return {}; // TODO: implement
+    return CreateProcessActions();
 }
 
 std::vector<int> ProcessesDataController::GetAvailableActions(const DataObject* dataObject) const {
