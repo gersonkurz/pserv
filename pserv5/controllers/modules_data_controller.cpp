@@ -52,6 +52,10 @@ void ModulesDataController::Clear() {
     m_bLoaded = false;
 }
 
+std::vector<std::shared_ptr<DataAction>> ModulesDataController::GetActions() const {
+    return {}; // TODO: implement
+}
+
 const std::vector<DataObject*>& ModulesDataController::GetDataObjects() const {
     return reinterpret_cast<const std::vector<DataObject*>&>(m_modules);
 }

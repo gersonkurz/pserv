@@ -12,7 +12,9 @@ public:
     ~ProcessesDataController() override;
 
     // DataController interface
-    void Refresh() override;
+    void Refresh() override;	std::vector<std::shared_ptr<DataAction>> GetActions() const override;
+
+
     std::vector<int> GetAvailableActions(const DataObject* dataObject) const override;
     void DispatchAction(int action, DataActionDispatchContext& context) override;
     std::string GetActionName(int action) const override;

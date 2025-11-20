@@ -57,6 +57,11 @@ void WindowsDataController::Clear() {
     m_dataObjects.clear();
     m_bLoaded = false;
 }
+
+std::vector<std::shared_ptr<DataAction>> WindowsDataController::GetActions() const {
+    return {}; // TODO: implement
+}
+
 const std::vector<DataObject*>& WindowsDataController::GetDataObjects() const {
     return m_dataObjects;
 }

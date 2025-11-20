@@ -51,7 +51,10 @@ public:
 		return reinterpret_cast<const std::vector<DataObject*>&>(m_services);
     }
 
-    // Get available actions for a service
+    // Action system
+    std::vector<std::shared_ptr<DataAction>> GetActions() const override;
+
+    // Legacy action system
     std::vector<int> GetAvailableActions(const DataObject* service) const override;
     std::string GetActionName(int action) const override;
 

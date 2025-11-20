@@ -1,6 +1,7 @@
 #pragma once
 #include "data_object.h"
 #include "data_object_column.h"
+#include "data_action.h"
 #include <vector>
 #include <memory>
 #include "../core/async_operation.h"
@@ -61,9 +62,15 @@ namespace pserv {
 		virtual void Refresh() = 0;
 		virtual const std::vector<DataObject*>& GetDataObjects() const = 0;
 		virtual VisualState GetVisualState(const DataObject* service) const = 0;
+
+		// Action system - new object-based interface
+		virtual std::vector<std::shared_ptr<DataAction>> GetActions() const = 0;
+
+		// Legacy action system - TODO: remove after migration complete
 		virtual std::vector<int> GetAvailableActions(const DataObject* service) const = 0;
 		virtual std::string GetActionName(int action) const = 0;
 		virtual void DispatchAction(int action, DataActionDispatchContext& context) = 0;
+
 		virtual void RenderPropertiesDialog() = 0;
 
 		// Generic sort implementation using column metadata and GetTypedProperty()

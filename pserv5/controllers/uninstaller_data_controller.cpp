@@ -56,6 +56,11 @@ void UninstallerDataController::Clear() {
     m_programs.clear();
     m_bLoaded = false;
 }
+
+std::vector<std::shared_ptr<DataAction>> UninstallerDataController::GetActions() const {
+    return {}; // TODO: implement
+}
+
 const std::vector<DataObject*>& UninstallerDataController::GetDataObjects() const {
     return reinterpret_cast<const std::vector<DataObject*>&>(m_programs);
 }

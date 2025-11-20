@@ -29,7 +29,9 @@ public:
     void Refresh() override;
     const std::vector<DataObject*>& GetDataObjects() const override;
 
-    VisualState GetVisualState(const DataObject* dataObject) const override;
+    VisualState GetVisualState(const DataObject* dataObject) const override;	std::vector<std::shared_ptr<DataAction>> GetActions() const override;
+
+
     
     std::vector<int> GetAvailableActions(const DataObject* dataObject) const override;
     std::string GetActionName(int action) const override;

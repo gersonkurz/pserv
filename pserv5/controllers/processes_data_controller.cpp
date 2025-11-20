@@ -73,6 +73,10 @@ void ProcessesDataController::Clear() {
     m_bLoaded = false;
 }
 
+std::vector<std::shared_ptr<DataAction>> ProcessesDataController::GetActions() const {
+    return {}; // TODO: implement
+}
+
 std::vector<int> ProcessesDataController::GetAvailableActions(const DataObject* dataObject) const {
     std::vector<int> actions;
     if (!dataObject) return actions;
