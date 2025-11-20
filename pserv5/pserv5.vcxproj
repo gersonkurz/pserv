@@ -225,6 +225,7 @@
   <ItemGroup>
     <ClCompile Include="actions\process_actions.cpp" />
     <ClCompile Include="actions\service_actions.cpp" />
+    <ClCompile Include="actions\window_actions.cpp" />
     <ClCompile Include="core\data_controller.cpp" />
     <ClCompile Include="core\data_controller_library.cpp" />
     <ClCompile Include="core\exporters\exporter_registry.cpp" />
