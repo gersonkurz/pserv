@@ -21,7 +21,8 @@ struct CachedModuleInfo {
 static std::unordered_map<std::wstring, CachedModuleInfo> s_moduleCache;
 
 std::string ModuleManager::RetrieveModuleBaseName(HANDLE hProcess, HMODULE hModule) {
-    std::wstring wName{ MAX_PATH, L'\0' };
+    // NOTE: Use parentheses () not braces {} - braces create initializer_list with 2 chars!
+    std::wstring wName(MAX_PATH, L'\0');
     DWORD result = ::GetModuleBaseNameW(hProcess, hModule, wName.data(), static_cast<DWORD>(wName.size()));
     if (result == 0) {
         spdlog::warn("GetModuleBaseNameW failed for module {:#x}: {}", reinterpret_cast<uintptr_t>(hModule), pserv::utils::GetLastWin32ErrorMessage());
@@ -32,7 +33,8 @@ std::string ModuleManager::RetrieveModuleBaseName(HANDLE hProcess, HMODULE hModu
 }
 
 std::string ModuleManager::RetrieveModuleFileName(HANDLE hProcess, HMODULE hModule) {
-    std::wstring wPath{ MAX_PATH, L'\0' };
+    // NOTE: Use parentheses () not braces {} - braces create initializer_list with 2 chars!
+    std::wstring wPath(MAX_PATH, L'\0');
     DWORD result = ::GetModuleFileNameExW(hProcess, hModule, wPath.data(), static_cast<DWORD>(wPath.size()));
     if (result == 0) {
         spdlog::warn("GetModuleFileNameExW failed for module {:#x}: {}", reinterpret_cast<uintptr_t>(hModule), pserv::utils::GetLastWin32ErrorMessage());
@@ -64,7 +66,8 @@ std::vector<ModuleInfo*> ModuleManager::EnumerateModules(uint32_t processId) {
 
     for (HMODULE hModule : hModules) {
         // First, get the full path (we need this as our cache key)
-        std::wstring wPath{ MAX_PATH, L'\0' };
+        // NOTE: Use parentheses () not braces {} - braces create initializer_list with 2 chars!
+        std::wstring wPath(MAX_PATH, L'\0');
         DWORD pathResult = ::GetModuleFileNameExW(hProcess.get(), hModule, wPath.data(), static_cast<DWORD>(wPath.size()));
         if (pathResult == 0) {
             spdlog::warn("GetModuleFileNameExW failed for module {:#x} in process {}: {}",
