@@ -5,6 +5,13 @@ namespace pserv
 
     class DataController;
 
+    struct PropertyEdit
+    {
+        int tabIndex;    // Which object (tab) was edited
+        int columnIndex; // Which column was edited
+        std::string newValue;
+    };
+
     class DataPropertiesDialog final
     {
     private:
@@ -12,6 +19,10 @@ namespace pserv
         DataController *m_controller{nullptr};
         int m_activeTabIndex{0};
         bool m_bOpen{false};
+
+        // Edit tracking
+        std::vector<PropertyEdit> m_pendingEdits;
+        std::map<int, std::map<int, std::string>> m_editBuffers; // [tabIndex][columnIndex] -> current edit value
 
     public:
         DataPropertiesDialog(DataController *controller, const std::vector<DataObject *> &dataObjects);
@@ -34,8 +45,17 @@ namespace pserv
         bool Render();
 
     private:
-        // Apply changes to a specific service
-        bool ApplyChanges(DataObject *dataObject);
+        // Apply all pending edits using transaction pattern
+        bool ApplyAllEdits();
+
+        // Check if a specific field has pending edits
+        bool HasPendingEdit(int tabIndex, int columnIndex) const;
+
+        // Get edit buffer value for a field (or original value if not edited)
+        std::string GetEditValue(int tabIndex, int columnIndex) const;
+
+        // Record an edit to a field
+        void RecordEdit(int tabIndex, int columnIndex, const std::string &newValue);
 
         // Render the content for a single service
         void RenderContent(const DataObject *dataObject);

@@ -20,12 +20,24 @@ namespace pserv
         Right
     };
 
+    // Column edit type (how should this column be edited in properties dialog)
+    enum class ColumnEditType
+    {
+        None,          // Read-only, not editable
+        Text,          // Single-line text input
+        TextMultiline, // Multi-line text input
+        Integer,       // Numeric input
+        Combo          // Dropdown with predefined options
+    };
+
     class DataObjectColumn final
     {
     public:
         const std::string DisplayName;
         const std::string BindingName;
         const ColumnDataType DataType = ColumnDataType::String;
+        const bool Editable = false;
+        const ColumnEditType EditType = ColumnEditType::None;
 
         // Auto-derive alignment from data type
         ColumnAlignment GetAlignment() const

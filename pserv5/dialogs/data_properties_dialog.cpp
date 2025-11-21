@@ -24,6 +24,8 @@ namespace pserv
 
         m_activeTabIndex = 0;
         m_bOpen = true;
+        m_pendingEdits.clear();
+        m_editBuffers.clear();
 
         spdlog::info("DataPropertiesDialog::Open() - opened dialog with {} objects", m_dataObjects.size());
     }
@@ -33,6 +35,8 @@ namespace pserv
         spdlog::info("DataPropertiesDialog::Close() called - m_bOpen was {}", m_bOpen);
         m_bOpen = false;
         m_activeTabIndex = 0;
+        m_pendingEdits.clear();
+        m_editBuffers.clear();
     }
 
     bool DataPropertiesDialog::Render()
@@ -122,16 +126,7 @@ namespace pserv
             if (ImGui::Button("OK", ImVec2(100, 0)))
             {
                 spdlog::info("DataPropertiesDialog: OK button clicked");
-                // Apply all dirty changes
-                for (auto dataObject : m_dataObjects)
-                {
-                    // if (state.bDirty) {
-                    if (ApplyChanges(dataObject))
-                    {
-                        changesApplied = true;
-                    }
-                    //}
-                }
+                changesApplied = ApplyAllEdits();
                 Close();
             }
 
@@ -167,49 +162,198 @@ namespace pserv
         {
             const float labelWidth = 200.0f;
 
-            // Loop through each column and display as read-only field
+            // Loop through each column and render appropriate control
             for (size_t i = 0; i < columns.size(); ++i)
             {
                 const auto &column = columns[i];
-                std::string value = dataObject->GetProperty(static_cast<int>(i));
+                int columnIndex = static_cast<int>(i);
 
                 // Display label
                 ImGui::Text("%s:", column.DisplayName.c_str());
                 ImGui::SameLine(labelWidth);
-
-                // Display value in a selectable/copyable input field (read-only)
                 ImGui::SetNextItemWidth(-1);
-                if (value.empty())
+
+                // Create a unique ID for each field
+                std::string fieldId = std::format("##{}", i);
+
+                // Check if this column is editable
+                if (column.Editable)
                 {
-                    ImGui::TextDisabled("N/A");
+                    // Get current value (from edit buffer or original)
+                    std::string value = GetEditValue(m_activeTabIndex, columnIndex);
+
+                    // Add visual indication for editable fields
+                    // Make editable fields noticeably lighter/brighter than read-only
+                    ImVec4 baseColor = ImGui::GetStyleColorVec4(ImGuiCol_FrameBg);
+
+                    // Calculate brightness to determine if dark or light theme
+                    float brightness = baseColor.x * 0.299f + baseColor.y * 0.587f + baseColor.z * 0.114f;
+                    bool isDarkTheme = brightness < 0.5f;
+
+                    // Adjust brightness: lighter in dark mode, darker in light mode
+                    float adjustment = isDarkTheme ? 1.7f : 0.8f;
+
+                    ImVec4 editableBg = ImVec4(
+                        std::min(baseColor.x * adjustment, 1.0f),
+                        std::min(baseColor.y * adjustment, 1.0f),
+                        std::min(baseColor.z * adjustment, 1.0f),
+                        baseColor.w
+                    );
+
+                    ImVec4 editableHovered = ImVec4(
+                        std::min(editableBg.x * 1.15f, 1.0f),
+                        std::min(editableBg.y * 1.15f, 1.0f),
+                        std::min(editableBg.z * 1.15f, 1.0f),
+                        baseColor.w
+                    );
+
+                    ImVec4 editableActive = ImVec4(
+                        std::min(editableBg.x * 1.3f, 1.0f),
+                        std::min(editableBg.y * 1.3f, 1.0f),
+                        std::min(editableBg.z * 1.3f, 1.0f),
+                        baseColor.w
+                    );
+
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, editableBg);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, editableHovered);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, editableActive);
+
+                    // Render based on edit type
+                    switch (column.EditType)
+                    {
+                    case ColumnEditType::Text:
+                    {
+                        // Single-line text input (editable)
+                        char buffer[1024];
+                        strncpy_s(buffer, value.c_str(), sizeof(buffer) - 1);
+                        buffer[sizeof(buffer) - 1] = '\0';
+
+                        if (ImGui::InputText(fieldId.c_str(), buffer, sizeof(buffer)))
+                        {
+                            RecordEdit(m_activeTabIndex, columnIndex, buffer);
+                        }
+                        break;
+                    }
+
+                    case ColumnEditType::TextMultiline:
+                    {
+                        // Multi-line text input (editable)
+                        char buffer[4096];
+                        strncpy_s(buffer, value.c_str(), sizeof(buffer) - 1);
+                        buffer[sizeof(buffer) - 1] = '\0';
+
+                        if (ImGui::InputTextMultiline(fieldId.c_str(), buffer, sizeof(buffer), ImVec2(-1, 100)))
+                        {
+                            RecordEdit(m_activeTabIndex, columnIndex, buffer);
+                        }
+                        break;
+                    }
+
+                    case ColumnEditType::Integer:
+                    {
+                        // Integer input (editable)
+                        int intValue = 0;
+                        try
+                        {
+                            intValue = std::stoi(value);
+                        }
+                        catch (...)
+                        {
+                        }
+
+                        if (ImGui::InputInt(fieldId.c_str(), &intValue))
+                        {
+                            RecordEdit(m_activeTabIndex, columnIndex, std::to_string(intValue));
+                        }
+                        break;
+                    }
+
+                    case ColumnEditType::Combo:
+                    {
+                        // Combo box (editable)
+                        auto options = m_controller->GetComboOptions(columnIndex);
+                        if (!options.empty())
+                        {
+                            // Find current selection index
+                            int currentIndex = 0;
+                            for (size_t j = 0; j < options.size(); ++j)
+                            {
+                                if (options[j] == value)
+                                {
+                                    currentIndex = static_cast<int>(j);
+                                    break;
+                                }
+                            }
+
+                            // Render combo box
+                            if (ImGui::BeginCombo(fieldId.c_str(), value.c_str()))
+                            {
+                                for (size_t j = 0; j < options.size(); ++j)
+                                {
+                                    bool isSelected = (currentIndex == static_cast<int>(j));
+                                    if (ImGui::Selectable(options[j].c_str(), isSelected))
+                                    {
+                                        RecordEdit(m_activeTabIndex, columnIndex, options[j]);
+                                    }
+                                    if (isSelected)
+                                    {
+                                        ImGui::SetItemDefaultFocus();
+                                    }
+                                }
+                                ImGui::EndCombo();
+                            }
+                        }
+                        else
+                        {
+                            // No options available, show as read-only
+                            ImGui::InputText(fieldId.c_str(), const_cast<char *>(value.c_str()), value.size() + 1, ImGuiInputTextFlags_ReadOnly);
+                        }
+                        break;
+                    }
+
+                    default:
+                        // Fallback to read-only
+                        ImGui::InputText(fieldId.c_str(), const_cast<char *>(value.c_str()), value.size() + 1, ImGuiInputTextFlags_ReadOnly);
+                        break;
+                    }
+
+                    // Pop the editable field colors
+                    ImGui::PopStyleColor(3);
                 }
                 else
                 {
-                    // Create a unique ID for each field
-                    std::string fieldId = std::format("##{}", i);
+                    // Read-only field
+                    std::string value = dataObject->GetProperty(columnIndex);
 
-                    // Check if value contains newlines
-                    bool hasNewlines = value.find('\n') != std::string::npos;
-
-                    if (hasNewlines)
+                    if (value.empty())
                     {
-                        // Use InputTextMultiline for multiline content
-                        int lineCount = std::count(value.begin(), value.end(), '\n') + 1;
-                        float height = ImGui::GetTextLineHeightWithSpacing() * std::min(lineCount, 5);
-
-                        ImGui::InputTextMultiline(fieldId.c_str(),
-                                                const_cast<char*>(value.c_str()),
-                                                value.size() + 1,
-                                                ImVec2(-1, height),
-                                                ImGuiInputTextFlags_ReadOnly);
+                        ImGui::TextDisabled("N/A");
                     }
                     else
                     {
-                        // Use single-line InputText for simple values
-                        ImGui::InputText(fieldId.c_str(),
-                                       const_cast<char*>(value.c_str()),
-                                       value.size() + 1,
-                                       ImGuiInputTextFlags_ReadOnly);
+                        // Check if value contains newlines
+                        bool hasNewlines = value.find('\n') != std::string::npos;
+
+                        if (hasNewlines)
+                        {
+                            // Use InputTextMultiline for multiline content
+                            int lineCount = static_cast<int>(std::count(value.begin(), value.end(), '\n')) + 1;
+                            float height = ImGui::GetTextLineHeightWithSpacing() * std::min(lineCount, 5);
+
+                            ImGui::InputTextMultiline(fieldId.c_str(),
+                                                      const_cast<char *>(value.c_str()),
+                                                      value.size() + 1,
+                                                      ImVec2(-1, height),
+                                                      ImGuiInputTextFlags_ReadOnly);
+                        }
+                        else
+                        {
+                            // Use single-line InputText for simple values
+                            ImGui::InputText(fieldId.c_str(),
+                                             const_cast<char *>(value.c_str()),
+                                             value.size() + 1,
+                                             ImGuiInputTextFlags_ReadOnly);
+                        }
                     }
                 }
 
@@ -291,41 +435,88 @@ namespace pserv
         ImGui::NewLine();
     }
 
-    bool DataPropertiesDialog::ApplyChanges(DataObject *dataObject)
+    bool DataPropertiesDialog::HasPendingEdit(int tabIndex, int columnIndex) const
     {
+        auto tabIt = m_editBuffers.find(tabIndex);
+        if (tabIt == m_editBuffers.end())
+            return false;
 
-        /*
-        try {
-            spdlog::info("Applying changes to {} '{}'", state.pService->GetName());
+        return tabIt->second.find(columnIndex) != tabIt->second.end();
+    }
 
-            // Get the startup type
-            DWORD startType = GetStartupTypeFromIndex(state.startupType);
-
-            // Call ServiceManager to update the service configuration
-            ServiceManager::ChangeServiceConfig(
-                state.pService->GetName(),
-                state.displayName,
-                state.description,
-                startType,
-                state.binaryPathName
-            );
-
-            // Update the local service object with new values
-            state.pService->SetDisplayName(state.displayName);
-            state.pService->SetDescription(state.description);
-            state.pService->SetStartType(startType);
-            state.pService->SetBinaryPathName(state.binaryPathName);
-
-            spdlog::info("Service '{}' configuration updated successfully", state.pService->GetName());
-            return true;
-
+    std::string DataPropertiesDialog::GetEditValue(int tabIndex, int columnIndex) const
+    {
+        // Check if there's an edit in the buffer
+        auto tabIt = m_editBuffers.find(tabIndex);
+        if (tabIt != m_editBuffers.end())
+        {
+            auto colIt = tabIt->second.find(columnIndex);
+            if (colIt != tabIt->second.end())
+            {
+                return colIt->second;
+            }
         }
-        catch (const std::exception& e) {
-            spdlog::error("Failed to update service configuration: {}", e.what());
+
+        // No edit, return original value
+        return m_dataObjects[tabIndex]->GetProperty(columnIndex);
+    }
+
+    void DataPropertiesDialog::RecordEdit(int tabIndex, int columnIndex, const std::string &newValue)
+    {
+        m_editBuffers[tabIndex][columnIndex] = newValue;
+        spdlog::debug("Recorded edit: tab={}, column={}, value={}", tabIndex, columnIndex, newValue);
+    }
+
+    bool DataPropertiesDialog::ApplyAllEdits()
+    {
+        if (m_editBuffers.empty())
+        {
+            spdlog::info("No edits to apply");
             return false;
         }
-        */
-        return false;
+
+        bool anyChangesApplied = false;
+
+        // Process each edited object
+        for (const auto &[tabIndex, columnEdits] : m_editBuffers)
+        {
+            if (columnEdits.empty())
+                continue;
+
+            DataObject *obj = m_dataObjects[tabIndex];
+            spdlog::info("Applying {} edits to object at tab {}", columnEdits.size(), tabIndex);
+
+            // Begin transaction
+            m_controller->BeginPropertyEdits(obj);
+
+            // Set all edits for this object
+            bool allSucceeded = true;
+            for (const auto &[columnIndex, newValue] : columnEdits)
+            {
+                if (!m_controller->SetPropertyEdit(obj, columnIndex, newValue))
+                {
+                    spdlog::warn("Failed to set property edit: column={}", columnIndex);
+                    allSucceeded = false;
+                }
+            }
+
+            // Commit transaction
+            if (allSucceeded)
+            {
+                if (m_controller->CommitPropertyEdits(obj))
+                {
+                    spdlog::info("Successfully committed edits for tab {}", tabIndex);
+                    anyChangesApplied = true;
+                }
+                else
+                {
+                    spdlog::error("Failed to commit edits for tab {}", tabIndex);
+                    MessageBoxA(nullptr, "Failed to apply property changes", "Error", MB_OK | MB_ICONERROR);
+                }
+            }
+        }
+
+        return anyChangesApplied;
     }
 
 } // namespace pserv

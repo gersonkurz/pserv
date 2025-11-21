@@ -69,6 +69,28 @@ namespace pserv
         // Common export/copy functionality
         void DispatchCommonAction(int action, DataActionDispatchContext &context);
 
+        // Property editing transaction methods
+        virtual void BeginPropertyEdits(DataObject *obj)
+        {
+            // Default: no-op
+        }
+
+        virtual bool SetPropertyEdit(DataObject *obj, int columnIndex, const std::string &newValue)
+        {
+            return false; // Default: not editable
+        }
+
+        virtual bool CommitPropertyEdits(DataObject *obj)
+        {
+            return false; // Default: no changes to commit
+        }
+
+        // Get combo box options for a specific column (only called if EditType is Combo)
+        virtual std::vector<std::string> GetComboOptions(int columnIndex) const
+        {
+            return {}; // Default: no options
+        }
+
         const std::vector<DataObjectColumn> &GetColumns() const
         {
             return m_columns;
