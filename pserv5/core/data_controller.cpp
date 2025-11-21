@@ -9,6 +9,24 @@
 
 namespace pserv
 {
+    DataController::~DataController()
+    {
+        if (m_pPropertiesDialog)
+        {
+            m_pPropertiesDialog->Close();
+            m_pPropertiesDialog = nullptr;
+        }
+        Clear();
+    }
+
+    void DataController::ShowPropertiesDialog(DataActionDispatchContext &ctx)
+    {
+        if (!ctx.m_selectedObjects.empty())
+        {
+            m_pPropertiesDialog = new DataPropertiesDialog{this, ctx.m_selectedObjects};
+            m_pPropertiesDialog->Open();
+        }
+    }
 
     void DataController::Sort(int columnIndex, bool ascending)
     {

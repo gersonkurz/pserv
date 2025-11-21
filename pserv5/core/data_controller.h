@@ -44,11 +44,9 @@ namespace pserv
         {
         }
 
-        virtual ~DataController()
-        {
-            assert(m_pPropertiesDialog == nullptr);
-            Clear();
-        }
+        void ShowPropertiesDialog(DataActionDispatchContext &ctx);
+
+        virtual ~DataController();
 
         // Core abstract methods
         virtual void Refresh() = 0;
