@@ -30,7 +30,7 @@ namespace pserv
         {
         public:
             ServiceStartAction()
-                : DataAction{"Start", ActionVisibility::ContextMenu}
+                : DataAction{"Start", ActionVisibility::Both}
             {
             }
 
@@ -95,7 +95,7 @@ namespace pserv
         {
         public:
             ServiceStopAction()
-                : DataAction{"Stop", ActionVisibility::ContextMenu}
+                : DataAction{"Stop", ActionVisibility::Both}
             {
             }
 
@@ -161,7 +161,7 @@ namespace pserv
         {
         public:
             ServiceRestartAction()
-                : DataAction{"Restart", ActionVisibility::ContextMenu}
+                : DataAction{"Restart", ActionVisibility::Both}
             {
             }
 
@@ -226,7 +226,7 @@ namespace pserv
         {
         public:
             ServicePauseAction()
-                : DataAction{"Pause", ActionVisibility::ContextMenu}
+                : DataAction{"Pause", ActionVisibility::Both}
             {
             }
 
@@ -292,7 +292,7 @@ namespace pserv
         {
         public:
             ServiceResumeAction()
-                : DataAction{"Resume", ActionVisibility::ContextMenu}
+                : DataAction{"Resume", ActionVisibility::Both}
             {
             }
 
@@ -545,7 +545,7 @@ namespace pserv
         {
         public:
             ServiceOpenInRegistryEditorAction()
-                : DataAction{"Open in Registry Editor", ActionVisibility::ContextMenu}
+                : DataAction{"Open in Registry Editor", ActionVisibility::Both}
             {
             }
 
@@ -578,7 +578,7 @@ namespace pserv
         {
         public:
             ServiceOpenInExplorerAction()
-                : DataAction{"Open in Explorer", ActionVisibility::ContextMenu}
+                : DataAction{"Open in Explorer", ActionVisibility::Both}
             {
             }
 
@@ -607,7 +607,7 @@ namespace pserv
         {
         public:
             ServiceOpenTerminalHereAction()
-                : DataAction{"Open Terminal Here", ActionVisibility::ContextMenu}
+                : DataAction{"Open Terminal Here", ActionVisibility::Both}
             {
             }
 
@@ -640,7 +640,7 @@ namespace pserv
         {
         public:
             ServiceUninstallAction()
-                : DataAction{"Uninstall Service", ActionVisibility::ContextMenu}
+                : DataAction{"Uninstall Service", ActionVisibility::Both}
             {
             }
 
@@ -722,7 +722,7 @@ namespace pserv
         {
         public:
             ServiceDeleteRegistryKeyAction()
-                : DataAction{"Delete Registry Key", ActionVisibility::ContextMenu}
+                : DataAction{"Delete Registry Key", ActionVisibility::Both}
             {
             }
 

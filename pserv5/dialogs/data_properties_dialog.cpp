@@ -381,7 +381,8 @@ namespace pserv
         // Get all actions from controller for this specific object
         const auto actions = m_controller->GetActions(dataObject);
 
-        // Filter and render actions visible in properties dialog
+        // Collect actions that should appear in properties dialog
+        std::vector<const DataAction *> dialogActions;
         for (const auto &action : actions)
         {
             auto visibility = action->GetVisibility();
@@ -393,46 +394,59 @@ namespace pserv
             if (!action->IsAvailableFor(dataObject))
                 continue;
 
-            if (action->IsSeparator())
-            {
-                ImGui::Spacing();
-                continue;
-            }
-
-            // Color destructive actions red
-            if (action->IsDestructive())
-            {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-            }
-
-            if (ImGui::Button(action->GetName().c_str()))
-            {
-                // Build dispatch context for this action
-                DataActionDispatchContext ctx;
-                ctx.m_pController = m_controller;
-                ctx.m_selectedObjects = {const_cast<DataObject *>(dataObject)};
-                ctx.m_hWnd = nullptr; // TODO: Get window handle if needed
-                ctx.m_pAsyncOp = nullptr;
-                ctx.m_bShowProgressDialog = false;
-
-                // Execute action
-                action->Execute(ctx);
-
-                // Note: We don't close the dialog here - let the action decide
-                // Some actions might want to close dialog, others might not
-            }
-
-            if (action->IsDestructive())
-            {
-                ImGui::PopStyleColor(3);
-            }
-
-            ImGui::SameLine();
+            dialogActions.push_back(action);
         }
 
-        ImGui::NewLine();
+        // Render as dropdown menu if there are any actions
+        if (!dialogActions.empty())
+        {
+            if (ImGui::Button("Actions"))
+            {
+                ImGui::OpenPopup("ActionsPopup");
+            }
+
+            if (ImGui::BeginPopup("ActionsPopup"))
+            {
+                for (const auto &action : dialogActions)
+                {
+                    if (action->IsSeparator())
+                    {
+                        ImGui::Separator();
+                        continue;
+                    }
+
+                    // Color destructive actions red
+                    if (action->IsDestructive())
+                    {
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+                    }
+
+                    if (ImGui::MenuItem(action->GetName().c_str()))
+                    {
+                        // Build dispatch context for this action
+                        DataActionDispatchContext ctx;
+                        ctx.m_pController = m_controller;
+                        ctx.m_selectedObjects = {const_cast<DataObject *>(dataObject)};
+                        ctx.m_hWnd = nullptr; // TODO: Get window handle if needed
+                        ctx.m_pAsyncOp = nullptr;
+                        ctx.m_bShowProgressDialog = false;
+
+                        // Execute action
+                        action->Execute(ctx);
+
+                        // Close the popup after action execution
+                        ImGui::CloseCurrentPopup();
+                    }
+
+                    if (action->IsDestructive())
+                    {
+                        ImGui::PopStyleColor();
+                    }
+                }
+
+                ImGui::EndPopup();
+            }
+        }
     }
 
     bool DataPropertiesDialog::HasPendingEdit(int tabIndex, int columnIndex) const
