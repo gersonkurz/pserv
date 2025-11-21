@@ -328,6 +328,7 @@ namespace pserv
 
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
+        ApplyOrangeAccent();
 
         // Setup Platform/Renderer backends first
         ImGui_ImplWin32_Init(m_hWnd);
@@ -350,6 +351,36 @@ namespace pserv
             ImGui_ImplWin32_Shutdown();
             ImGui::DestroyContext();
         }
+    }
+
+    void MainWindow::ApplyOrangeAccent()
+    {
+        ImGuiStyle &style = ImGui::GetStyle();
+        ImVec4 *colors = style.Colors;
+
+        // Orange accent color (replaces blue)
+        const ImVec4 orange = ImVec4(1.0f, 0.5f, 0.0f, 1.0f);          // Base orange
+        const ImVec4 orangeHovered = ImVec4(1.0f, 0.6f, 0.2f, 1.0f);   // Lighter on hover
+        const ImVec4 orangeActive = ImVec4(0.9f, 0.45f, 0.0f, 1.0f);   // Darker when active
+
+        // Apply orange to accent elements
+        colors[ImGuiCol_Header] = orange;
+        colors[ImGuiCol_HeaderHovered] = orangeHovered;
+        colors[ImGuiCol_HeaderActive] = orangeActive;
+        colors[ImGuiCol_Button] = orange;
+        colors[ImGuiCol_ButtonHovered] = orangeHovered;
+        colors[ImGuiCol_ButtonActive] = orangeActive;
+        colors[ImGuiCol_TabActive] = orange;
+        colors[ImGuiCol_TabHovered] = orangeHovered;
+        colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.7f, 0.35f, 0.0f, 1.0f);
+        colors[ImGuiCol_TitleBgActive] = orange;
+        colors[ImGuiCol_CheckMark] = orange;
+        colors[ImGuiCol_SliderGrab] = orange;
+        colors[ImGuiCol_SliderGrabActive] = orangeActive;
+        colors[ImGuiCol_ResizeGrip] = orange;
+        colors[ImGuiCol_ResizeGripHovered] = orangeHovered;
+        colors[ImGuiCol_ResizeGripActive] = orangeActive;
+        colors[ImGuiCol_TextSelectedBg] = ImVec4(orange.x, orange.y, orange.z, 0.35f);
     }
 
     void MainWindow::RebuildFontAtlas(float fontSize)
@@ -1466,6 +1497,7 @@ namespace pserv
                         appSettings.save(*m_pConfigBackend);
                     }
                     ImGui::StyleColorsDark();
+                    ApplyOrangeAccent();
                 }
 
                 if (ImGui::MenuItem("Light", nullptr, currentTheme == "Light"))
@@ -1476,16 +1508,7 @@ namespace pserv
                         appSettings.save(*m_pConfigBackend);
                     }
                     ImGui::StyleColorsLight();
-                }
-
-                if (ImGui::MenuItem("Classic", nullptr, currentTheme == "Classic"))
-                {
-                    appSettings.theme.set("Classic");
-                    if (m_pConfigBackend)
-                    {
-                        appSettings.save(*m_pConfigBackend);
-                    }
-                    ImGui::StyleColorsClassic();
+                    ApplyOrangeAccent();
                 }
 
                 ImGui::EndMenu();

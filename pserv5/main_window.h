@@ -33,6 +33,7 @@ namespace pserv
         void CleanupDirectX();
         bool InitializeImGui();
         void CleanupImGui();
+        void ApplyOrangeAccent();
         void RebuildFontAtlas(float fontSize);
         void CreateRenderTarget();
         void CleanupRenderTarget();
