@@ -1000,9 +1000,20 @@ namespace pserv
                                     menuLabel += std::format(" ({} selected)", m_dispatchContext.m_selectedObjects.size());
                                 }
 
+                                // Color destructive actions red
+                                if (action->IsDestructive())
+                                {
+                                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+                                }
+
                                 if (ImGui::MenuItem(menuLabel.c_str()))
                                 {
                                     action->Execute(m_dispatchContext);
+                                }
+
+                                if (action->IsDestructive())
+                                {
+                                    ImGui::PopStyleColor();
                                 }
                             }
                             ImGui::EndPopup();
