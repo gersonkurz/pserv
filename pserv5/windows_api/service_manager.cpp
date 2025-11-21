@@ -1,8 +1,7 @@
 #include "precomp.h"
-#include "service_manager.h"
-#include "../models/service_info.h"
-#include "../utils/string_utils.h"
-#include <spdlog/spdlog.h>
+#include <windows_api/service_manager.h>
+#include <models/service_info.h>
+#include <utils/string_utils.h>
 
 namespace pserv {
 
@@ -36,8 +35,8 @@ ServiceManager::ServiceManager() {
     }
 }
 
-std::vector<ServiceInfo*> ServiceManager::EnumerateServices(DWORD serviceType) {
-    std::vector<ServiceInfo*> services;
+std::vector<DataObject*> ServiceManager::EnumerateServices(DWORD serviceType) {
+    std::vector<DataObject*> services;
 
     // First call to get required buffer size
     DWORD bytesNeeded = 0;

@@ -1,8 +1,5 @@
 #pragma once
-#include <string>
-#include <vector>
-#include <imgui.h>
-#include "../models/installed_program_info.h"
+#include <models/installed_program_info.h>
 
 namespace pserv {
 

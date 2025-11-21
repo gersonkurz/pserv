@@ -1,17 +1,20 @@
 #include "precomp.h"
-#include "main_window.h"
+#include <main_window.h>
 #include "Resource.h"
-#include <Config/settings.h>
+#include <config/settings.h>
 #include <utils/win32_error.h>
 #include <utils/string_utils.h>
 #include <core/async_operation.h>
 #include <core/data_controller_library.h>
+#include <actions/common_actions.h>
+#include <core/data_action.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 
 namespace pserv {
 
@@ -865,7 +868,8 @@ namespace pserv {
 							}
 
 							// Get all actions and filter to those available for this object
-							auto allActions = controller->GetActions();
+							auto allActions = controller->GetActions(dataObject);
+							AddCommonExportActions(allActions);
 							for (const auto& action : allActions) {
 								// Filter to context menu actions
 								auto visibility = action->GetVisibility();

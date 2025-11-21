@@ -1,7 +1,5 @@
 #pragma once
-#include "../core/data_object.h"
-#include <Windows.h>
-#include <string>
+#include <core/data_object.h>
 
 namespace pserv {
 
@@ -57,6 +55,10 @@ public:
     std::string GetProperty(int propertyId) const override;
     PropertyValue GetTypedProperty(int propertyId) const override;
     bool MatchesFilter(const std::string& filter) const override;
+    std::string GetItemName() const
+    {
+        return GetProperty(static_cast<int>(ServiceProperty::Name));
+    }
 
     // Getters
     const std::string& GetName() const { return m_name; }

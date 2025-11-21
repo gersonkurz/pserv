@@ -3,8 +3,6 @@
 #include <windows_api/window_manager.h>
 #include <utils/string_utils.h>
 #include <actions/window_actions.h>
-#include <actions/common_actions.h>
-#include <algorithm>
 
 namespace pserv {
 
@@ -22,93 +20,20 @@ WindowsDataController::WindowsDataController()
         {"ThreadID", "ThreadID", ColumnDataType::UnsignedInteger},
         {"Process", "Process", ColumnDataType::String}
     } }
-    , m_pPropertiesDialog{new WindowPropertiesDialog()}
 {
-}
-
-WindowsDataController::~WindowsDataController() {
-    Clear();
-    delete m_pPropertiesDialog;
 }
 
 void WindowsDataController::Refresh() {
     spdlog::info("Refreshing windows...");
     
-    // Get new list
-    std::vector<WindowInfo*> newWindows = WindowManager::EnumerateWindows();
-    
-    // Using basic replace for now
-    Clear();
-    m_windows = std::move(newWindows);
-    
-    // Update base class pointers
-    m_dataObjects.reserve(m_windows.size());
-    for (auto* win : m_windows) {
-        m_dataObjects.push_back(win);
-    }
-    
-    spdlog::info("Refreshed {} windows", m_windows.size());
+    m_objects = WindowManager::EnumerateWindows();
+
+    spdlog::info("Refreshed {} windows", m_objects.size());
     m_bLoaded = true;
 }
 
-void WindowsDataController::Clear() {
-    for (auto* win : m_windows) {
-        delete win;
-    }
-    m_windows.clear();
-    m_dataObjects.clear();
-    m_bLoaded = false;
-}
-
-std::vector<std::shared_ptr<DataAction>> WindowsDataController::GetActions() const {
-    auto actions = CreateWindowActions();
-    auto commonActions = CreateCommonExportActions();
-    actions.insert(actions.end(), commonActions.begin(), commonActions.end());
-    return actions;
-}
-
-const std::vector<DataObject*>& WindowsDataController::GetDataObjects() const {
-    return m_dataObjects;
-}
-
-std::vector<int> WindowsDataController::GetAvailableActions(const DataObject* dataObject) const {
-    std::vector<int> actions;
-    if (!dataObject) return actions;
-
-    actions.push_back(static_cast<int>(WindowAction::Properties));
-    actions.push_back(static_cast<int>(WindowAction::Separator));
-
-    actions.push_back(static_cast<int>(WindowAction::Show));
-    actions.push_back(static_cast<int>(WindowAction::Hide));
-    actions.push_back(static_cast<int>(WindowAction::Minimize));
-    actions.push_back(static_cast<int>(WindowAction::Maximize));
-    actions.push_back(static_cast<int>(WindowAction::Restore));
-    
-    actions.push_back(static_cast<int>(WindowAction::Separator));
-    
-    actions.push_back(static_cast<int>(WindowAction::BringToFront));
-    actions.push_back(static_cast<int>(WindowAction::Close));
-
-    // Add common export/copy actions
-    AddCommonExportActions(actions);
-
-    return actions;
-}
-
-std::string WindowsDataController::GetActionName(int action) const {
-    switch (static_cast<WindowAction>(action)) {
-        case WindowAction::Properties: return "Properties";
-        case WindowAction::Show: return "Show";
-        case WindowAction::Hide: return "Hide";
-        case WindowAction::Minimize: return "Minimize";
-        case WindowAction::Maximize: return "Maximize";
-        case WindowAction::Restore: return "Restore";
-        case WindowAction::BringToFront: return "Bring To Front";
-        case WindowAction::Close: return "Close";
-        default:
-            std::string commonName = GetCommonActionName(action);
-            return !commonName.empty() ? commonName : "";
-    }
+std::vector<const DataAction*> WindowsDataController::GetActions(const DataObject* dataObject) const {
+    return CreateWindowActions();
 }
 
 VisualState WindowsDataController::GetVisualState(const DataObject* dataObject) const {
@@ -127,6 +52,7 @@ VisualState WindowsDataController::GetVisualState(const DataObject* dataObject) 
     return VisualState::Normal;
 }
 
+/*
 void WindowsDataController::DispatchAction(int action, DataActionDispatchContext& context) {
     if (context.m_selectedObjects.empty()) return;
 
@@ -184,11 +110,6 @@ void WindowsDataController::DispatchAction(int action, DataActionDispatchContext
         Refresh();
     }
 }
-
-void WindowsDataController::RenderPropertiesDialog() {
-    if (m_pPropertiesDialog && m_pPropertiesDialog->IsOpen()) {
-        m_pPropertiesDialog->Render();
-    }
-}
+*/
 
 } // namespace pserv

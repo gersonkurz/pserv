@@ -2,7 +2,6 @@
 #include <core/data_controller.h>
 #include <core/data_action.h>
 #include <models/module_info.h>
-#include <shellapi.h>
 
 namespace pserv {
 
@@ -28,7 +27,7 @@ public:
 		return !GetModuleInfo(obj)->GetPath().empty();
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		for (const auto* obj : ctx.m_selectedObjects) {
 			const auto* module = GetModuleInfo(obj);
 			std::string path = module->GetPath();
@@ -48,15 +47,17 @@ public:
 	}
 };
 
+ModuleOpenContainingFolderAction theModuleOpenContainingFolderAction;
+
 } // anonymous namespace
 
 // ============================================================================
 // Factory Function
 // ============================================================================
 
-std::vector<std::shared_ptr<DataAction>> CreateModuleActions() {
+std::vector<const DataAction*> CreateModuleActions() {
 	return {
-		std::make_shared<ModuleOpenContainingFolderAction>()
+		&theModuleOpenContainingFolderAction
 	};
 }
 

@@ -1,6 +1,5 @@
 #pragma once
-#include "../core/data_object.h"
-#include <Windows.h>
+#include <core/data_object.h>
 
 namespace pserv {
 
@@ -27,6 +26,10 @@ public:
     std::string GetProperty(int propertyId) const override;
     PropertyValue GetTypedProperty(int propertyId) const override;
     bool MatchesFilter(const std::string& filter) const override;
+    std::string GetItemName() const
+    {
+        return GetProperty(static_cast<int>(WindowProperty::InternalID));
+    }
 
     // Getters
     HWND GetHandle() const { return m_hwnd; }
@@ -48,7 +51,7 @@ public:
     void SetProcessId(DWORD pid) { m_processId = pid; }
     void SetThreadId(DWORD tid) { m_threadId = tid; }
     void SetProcessName(std::string name) { m_processName = std::move(name); }
-
+    
 private:
     HWND m_hwnd;
     std::string m_title;

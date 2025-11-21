@@ -5,8 +5,7 @@
 #include <core/exporters/exporter_interface.h>
 #include <utils/string_utils.h>
 #include <utils/file_dialogs.h>
-#include <imgui.h>
-#include <fstream>
+
 
 namespace pserv {
 
@@ -32,7 +31,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		if (ctx.m_selectedObjects.empty()) {
 			spdlog::warn("ExportAction: No objects selected");
 			return;
@@ -143,40 +142,45 @@ public:
 	ExportToTextAction() : ExportAction{"Export to Plain Text...", "Plain Text", false} {}
 };
 
+CopyAsJsonAction theCopyAsJsonAction;
+ExportToJsonAction theExportToJsonAction;
+CopyAsTextAction theCopyAsTextAction;
+ExportToTextAction theExportToTextAction;
+
 } // anonymous namespace
 
 // ============================================================================
 // Factory Function
 // ============================================================================
 
-std::vector<std::shared_ptr<DataAction>> CreateCommonExportActions() {
+void AddCommonExportActions(std::vector<const DataAction*>& actions) {
 	const auto& exporters = ExporterRegistry::Instance().GetExporters();
 	if (exporters.empty()) {
-		spdlog::debug("CreateCommonExportActions: No exporters registered");
-		return {};
+		spdlog::debug("AddCommonExportActions: No exporters registered");
+		return;
 	}
 
-	std::vector<std::shared_ptr<DataAction>> actions;
-
 	// Add separator first
-	actions.push_back(std::make_shared<DataActionSeparator>());
+	actions.push_back(&theDataActionSeparator);
 
 	// Add Copy/Export action pairs for each registered exporter
 	for (const auto* exporter : exporters) {
-		spdlog::debug("CreateCommonExportActions: Checking exporter '{}'", exporter->GetFormatName());
+		spdlog::debug("AddCommonExportActions: Checking exporter '{}'", exporter->GetFormatName());
 		if (exporter->GetFormatName() == "JSON") {
-			actions.push_back(std::make_shared<CopyAsJsonAction>());
-			actions.push_back(std::make_shared<ExportToJsonAction>());
-			spdlog::debug("CreateCommonExportActions: Added JSON actions");
+			actions.push_back(&theCopyAsJsonAction);
+			actions.push_back(&theExportToJsonAction);
+			spdlog::debug("AddCommonExportActions: Added JSON actions");
 		} else if (exporter->GetFormatName() == "Plain Text") {
-			actions.push_back(std::make_shared<CopyAsTextAction>());
-			actions.push_back(std::make_shared<ExportToTextAction>());
-			spdlog::debug("CreateCommonExportActions: Added Plain Text actions");
+			actions.push_back(&theCopyAsTextAction);
+			actions.push_back(&theExportToTextAction);
+			spdlog::debug("AddCommonExportActions: Added Plain Text actions");
 		}
 	}
 
-	spdlog::debug("CreateCommonExportActions: Created {} common actions", actions.size());
-	return actions;
+	actions.push_back(&theDataActionSeparator);
+	actions.push_back(&theDataPropertiesAction);
+	
+	spdlog::debug("AddCommonExportActions: Created {} common actions", actions.size());
 }
 
 } // namespace pserv

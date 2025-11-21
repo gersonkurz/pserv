@@ -1,10 +1,5 @@
 #pragma once
-#include <atomic>
-#include <future>
-#include <functional>
-#include <string>
-#include <mutex>
-#include <Windows.h>
+
 
 #define WM_ASYNC_OPERATION_COMPLETE (WM_USER + 1)
 

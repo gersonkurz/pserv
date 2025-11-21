@@ -1,10 +1,6 @@
 #include "precomp.h"
-#include "logging.h"
-#include <spdlog/sinks/msvc_sink.h>
-#include <chrono>
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
+#include <utils/logging.h>
+
 
 namespace pserv::utils {
 

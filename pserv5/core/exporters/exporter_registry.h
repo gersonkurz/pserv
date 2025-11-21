@@ -1,8 +1,5 @@
 #pragma once
-#include "exporter_interface.h"
-#include <memory>
-#include <vector>
-#include <string>
+#include <core/exporters/exporter_interface.h>
 
 namespace pserv {
 

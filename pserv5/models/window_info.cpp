@@ -1,6 +1,6 @@
 #include "precomp.h"
-#include "window_info.h"
-#include "../utils/string_utils.h"
+#include <models/window_info.h>
+#include <utils/string_utils.h>
 
 namespace pserv {
 

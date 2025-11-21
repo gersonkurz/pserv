@@ -1,12 +1,9 @@
 #pragma once
-#include <vector>
-#include <string>
-#include <functional>
-#include <Windows.h>
 
 namespace pserv {
 
 class ProcessInfo; // Forward declaration
+class DataObject;
 
 class ProcessManager {
 public:
@@ -15,7 +12,7 @@ public:
 
     // Enumerate all running processes
     // Returns raw pointers - caller is responsible for cleanup (typically via RefCount/release)
-    static std::vector<ProcessInfo*> EnumerateProcesses();
+    static std::vector<DataObject*> EnumerateProcesses();
 
     // Terminate a process by ID
     // Returns true on success

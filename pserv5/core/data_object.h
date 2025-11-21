@@ -1,7 +1,5 @@
 #pragma once
-#include "IRefCounted.h"
-#include <string>
-#include <variant>
+#include <core/refcount_interface.h>
 
 namespace pserv {
     // Type-safe property value for sorting and comparison
@@ -22,6 +20,7 @@ namespace pserv {
         virtual PropertyValue GetTypedProperty(int propertyId) const = 0;
         // Note: filter is expected to be pre-lowercased for performance (done once at call site)
         virtual bool MatchesFilter(const std::string& filter) const = 0;
+		virtual std::string GetItemName() const = 0;
 
         bool IsRunning() const { return m_bIsRunning; }
         bool IsDisabled() const { return m_bIsDisabled; }

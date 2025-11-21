@@ -1,11 +1,7 @@
 #include "precomp.h"
-#include "process_manager.h"
-#include "../models/process_info.h"
+#include <windows_api/process_manager.h>
+#include <models/process_info.h>
 #include <utils/string_utils.h>
-#include <tlhelp32.h>
-#include <psapi.h>
-#include <sddl.h>
-#include <wil/resource.h>
 
 #pragma comment(lib, "psapi.lib")
 #pragma comment(lib, "advapi32.lib")
@@ -185,8 +181,8 @@ static std::string GetProcessCommandLine(HANDLE hProcess) {
     return "";
 }
 
-std::vector<ProcessInfo*> ProcessManager::EnumerateProcesses() {
-    std::vector<ProcessInfo*> processes;
+std::vector<DataObject*> ProcessManager::EnumerateProcesses() {
+    std::vector<DataObject*> processes;
 
     wil::unique_handle hSnapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
     if (!hSnapshot) {

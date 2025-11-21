@@ -1,11 +1,7 @@
 #pragma once
-#include "config_backend.h"
-#include <toml++/toml.hpp>
-#include <spdlog/spdlog.h>
-#include <source_location>
-#include <filesystem>
-#include <fstream>
-#include <sstream>
+
+#include <config/config_backend.h>
+
 
 namespace pserv::config {
 

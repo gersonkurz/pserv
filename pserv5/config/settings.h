@@ -1,6 +1,7 @@
 #pragma once
-#include "section.h"
-#include "typed_value.h"
+
+#include <config/section.h>
+#include <config/typed_value.h>
 
 namespace pserv::config {
 

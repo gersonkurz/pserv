@@ -1,8 +1,6 @@
 #include "precomp.h"
-#include "process_properties_dialog.h"
+#include <dialogs/process_properties_dialog.h>
 #include <utils/format_utils.h>
-#include <imgui.h>
-#include <format>
 
 namespace pserv {
 

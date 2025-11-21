@@ -1,10 +1,7 @@
 #pragma once
 
-// @file pserv::Config/config_backend.h
+// @file pserv::config/config_backend.h
 // @brief defines the interface for configuration backends
-
-#include <cstdint>
-#include <string>
 
 namespace pserv::config {
 

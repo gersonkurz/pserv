@@ -1,8 +1,6 @@
 #pragma once
-#include "../data_object.h"
-#include "../data_object_column.h"
-#include <string>
-#include <vector>
+#include <core/data_object.h>
+#include <core/data_object_column.h>
 
 namespace pserv {
 

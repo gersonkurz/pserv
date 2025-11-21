@@ -4,8 +4,6 @@
 #include <models/installed_program_info.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
-#include <shellapi.h>
-#include <wil/resource.h>
 
 namespace pserv {
 
@@ -18,25 +16,6 @@ namespace {
 inline const InstalledProgramInfo* GetProgramInfo(const DataObject* obj) {
 	return static_cast<const InstalledProgramInfo*>(obj);
 }
-
-// ============================================================================
-// Properties Action
-// ============================================================================
-
-class UninstallerPropertiesAction final : public DataAction {
-public:
-	UninstallerPropertiesAction() : DataAction{"Properties...", ActionVisibility::Both} {}
-
-	bool IsAvailableFor(const DataObject*) const override {
-		return true;
-	}
-
-	void Execute(DataActionDispatchContext& ctx) override {
-		// Will be implemented when we integrate with controllers
-		// For now, this is a stub
-		spdlog::info("Uninstaller Properties action executed (stub)");
-	}
-};
 
 // ============================================================================
 // Uninstall Action
@@ -58,7 +37,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		if (ctx.m_selectedObjects.empty()) return;
 
 		const auto* program = GetProgramInfo(ctx.m_selectedObjects[0]);
@@ -118,17 +97,17 @@ public:
 	}
 };
 
+UninstallProgramAction theUninstallProgramAction;
+
 } // anonymous namespace
 
 // ============================================================================
 // Factory Function
 // ============================================================================
 
-std::vector<std::shared_ptr<DataAction>> CreateUninstallerActions() {
+std::vector<const DataAction*> CreateUninstallerActions() {
 	return {
-		std::make_shared<UninstallerPropertiesAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<UninstallProgramAction>()
+		&theUninstallProgramAction
 	};
 }
 

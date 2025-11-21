@@ -1,6 +1,5 @@
 #pragma once
-#include <vector>
-#include <Windows.h>
+
 #include <models/window_info.h>
 
 namespace pserv {
@@ -8,7 +7,7 @@ namespace pserv {
 class WindowManager {
 public:
     // Enumerates all top-level windows
-    static std::vector<WindowInfo*> EnumerateWindows();
+    static std::vector<DataObject*> EnumerateWindows();
 
     // Window actions
     static bool ShowWindow(HWND hwnd, int nCmdShow);

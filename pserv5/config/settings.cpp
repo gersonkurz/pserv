@@ -1,5 +1,5 @@
 #include "precomp.h"
-#include "settings.h"
+#include <config/settings.h>
 
 namespace pserv::config {
     RootSettings theSettings;

@@ -1,11 +1,8 @@
 #pragma once
-#include <string>
-#include <vector>
-#include <wil/resource.h>
 
 namespace pserv {
 
-class ServiceInfo;  // Forward declaration
+class DataObject;  // Forward declaration
 
 class ServiceManager {
 private:
@@ -18,7 +15,7 @@ public:
     // Enumerate all services on the local machine
     // Returns raw pointers - caller is responsible for cleanup
     // serviceType: filter by service type (default = all types)
-    std::vector<ServiceInfo*> EnumerateServices(DWORD serviceType = SERVICE_WIN32 | SERVICE_DRIVER);
+    std::vector<DataObject*> EnumerateServices(DWORD serviceType = SERVICE_WIN32 | SERVICE_DRIVER);
 
     // Start a service and wait for it to reach running state
     // progressCallback is called periodically with progress (0.0-1.0) and status message

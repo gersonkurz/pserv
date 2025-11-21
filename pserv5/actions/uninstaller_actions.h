@@ -3,6 +3,6 @@
 
 namespace pserv {
 
-std::vector<std::shared_ptr<DataAction>> CreateUninstallerActions();
+std::vector<const DataAction*> CreateUninstallerActions();
 
 } // namespace pserv

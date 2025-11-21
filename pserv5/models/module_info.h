@@ -1,7 +1,5 @@
 #pragma once
-#include "../core/data_object.h"
-#include <string>
-#include <cstdint>
+#include <core/data_object.h>
 
 namespace pserv {
 
@@ -27,6 +25,12 @@ public:
     std::string GetProperty(int column) const override;
     PropertyValue GetTypedProperty(int propertyId) const override;
     bool MatchesFilter(const std::string& filter) const override;
+    std::string GetItemName() const
+    {
+        return std::format("{} ({})",
+            GetProperty(static_cast<int>(ModuleProperty::Name)),
+            GetProperty(static_cast<int>(ModuleProperty::ProcessId)));
+    }
 
     // Module-specific getters
     uint32_t GetProcessId() const { return m_processId; }

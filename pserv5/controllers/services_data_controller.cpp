@@ -1,7 +1,6 @@
 #include "precomp.h"
 #include <controllers/services_data_controller.h>
 #include <actions/service_actions.h>
-#include <actions/common_actions.h>
 #include <windows_api/service_manager.h>
 #include <core/async_operation.h>
 #include <utils/string_utils.h>
@@ -32,7 +31,6 @@ namespace pserv {
 			{"Controls Accepted", "ControlsAccepted", ColumnDataType::String}
 		} }
 		, m_serviceType{SERVICE_WIN32}
-		, m_pPropertiesDialog{new ServicePropertiesDialog()}
 	{
 	}
 
@@ -58,13 +56,7 @@ namespace pserv {
 			{"Controls Accepted", "ControlsAccepted", ColumnDataType::String}
 		} }
 		, m_serviceType{serviceType}
-		, m_pPropertiesDialog{new ServicePropertiesDialog()}
 	{
-	}
-
-	ServicesDataController::~ServicesDataController() {
-		Clear();
-		delete m_pPropertiesDialog;
 	}
 
 	void ServicesDataController::Refresh() {
@@ -76,9 +68,9 @@ namespace pserv {
 		try {
 			// Enumerate services with the configured service type filter
 			ServiceManager sm;
-			m_services = sm.EnumerateServices(m_serviceType);
+			m_objects = sm.EnumerateServices(m_serviceType);
 
-			spdlog::info("Successfully refreshed {} services", m_services.size());
+			spdlog::info("Successfully refreshed {} services", m_objects.size());
 
 			// Re-apply last sort order if any
 			if (m_lastSortColumn >= 0) {
@@ -93,104 +85,12 @@ namespace pserv {
 		}
 	}
 
-	void ServicesDataController::RenderPropertiesDialog()
-	{
-		// Render service properties dialog if open
-		if (m_pPropertiesDialog && m_pPropertiesDialog->IsOpen()) {
-			bool changesApplied = m_pPropertiesDialog->Render();
-			if (changesApplied) {
-				// Refresh services list to show updated data
-				Refresh();
-			}
-		}
-	}
-
-	void ServicesDataController::Clear() {
-		for (auto* service : m_services) {
-			delete service;
-		}
-		m_services.clear();
-		m_bLoaded = false;
-	}
-
-	std::vector<std::shared_ptr<DataAction>> ServicesDataController::GetActions() const {
-		auto actions = CreateServiceActions();
-		auto commonActions = CreateCommonExportActions();
-		actions.insert(actions.end(), commonActions.begin(), commonActions.end());
-		return actions;
-	}
-
-	std::vector<int> ServicesDataController::GetAvailableActions(const DataObject* dataObject) const {
-		std::vector<int> actions;
-
-		if (!dataObject) {
-			return actions;
-		}
+	std::vector<const DataAction*> ServicesDataController::GetActions(const DataObject* dataObject) const {
+		
 		const auto service = dynamic_cast<const ServiceInfo*>(dataObject);
-
-		// Properties action (always available, at the top)
-		actions.push_back(static_cast<int>(ServiceAction::Properties));
-		actions.push_back(static_cast<int>(ServiceAction::Separator));
-
-		// Get service state and capabilities
-		DWORD currentState = service->GetCurrentState();
-		DWORD controlsAccepted = service->GetControlsAccepted();
-
-		// State-dependent actions first
-		if (currentState == SERVICE_STOPPED) {
-			actions.push_back(static_cast<int>(ServiceAction::Start));
-		}
-		else if (currentState == SERVICE_RUNNING) {
-			actions.push_back(static_cast<int>(ServiceAction::Stop));
-			actions.push_back(static_cast<int>(ServiceAction::Restart));
-
-			// Only offer Pause if service accepts pause/continue
-			if (controlsAccepted & SERVICE_ACCEPT_PAUSE_CONTINUE) {
-				actions.push_back(static_cast<int>(ServiceAction::Pause));
-			}
-		}
-		else if (currentState == SERVICE_PAUSED) {
-			actions.push_back(static_cast<int>(ServiceAction::Resume));
-			actions.push_back(static_cast<int>(ServiceAction::Stop));
-		}
-
-		// Separator after state-dependent actions
-		if (!actions.empty()) {
-			actions.push_back(static_cast<int>(ServiceAction::Separator));
-		}
-
-		// Copy actions (always available)
-		actions.push_back(static_cast<int>(ServiceAction::CopyName));
-		actions.push_back(static_cast<int>(ServiceAction::CopyDisplayName));
-		actions.push_back(static_cast<int>(ServiceAction::CopyBinaryPath));
-
-		// Separator before startup type actions
-		actions.push_back(static_cast<int>(ServiceAction::Separator));
-
-		// Startup type actions (always available)
-		actions.push_back(static_cast<int>(ServiceAction::SetStartupAutomatic));
-		actions.push_back(static_cast<int>(ServiceAction::SetStartupManual));
-		actions.push_back(static_cast<int>(ServiceAction::SetStartupDisabled));
-
-		// Separator before file system integration actions
-		actions.push_back(static_cast<int>(ServiceAction::Separator));
-
-		// File system integration actions (always available)
-		actions.push_back(static_cast<int>(ServiceAction::OpenInRegistryEditor));
-		actions.push_back(static_cast<int>(ServiceAction::OpenInExplorer));
-		actions.push_back(static_cast<int>(ServiceAction::OpenTerminalHere));
-
-		// Separator before deletion actions
-		actions.push_back(static_cast<int>(ServiceAction::Separator));
-
-		// Deletion actions (always available)
-		actions.push_back(static_cast<int>(ServiceAction::UninstallService));
-		actions.push_back(static_cast<int>(ServiceAction::DeleteRegistryKey));
-
-		// Add common export/copy actions
-		AddCommonExportActions(actions);
-
-		return actions;
+		const auto currentState = service->GetCurrentState();
+		const auto controlsAccepted = service->GetControlsAccepted();
+		return CreateServiceActions(currentState, controlsAccepted);
 	}
 
 	VisualState ServicesDataController::GetVisualState(const DataObject* dataObject) const {
@@ -214,7 +114,7 @@ namespace pserv {
 
 		return VisualState::Normal;
 	}
-
+	/*
 	void ServicesDataController::DispatchAction(int action, DataActionDispatchContext& dispatchContext)
 	{
 		// Handle action
@@ -746,51 +646,5 @@ namespace pserv {
 			break;
 		}
 	}
-
-	std::string ServicesDataController::GetActionName(int action) const {
-		switch (static_cast<ServiceAction>(action)) {
-		case ServiceAction::Start:
-			return "Start Service";
-		case ServiceAction::Stop:
-			return "Stop Service";
-		case ServiceAction::Restart:
-			return "Restart Service";
-		case ServiceAction::Pause:
-			return "Pause Service";
-		case ServiceAction::Resume:
-			return "Resume Service";
-		case ServiceAction::CopyName:
-			return "Copy Name";
-		case ServiceAction::CopyDisplayName:
-			return "Copy Display Name";
-		case ServiceAction::CopyBinaryPath:
-			return "Copy Binary Path";
-		case ServiceAction::SetStartupAutomatic:
-			return "Set Startup: Automatic";
-		case ServiceAction::SetStartupManual:
-			return "Set Startup: Manual";
-		case ServiceAction::SetStartupDisabled:
-			return "Set Startup: Disabled";
-		case ServiceAction::OpenInRegistryEditor:
-			return "Open in Registry Editor";
-		case ServiceAction::OpenInExplorer:
-			return "Open in Explorer";
-		case ServiceAction::OpenTerminalHere:
-			return "Open Terminal Here";
-		case ServiceAction::UninstallService:
-			return "Uninstall Service";
-		case ServiceAction::DeleteRegistryKey:
-			return "Delete Registry Key";
-		case ServiceAction::Properties:
-			return "Properties...";
-		default:
-			// Check if it's a common action
-			std::string commonName = GetCommonActionName(action);
-			if (!commonName.empty()) {
-				return commonName;
-			}
-			return "Unknown Action";
-		}
-	}
-
+	*/
 } // namespace pserv

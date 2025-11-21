@@ -1,9 +1,6 @@
 #pragma once
 
-#include "value_interface.h"
-#include <memory>
-#include <string>
-#include <vector>
+#include <config/value_interface.h>
 
 namespace pserv::config {
 

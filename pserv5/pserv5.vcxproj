@@ -167,8 +167,16 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="actions\common_actions.h" />
+    <ClInclude Include="actions\module_actions.h" />
+    <ClInclude Include="actions\process_actions.h" />
+    <ClInclude Include="actions\service_actions.h" />
+    <ClInclude Include="actions\uninstaller_actions.h" />
+    <ClInclude Include="actions\window_actions.h" />
     <ClInclude Include="controllers\devices_data_controller.h" />
+    <ClInclude Include="core\data_action.h" />
     <ClInclude Include="core\data_controller_library.h" />
+    <ClInclude Include="dialogs\data_properties_dialog.h" />
     <ClInclude Include="precomp.h" />
     <ClInclude Include="pserv5.h" />
     <ClInclude Include="Resource.h" />
@@ -178,14 +186,14 @@
     <ClInclude Include="utils\logging.h" />
     <ClInclude Include="utils\string_utils.h" />
     <ClInclude Include="utils\win32_error.h" />
-    <ClInclude Include="Config\config_backend.h" />
-    <ClInclude Include="Config\section.h" />
-    <ClInclude Include="Config\settings.h" />
-    <ClInclude Include="Config\toml_backend.h" />
-    <ClInclude Include="Config\typed_value.h" />
-    <ClInclude Include="Config\typed_vector_value.h" />
-    <ClInclude Include="Config\value_interface.h" />
-    <ClInclude Include="core\IRefCounted.h" />
+    <ClInclude Include="config\config_backend.h" />
+    <ClInclude Include="config\section.h" />
+    <ClInclude Include="config\settings.h" />
+    <ClInclude Include="config\toml_backend.h" />
+    <ClInclude Include="config\typed_value.h" />
+    <ClInclude Include="config\typed_vector_value.h" />
+    <ClInclude Include="config\value_interface.h" />
+    <ClInclude Include="core\refcount_interface.h" />
     <ClInclude Include="core\async_operation.h" />
     <ClInclude Include="core\data_object.h" />
     <ClInclude Include="core\data_object_column.h" />
@@ -229,11 +237,13 @@
     <ClCompile Include="actions\service_actions.cpp" />
     <ClCompile Include="actions\uninstaller_actions.cpp" />
     <ClCompile Include="actions\window_actions.cpp" />
+    <ClCompile Include="core\data_action.cpp" />
     <ClCompile Include="core\data_controller.cpp" />
     <ClCompile Include="core\data_controller_library.cpp" />
     <ClCompile Include="core\exporters\exporter_registry.cpp" />
     <ClCompile Include="core\exporters\json_exporter.cpp" />
     <ClCompile Include="core\exporters\plaintext_exporter.cpp" />
+    <ClCompile Include="dialogs\data_properties_dialog.cpp" />
     <ClCompile Include="precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -264,8 +274,8 @@
     <ClCompile Include="windows_api\uninstaller_manager.cpp" />
     <ClCompile Include="controllers\uninstaller_data_controller.cpp" />
     <ClCompile Include="dialogs\uninstaller_properties_dialog.cpp" />
-    <ClCompile Include="Config\section.cpp" />
-    <ClCompile Include="Config\settings.cpp" />
+    <ClCompile Include="config\section.cpp" />
+    <ClCompile Include="config\settings.cpp" />
     <ClCompile Include="..\imgui\imgui.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>

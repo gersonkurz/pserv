@@ -1,5 +1,5 @@
 #include "precomp.h"
-#include "section.h"
+#include <config/section.h>
 
 namespace pserv::config {
 

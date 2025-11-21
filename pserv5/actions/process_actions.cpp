@@ -5,7 +5,6 @@
 #include <windows_api/process_manager.h>
 #include <core/async_operation.h>
 #include <utils/string_utils.h>
-#include <shellapi.h>
 
 namespace pserv {
 
@@ -20,25 +19,6 @@ inline const ProcessInfo* GetProcessInfo(const DataObject* obj) {
 }
 
 // ============================================================================
-// Properties Action
-// ============================================================================
-
-class ProcessPropertiesAction final : public DataAction {
-public:
-	ProcessPropertiesAction() : DataAction{"Properties", ActionVisibility::Both} {}
-
-	bool IsAvailableFor(const DataObject*) const override {
-		return true;
-	}
-
-	void Execute(DataActionDispatchContext& ctx) override {
-		// Will be implemented when we integrate with controllers
-		// For now, this is a stub
-		spdlog::info("Process Properties action executed (stub)");
-	}
-};
-
-// ============================================================================
 // File System Actions
 // ============================================================================
 
@@ -50,7 +30,7 @@ public:
 		return !GetProcessInfo(obj)->GetPath().empty();
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		for (const auto* obj : ctx.m_selectedObjects) {
 			const auto* proc = GetProcessInfo(obj);
 			std::string path = proc->GetPath();
@@ -82,7 +62,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<DWORD> pids;
 		for (const auto* obj : ctx.m_selectedObjects) {
 			pids.push_back(GetProcessInfo(obj)->GetPid());
@@ -122,7 +102,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<DWORD> pids;
 		std::string confirmMsg = "Are you sure you want to terminate the following processes?\n\n";
 
@@ -164,26 +144,33 @@ public:
 	}
 };
 
+ProcessOpenLocationAction theProcessOpenLocationAction;
+ProcessSetPriorityAction theSetRealtimePriorityAction{ "Set Priority: Realtime", REALTIME_PRIORITY_CLASS };
+ProcessSetPriorityAction theSetHighPriorityAction{ "Set Priority: High", HIGH_PRIORITY_CLASS };
+ProcessSetPriorityAction theSetAboveNormalPriorityAction{"Set Priority: Above Normal", ABOVE_NORMAL_PRIORITY_CLASS};
+ProcessSetPriorityAction theSetNormalPriorityAction{"Set Priority: Normal", NORMAL_PRIORITY_CLASS};
+ProcessSetPriorityAction theSetBelowNormalPriorityAction{"Set Priority: Below Normal", BELOW_NORMAL_PRIORITY_CLASS};
+ProcessSetPriorityAction theSetLowPriorityAction{ "Set Priority: Low", IDLE_PRIORITY_CLASS };
+ProcessTerminateAction theProcessTerminateAction;
+
 } // anonymous namespace
 
 // ============================================================================
 // Factory Function
 // ============================================================================
 
-std::vector<std::shared_ptr<DataAction>> CreateProcessActions() {
+std::vector<const DataAction*> CreateProcessActions() {
 	return {
-		std::make_shared<ProcessPropertiesAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<ProcessOpenLocationAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<ProcessSetPriorityAction>("Set Priority: Realtime", REALTIME_PRIORITY_CLASS),
-		std::make_shared<ProcessSetPriorityAction>("Set Priority: High", HIGH_PRIORITY_CLASS),
-		std::make_shared<ProcessSetPriorityAction>("Set Priority: Above Normal", ABOVE_NORMAL_PRIORITY_CLASS),
-		std::make_shared<ProcessSetPriorityAction>("Set Priority: Normal", NORMAL_PRIORITY_CLASS),
-		std::make_shared<ProcessSetPriorityAction>("Set Priority: Below Normal", BELOW_NORMAL_PRIORITY_CLASS),
-		std::make_shared<ProcessSetPriorityAction>("Set Priority: Low", IDLE_PRIORITY_CLASS),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<ProcessTerminateAction>()
+		&theProcessOpenLocationAction,
+		&theDataActionSeparator,
+		&theSetRealtimePriorityAction,
+		&theSetHighPriorityAction,
+		&theSetAboveNormalPriorityAction,
+		&theSetNormalPriorityAction,
+		&theSetBelowNormalPriorityAction,
+		&theSetLowPriorityAction,
+		&theDataActionSeparator,
+		&theProcessTerminateAction
 	};
 }
 

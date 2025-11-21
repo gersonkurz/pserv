@@ -1,7 +1,5 @@
 #pragma once
-#include "../models/process_info.h"
-#include <string>
-#include <vector>
+#include <models/process_info.h>
 
 namespace pserv {
 

@@ -3,6 +3,6 @@
 
 namespace pserv {
 
-std::vector<std::shared_ptr<DataAction>> CreateCommonExportActions();
+	void AddCommonExportActions(std::vector<const DataAction*>& actions);
 
 } // namespace pserv

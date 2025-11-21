@@ -1,7 +1,6 @@
 #pragma once
 
-#include "value_interface.h"
-#include <spdlog/spdlog.h>
+#include <config/value_interface.h>
 
 namespace pserv::config {
 

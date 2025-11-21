@@ -2,12 +2,12 @@
 //
 
 #include "precomp.h"
-#include "pserv5.h"
-#include "utils/logging.h"
-#include "utils/string_utils.h"
-#include "Config/settings.h"
-#include "Config/toml_backend.h"
-#include "main_window.h"
+#include <pserv5.h>
+#include <utils/logging.h>
+#include <utils/string_utils.h>
+#include <config/settings.h>
+#include <config/toml_backend.h>
+#include <main_window.h>
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,

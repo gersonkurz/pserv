@@ -1,6 +1,5 @@
 #include "precomp.h"
-#include "exporter_registry.h"
-#include <algorithm>
+#include <core/exporters/exporter_registry.h>
 
 namespace pserv {
 

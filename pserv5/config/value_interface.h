@@ -1,10 +1,9 @@
 #pragma once
 
-// @file pserv::Config/value_interface.h
+// @file pserv::config/value_interface.h
 // @brief defines what a configuration value does
 
-#include "config_backend.h"
-#include <string>
+#include <config/config_backend.h>
 
 namespace pserv::config {
 

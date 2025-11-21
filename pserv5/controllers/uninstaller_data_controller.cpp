@@ -4,13 +4,6 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <actions/uninstaller_actions.h>
-#include <actions/common_actions.h>
-#include <spdlog/spdlog.h>
-#include <format>
-#include <algorithm>
-#include <imgui.h>
-#include <shellapi.h>
-#include <wil/resource.h>
 
 namespace pserv {
 
@@ -27,78 +20,34 @@ UninstallerDataController::UninstallerDataController()
         {"Help Link", "HelpLink", ColumnDataType::String},
         {"URL Info About", "URLInfoAbout", ColumnDataType::String}
     } }
-    , m_pPropertiesDialog{new UninstallerPropertiesDialog()}
 {
-}
-
-UninstallerDataController::~UninstallerDataController() {
-    Clear();
-    delete m_pPropertiesDialog;
 }
 
 void UninstallerDataController::Refresh() {
     spdlog::info("Refreshing installed programs...");
     Clear();
 
-    m_programs = UninstallerManager::EnumerateInstalledPrograms();
+    m_objects = UninstallerManager::EnumerateInstalledPrograms();
 
     // Re-apply last sort order if any
     if (m_lastSortColumn >= 0) {
         Sort(m_lastSortColumn, m_lastSortAscending);
     }
 
-    spdlog::info("Refreshed {} installed programs", m_programs.size());
+    spdlog::info("Refreshed {} installed programs", m_objects.size());
     m_bLoaded = true;
 }
 
-void UninstallerDataController::Clear() {
-    for (auto* program : m_programs) {
-        delete program;
-    }
-    m_programs.clear();
-    m_bLoaded = false;
-}
 
-std::vector<std::shared_ptr<DataAction>> UninstallerDataController::GetActions() const {
-    auto actions = CreateUninstallerActions();
-    auto commonActions = CreateCommonExportActions();
-    actions.insert(actions.end(), commonActions.begin(), commonActions.end());
-    return actions;
-}
-
-const std::vector<DataObject*>& UninstallerDataController::GetDataObjects() const {
-    return reinterpret_cast<const std::vector<DataObject*>&>(m_programs);
+std::vector<const DataAction*> UninstallerDataController::GetActions(const DataObject* dataObject) const {
+    return CreateUninstallerActions();
 }
 
 VisualState UninstallerDataController::GetVisualState(const DataObject* dataObject) const {
     // No special visual states for installed programs currently
     return VisualState::Normal;
 }
-
-std::vector<int> UninstallerDataController::GetAvailableActions(const DataObject* dataObject) const {
-    std::vector<int> actions;
-    if (!dataObject) return actions;
-
-    actions.push_back(static_cast<int>(UninstallerAction::Properties));
-    actions.push_back(static_cast<int>(UninstallerAction::Separator));
-    actions.push_back(static_cast<int>(UninstallerAction::Uninstall));
-
-    // Add common export/copy actions
-    AddCommonExportActions(actions);
-
-    return actions;
-}
-
-std::string UninstallerDataController::GetActionName(int action) const {
-    switch (static_cast<UninstallerAction>(action)) {
-        case UninstallerAction::Properties: return "Properties...";
-        case UninstallerAction::Uninstall: return "Uninstall";
-        default:
-            std::string commonName = GetCommonActionName(action);
-            return !commonName.empty() ? commonName : "";
-    }
-}
-
+/*
 void UninstallerDataController::DispatchAction(int action, DataActionDispatchContext& context) {
     if (context.m_selectedObjects.empty()) return;
 
@@ -177,11 +126,5 @@ void UninstallerDataController::DispatchAction(int action, DataActionDispatchCon
             break;
     }
 }
-
-void UninstallerDataController::RenderPropertiesDialog() {
-    if (m_pPropertiesDialog) {
-        m_pPropertiesDialog->Render();
-    }
-}
-
+*/
 } // namespace pserv

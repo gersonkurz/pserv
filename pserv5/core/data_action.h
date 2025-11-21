@@ -1,7 +1,4 @@
 #pragma once
-#include <string>
-#include <memory>
-#include <vector>
 
 namespace pserv {
 
@@ -42,7 +39,7 @@ public:
     virtual bool IsSeparator() const { return false; }
 
     // Execution
-    virtual void Execute(DataActionDispatchContext& context) = 0;
+    virtual void Execute(DataActionDispatchContext& context) const = 0;
 
     // UI hints
     virtual bool IsDestructive() const { return false; }  // Red button color hint
@@ -55,7 +52,25 @@ public:
     DataActionSeparator() : DataAction{"", ActionVisibility::Both} {}
     bool IsAvailableFor(const DataObject*) const override { return true; }
     bool IsSeparator() const override { return true; }
-    void Execute(DataActionDispatchContext&) override {}
+    void Execute(DataActionDispatchContext&) const override {}
 };
+
+// ============================================================================
+// Properties Dialog Action
+// ============================================================================
+
+class DataPropertiesAction final : public DataAction {
+public:
+    DataPropertiesAction() : DataAction{ "Properties...", ActionVisibility::Both } {}
+
+    bool IsAvailableFor(const DataObject*) const override {
+        return true;
+    }
+
+    void Execute(DataActionDispatchContext& ctx) const override;
+};
+
+extern DataActionSeparator theDataActionSeparator;
+extern DataPropertiesAction theDataPropertiesAction;
 
 } // namespace pserv

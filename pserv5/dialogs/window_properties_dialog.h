@@ -1,7 +1,5 @@
 #pragma once
-#include "../models/window_info.h"
-#include <string>
-#include <vector>
+#include <models/window_info.h>
 
 namespace pserv {
 

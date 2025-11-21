@@ -1,9 +1,6 @@
 #include "precomp.h"
-#include "file_dialogs.h"
-#include "string_utils.h"
-#include <ShObjIdl.h>
-#include <wil/com.h>
-#include <spdlog/spdlog.h>
+#include <utils/file_dialogs.h>
+#include <utils/string_utils.h>
 
 namespace pserv {
 namespace utils {

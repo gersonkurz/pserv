@@ -1,10 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <optional>
-#include <string>
-#include <vector>
-
 #undef USE_REFCOUNT_DEBUGGING
 #ifdef USE_REFCOUNT_DEBUGGING
 #define REFCOUNT_DEBUG_ARGS __FILE__, __LINE__

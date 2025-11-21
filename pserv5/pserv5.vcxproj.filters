@@ -35,6 +35,9 @@
     <Filter Include="actions">
       <UniqueIdentifier>{b943704d-a8f3-41e6-9642-75eb8cdf7d3b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\exporters">
+      <UniqueIdentifier>{9176fc86-3c9f-4f77-9a8d-758f72ffe201}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dialogs\service_properties_dialog.h">
@@ -61,31 +64,31 @@
     <ClInclude Include="core\data_object_column.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="core\IRefCounted.h">
+    <ClInclude Include="core\refcount_interface.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="models\service_info.h">
       <Filter>models</Filter>
     </ClInclude>
-    <ClInclude Include="Config\config_backend.h">
+    <ClInclude Include="config\config_backend.h">
       <Filter>config</Filter>
     </ClInclude>
-    <ClInclude Include="Config\section.h">
+    <ClInclude Include="config\section.h">
       <Filter>config</Filter>
     </ClInclude>
-    <ClInclude Include="Config\toml_backend.h">
+    <ClInclude Include="config\toml_backend.h">
       <Filter>config</Filter>
     </ClInclude>
-    <ClInclude Include="Config\typed_value.h">
+    <ClInclude Include="config\typed_value.h">
       <Filter>config</Filter>
     </ClInclude>
-    <ClInclude Include="Config\typed_vector_value.h">
+    <ClInclude Include="config\typed_vector_value.h">
       <Filter>config</Filter>
     </ClInclude>
-    <ClInclude Include="Config\value_interface.h">
+    <ClInclude Include="config\value_interface.h">
       <Filter>config</Filter>
     </ClInclude>
-    <ClInclude Include="Config\settings.h">
+    <ClInclude Include="config\settings.h">
       <Filter>config</Filter>
     </ClInclude>
     <ClInclude Include="windows_api\service_manager.h">
@@ -184,11 +187,45 @@
     <ClInclude Include="models\installed_program_info.h">
       <Filter>models</Filter>
     </ClInclude>
-    <ClInclude Include="utils\file_dialogs.h" />
-    <ClInclude Include="core\exporters\exporter_interface.h" />
-    <ClInclude Include="core\exporters\exporter_registry.h" />
-    <ClInclude Include="core\exporters\json_exporter.h" />
-    <ClInclude Include="core\exporters\plaintext_exporter.h" />
+    <ClInclude Include="core\exporters\exporter_interface.h">
+      <Filter>core\exporters</Filter>
+    </ClInclude>
+    <ClInclude Include="core\exporters\exporter_registry.h">
+      <Filter>core\exporters</Filter>
+    </ClInclude>
+    <ClInclude Include="core\exporters\json_exporter.h">
+      <Filter>core\exporters</Filter>
+    </ClInclude>
+    <ClInclude Include="core\exporters\plaintext_exporter.h">
+      <Filter>core\exporters</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\process_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\module_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\uninstaller_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\window_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\file_dialogs.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\common_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="core\data_action.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\service_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="dialogs\data_properties_dialog.h">
+      <Filter>dialogs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dialogs\service_properties_dialog.cpp">
@@ -206,10 +243,10 @@
     <ClCompile Include="models\service_info.cpp">
       <Filter>models</Filter>
     </ClCompile>
-    <ClCompile Include="Config\settings.cpp">
+    <ClCompile Include="config\settings.cpp">
       <Filter>config</Filter>
     </ClCompile>
-    <ClCompile Include="Config\section.cpp">
+    <ClCompile Include="config\section.cpp">
       <Filter>config</Filter>
     </ClCompile>
     <ClCompile Include="windows_api\service_manager.cpp">
@@ -290,11 +327,6 @@
     <ClCompile Include="models\installed_program_info.cpp">
       <Filter>models</Filter>
     </ClCompile>
-    <ClCompile Include="core\data_controller.cpp" />
-    <ClCompile Include="core\exporters\exporter_registry.cpp" />
-    <ClCompile Include="core\exporters\json_exporter.cpp" />
-    <ClCompile Include="core\exporters\plaintext_exporter.cpp" />
-    <ClCompile Include="utils\file_dialogs.cpp" />
     <ClCompile Include="actions\common_actions.cpp">
       <Filter>actions</Filter>
     </ClCompile>
@@ -312,6 +344,27 @@
     </ClCompile>
     <ClCompile Include="actions\window_actions.cpp">
       <Filter>actions</Filter>
+    </ClCompile>
+    <ClCompile Include="core\exporters\exporter_registry.cpp">
+      <Filter>core\exporters</Filter>
+    </ClCompile>
+    <ClCompile Include="core\exporters\json_exporter.cpp">
+      <Filter>core\exporters</Filter>
+    </ClCompile>
+    <ClCompile Include="core\exporters\plaintext_exporter.cpp">
+      <Filter>core\exporters</Filter>
+    </ClCompile>
+    <ClCompile Include="core\data_controller.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\file_dialogs.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="core\data_action.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="dialogs\data_properties_dialog.cpp">
+      <Filter>dialogs</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

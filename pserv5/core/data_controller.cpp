@@ -1,11 +1,9 @@
 #include "precomp.h"
-#include "data_controller.h"
-#include "exporters/exporter_registry.h"
-#include "../utils/file_dialogs.h"
-#include "../utils/string_utils.h"
-#include <algorithm>
-#include <spdlog/spdlog.h>
-#include <fstream>
+#include <core/data_controller.h>
+#include <core/exporters/exporter_registry.h>
+#include <utils/file_dialogs.h>
+#include <utils/string_utils.h>
+#include <dialogs/data_properties_dialog.h>
 
 namespace pserv {
 
@@ -66,50 +64,23 @@ void DataController::Sort(int columnIndex, bool ascending) {
     });
 }
 
-void DataController::AddCommonExportActions(std::vector<int>& actions) const {
-    const auto& exporters = ExporterRegistry::Instance().GetExporters();
-    if (exporters.empty()) {
-        spdlog::debug("AddCommonExportActions: No exporters registered");
-        return;
-    }
-
-    // Add separator if actions list not empty and last action isn't already a separator
-    if (!actions.empty() && actions.back() != -1) {
-        actions.push_back(static_cast<int>(CommonAction::Separator));
-    }
-
-    spdlog::debug("AddCommonExportActions: Found {} exporters", exporters.size());
-
-    // Add Copy/Export action pairs for each registered exporter
-    for (const auto* exporter : exporters) {
-        spdlog::debug("AddCommonExportActions: Checking exporter '{}'", exporter->GetFormatName());
-        if (exporter->GetFormatName() == "JSON") {
-            actions.push_back(static_cast<int>(CommonAction::CopyAsJson));
-            actions.push_back(static_cast<int>(CommonAction::ExportToJson));
-            spdlog::debug("AddCommonExportActions: Added JSON actions");
-        } else if (exporter->GetFormatName() == "Plain Text") {
-            actions.push_back(static_cast<int>(CommonAction::CopyAsTxt));
-            actions.push_back(static_cast<int>(CommonAction::ExportToTxt));
-            spdlog::debug("AddCommonExportActions: Added Plain Text actions");
+void DataController::RenderPropertiesDialog()
+{
+    // Render service properties dialog if open
+    if (m_pPropertiesDialog) {
+        const bool changesApplied = m_pPropertiesDialog->Render();
+        if (changesApplied) {
+            // Refresh services list to show updated data
+            Refresh();
         }
     }
-
-    spdlog::debug("AddCommonExportActions: Total actions after: {}", actions.size());
 }
-
-std::string DataController::GetCommonActionName(int action) const {
-    switch (static_cast<CommonAction>(action)) {
-        case CommonAction::ExportToJson:
-            return "Export to JSON...";
-        case CommonAction::CopyAsJson:
-            return "Copy as JSON";
-        case CommonAction::ExportToTxt:
-            return "Export to TXT...";
-        case CommonAction::CopyAsTxt:
-            return "Copy as TXT";
-        default:
-            return "";
+void DataController::Clear() {
+    for (auto* mod : m_objects) {
+        delete mod;
     }
+    m_objects.clear();
+    m_bLoaded = false;
 }
 
 void DataController::DispatchCommonAction(int action, DataActionDispatchContext& context) {

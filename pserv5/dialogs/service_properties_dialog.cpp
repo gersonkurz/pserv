@@ -1,9 +1,6 @@
 #include "precomp.h"
-#include "service_properties_dialog.h"
-#include "../windows_api/service_manager.h"
-#include <imgui.h>
-#include <spdlog/spdlog.h>
-#include <format>
+#include <dialogs/service_properties_dialog.h>
+#include <windows_api/service_manager.h>
 
 namespace pserv {
 

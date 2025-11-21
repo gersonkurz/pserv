@@ -1,10 +1,7 @@
 #include "precomp.h"
-#include "module_manager.h"
-#include <spdlog/spdlog.h>
-#include <Psapi.h> // For EnumProcessModules, GetModuleBaseName, GetModuleFileNameEx, GetModuleInformation
-#include <format>
-#include "../utils/string_utils.h"
-#include "../utils/win32_error.h"
+#include <windows_api/module_manager.h>
+#include <utils/string_utils.h>
+#include <utils/win32_error.h>
 
 #pragma comment(lib, "psapi.lib")
 

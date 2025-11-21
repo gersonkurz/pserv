@@ -3,6 +3,6 @@
 
 namespace pserv {
 
-std::vector<std::shared_ptr<DataAction>> CreateModuleActions();
+std::vector<const DataAction*> CreateModuleActions();
 
 } // namespace pserv

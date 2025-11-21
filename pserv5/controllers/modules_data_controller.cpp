@@ -4,7 +4,6 @@
 #include <models/process_info.h>
 #include <utils/string_utils.h>
 #include <actions/module_actions.h>
-#include <actions/common_actions.h>
 
 namespace pserv {
 
@@ -19,79 +18,37 @@ ModulesDataController::ModulesDataController()
 {
 }
 
-ModulesDataController::~ModulesDataController() {
-    Clear();
-}
-
 void ModulesDataController::Refresh() {
     spdlog::info("Refreshing modules...");
     Clear();
 
     // Enumerate all processes to get their modules
-    std::vector<ProcessInfo*> processes = ProcessManager::EnumerateProcesses();
-
-    for (ProcessInfo* proc : processes) {
+    auto processes = ProcessManager::EnumerateProcesses();
+    for (const auto proc : processes) {
         // Enumerate modules for this process
-        auto processModules = ModuleManager::EnumerateModules(proc->GetPid());
+        const auto processModules{ ModuleManager::EnumerateModules(static_cast<ProcessInfo*>(proc)->GetPid()) };
 
         // Add to our main list
-        m_modules.insert(m_modules.end(), processModules.begin(), processModules.end());
+        m_objects.insert(m_objects.end(), processModules.begin(), processModules.end());
 
         // Modules are owned by this controller now, so delete process info object.
         delete proc;
     }
+    spdlog::info("Refreshed {} modules from {} processes", m_objects.size(), processes.size());
     processes.clear(); // Clear the vector of invalidated pointers
-
-    spdlog::info("Refreshed {} modules from {} processes", m_modules.size(), processes.size());
     m_bLoaded = true;
 }
 
-void ModulesDataController::Clear() {
-    for (auto* mod : m_modules) {
-        delete mod;
-    }
-    m_modules.clear();
-    m_bLoaded = false;
-}
 
-std::vector<std::shared_ptr<DataAction>> ModulesDataController::GetActions() const {
-    auto actions = CreateModuleActions();
-    auto commonActions = CreateCommonExportActions();
-    actions.insert(actions.end(), commonActions.begin(), commonActions.end());
-    return actions;
-}
-
-const std::vector<DataObject*>& ModulesDataController::GetDataObjects() const {
-    return reinterpret_cast<const std::vector<DataObject*>&>(m_modules);
-}
-
-std::vector<int> ModulesDataController::GetAvailableActions(const DataObject* dataObject) const {
-    std::vector<int> actions;
-    if (!dataObject) return actions;
-
-    actions.push_back(static_cast<int>(ModuleAction::OpenContainingFolder));
-
-    // Add common export/copy actions
-    AddCommonExportActions(actions);
-
-    return actions;
-}
-
-std::string ModulesDataController::GetActionName(int action) const {
-    switch (static_cast<ModuleAction>(action)) {
-        case ModuleAction::OpenContainingFolder: return "Open Containing Folder";
-        // case ModuleAction::Properties: return "Properties";
-        default:
-            std::string commonName = GetCommonActionName(action);
-            return !commonName.empty() ? commonName : "";
-    }
+std::vector<const DataAction*> ModulesDataController::GetActions(const DataObject* dataObject) const {
+    return CreateModuleActions();
 }
 
 VisualState ModulesDataController::GetVisualState(const DataObject* dataObject) const {
     // Modules don't have complex visual states like services or processes, so always normal.
     return VisualState::Normal;
 }
-
+/*
 void ModulesDataController::DispatchAction(int action, DataActionDispatchContext& context) {
     if (context.m_selectedObjects.empty()) return;
 
@@ -126,9 +83,6 @@ void ModulesDataController::DispatchAction(int action, DataActionDispatchContext
             break;
     }
 }
-
-void ModulesDataController::RenderPropertiesDialog() {
-    // No properties dialog for modules yet
-}
+*/
 
 } // namespace pserv

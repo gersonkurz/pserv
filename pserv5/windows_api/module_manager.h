@@ -1,9 +1,5 @@
 #pragma once
-#include <vector>
-#include <string>
-#include <cstdint>
-#include "../models/module_info.h"
-#include <wil/resource.h>
+#include <models/module_info.h>
 
 namespace pserv {
 

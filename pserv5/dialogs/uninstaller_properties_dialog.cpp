@@ -1,10 +1,6 @@
 #include "precomp.h"
-#include "uninstaller_properties_dialog.h"
-#include <imgui.h>
-#include <format>
-#include <string>
-#include "../utils/string_utils.h"
-#include <spdlog/spdlog.h>
+#include <dialogs/uninstaller_properties_dialog.h>
+#include <utils/string_utils.h>
 
 namespace pserv {
 

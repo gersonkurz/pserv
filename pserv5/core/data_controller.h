@@ -1,13 +1,13 @@
 #pragma once
-#include "data_object.h"
-#include "data_object_column.h"
-#include "data_action.h"
-#include <vector>
-#include <memory>
-#include "../core/async_operation.h"
+#include <core/data_object.h>
+#include <core/data_object_column.h>
+#include <core/data_action.h>
+#include <core/async_operation.h>
 
 namespace pserv {
 	class DataController;
+
+
 	struct DataActionDispatchContext final
 	{
 		DataActionDispatchContext() = default;
@@ -42,56 +42,68 @@ namespace pserv {
 		CopyAsTxt = -1003
 	};
 
+	class DataPropertiesDialog;
+
 	class DataController {
 	protected:
-		std::string m_controllerName;
-		std::string m_itemName;
+		const std::string m_controllerName;
+		const std::string m_itemName;
 		const std::vector<DataObjectColumn> m_columns;
+		std::vector<DataObject*> m_objects;
 
 	public:
 		DataController(std::string controllerName, std::string itemName, std::vector<DataObjectColumn>&& columns)
 			: m_controllerName{ std::move(controllerName) }
 			, m_itemName{ std::move(itemName) }
 			, m_columns{ std::move(columns) }
+			, m_pPropertiesDialog{ nullptr }
 		{
 		}
 
-		virtual ~DataController() = default;
+		virtual ~DataController()
+		{
+			assert(m_pPropertiesDialog == nullptr);
+			Clear();
+		}
 
 		// Core abstract methods
 		virtual void Refresh() = 0;
-		virtual const std::vector<DataObject*>& GetDataObjects() const = 0;
+		
+		const std::vector<DataObject*>& GetDataObjects() const
+		{
+			return m_objects;
+		}
+
 		virtual VisualState GetVisualState(const DataObject* service) const = 0;
 
 		// Action system - new object-based interface
-		virtual std::vector<std::shared_ptr<DataAction>> GetActions() const = 0;
+		virtual std::vector<const DataAction*> GetActions(const DataObject* dataObject) const = 0;
 
-		// Legacy action system - TODO: remove after migration complete
-		virtual std::vector<int> GetAvailableActions(const DataObject* service) const = 0;
-		virtual std::string GetActionName(int action) const = 0;
-		virtual void DispatchAction(int action, DataActionDispatchContext& context) = 0;
-
-		virtual void RenderPropertiesDialog() = 0;
+		void RenderPropertiesDialog();
 
 		// Generic sort implementation using column metadata and GetTypedProperty()
 		void Sort(int columnIndex, bool ascending);
 
 		// Common export/copy functionality
-		void AddCommonExportActions(std::vector<int>& actions) const;
 		void DispatchCommonAction(int action, DataActionDispatchContext& context);
-		std::string GetCommonActionName(int action) const;
 
 		const std::vector<DataObjectColumn>& GetColumns() const { return m_columns; }
-		const std::string& GetControllerName() const { return m_controllerName; }
-		const std::string& GetItemName() const { return m_itemName; }
+		const auto& GetControllerName() const { return m_controllerName; }
+		const auto& GetItemName() const { return m_itemName; }
 		bool IsLoaded() const { return m_bLoaded; }
 		bool NeedsRefresh() const { return m_bNeedsRefresh; }
 		void ClearRefreshFlag() { m_bNeedsRefresh = false; }
+
+	protected:
+		void Clear();
 
 	protected:
 		bool m_bLoaded{ false };
 		bool m_bNeedsRefresh{ false };
 		int m_lastSortColumn{ -1 };
 		bool m_lastSortAscending{ true };
+
+	private:
+		DataPropertiesDialog* m_pPropertiesDialog{ nullptr };
 	};
 }

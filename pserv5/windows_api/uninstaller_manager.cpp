@@ -1,11 +1,8 @@
 #include "precomp.h"
-#include "uninstaller_manager.h"
-#include "../utils/string_utils.h"
-#include "../utils/format_utils.h"
-#include "../utils/win32_error.h"
-#include <spdlog/spdlog.h>
-#include <format>
-#include <set>
+#include <windows_api/uninstaller_manager.h>
+#include <utils/string_utils.h>
+#include <utils/format_utils.h>
+#include <utils/win32_error.h>
 
 namespace
 {
@@ -21,8 +18,8 @@ namespace pserv {
 
 
 
-std::vector<InstalledProgramInfo*> UninstallerManager::EnumerateInstalledPrograms() {
-    std::vector<InstalledProgramInfo*> programs;
+std::vector<DataObject*> UninstallerManager::EnumerateInstalledPrograms() {
+    std::vector<DataObject*> programs;
     std::set<std::string> uniqueIds; // To store unique IDs and prevent duplicates
 
     // Enumerate from HKEY_LOCAL_MACHINE (64-bit and 32-bit uninstall paths)
@@ -33,9 +30,9 @@ std::vector<InstalledProgramInfo*> UninstallerManager::EnumerateInstalledProgram
     EnumerateProgramsInKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall", programs);
 
     // Filter out duplicates. Programs can appear in multiple locations (e.g., user-specific vs. machine-wide)
-    std::vector<InstalledProgramInfo*> uniquePrograms;
-    for (InstalledProgramInfo* program : programs) {
-        const auto id = GetInstalledProgramInfoGetId(program);
+    std::vector<DataObject*> uniquePrograms;
+    for (const auto program : programs) {
+        const auto id = GetInstalledProgramInfoGetId(static_cast<InstalledProgramInfo*>(program));
         if (uniqueIds.find(id) == uniqueIds.end()) {
             uniqueIds.insert(id);
             uniquePrograms.push_back(program);
@@ -51,7 +48,7 @@ std::vector<InstalledProgramInfo*> UninstallerManager::EnumerateInstalledProgram
 void UninstallerManager::EnumerateProgramsInKey(
     HKEY hKeyParent,
     const std::wstring& subKeyPath,
-    std::vector<InstalledProgramInfo*>& programs) {
+    std::vector<DataObject*>& programs) {
 
     wil::unique_hkey hKey;
     LSTATUS status = RegOpenKeyExW(hKeyParent, subKeyPath.c_str(), 0, KEY_READ, &hKey);

@@ -1,11 +1,9 @@
-#include "precomp.h"
+ #include "precomp.h"
 #include <controllers/processes_data_controller.h>
 #include <windows_api/process_manager.h>
 #include <core/async_operation.h>
 #include <utils/string_utils.h>
 #include <actions/process_actions.h>
-#include <actions/common_actions.h>
-#include <shellapi.h>
 
 namespace pserv {
 
@@ -29,13 +27,7 @@ ProcessesDataController::ProcessesDataController()
         {"Non-Paged Pool", "NonPagedPoolUsage", ColumnDataType::Size},
         {"Page Faults", "PageFaultCount", ColumnDataType::UnsignedInteger}
     } }
-    , m_pPropertiesDialog{new ProcessPropertiesDialog()}
 {
-}
-
-ProcessesDataController::~ProcessesDataController() {
-    Clear();
-    delete m_pPropertiesDialog;
 }
 
 void ProcessesDataController::Refresh() {
@@ -51,15 +43,14 @@ void ProcessesDataController::Refresh() {
     }
 
     try {
-        ProcessManager pm;
-        m_processes = pm.EnumerateProcesses();
+        m_objects = ProcessManager::EnumerateProcesses();
         
         // Re-apply sort
         if (m_lastSortColumn >= 0) {
             Sort(m_lastSortColumn, m_lastSortAscending);
         }
         
-        spdlog::info("Refreshed {} processes", m_processes.size());
+        spdlog::info("Refreshed {} processes", m_objects.size());
         m_bLoaded = true;
     }
     catch (const std::exception& e) {
@@ -67,62 +58,8 @@ void ProcessesDataController::Refresh() {
     }
 }
 
-void ProcessesDataController::Clear() {
-    for (auto* p : m_processes) {
-        delete p;
-    }
-    m_processes.clear();
-    m_bLoaded = false;
-}
-
-std::vector<std::shared_ptr<DataAction>> ProcessesDataController::GetActions() const {
-    auto actions = CreateProcessActions();
-    auto commonActions = CreateCommonExportActions();
-    actions.insert(actions.end(), commonActions.begin(), commonActions.end());
-    return actions;
-}
-
-std::vector<int> ProcessesDataController::GetAvailableActions(const DataObject* dataObject) const {
-    std::vector<int> actions;
-    if (!dataObject) return actions;
-
-    actions.push_back(static_cast<int>(ProcessAction::Properties));
-    actions.push_back(static_cast<int>(ProcessAction::Separator));
-
-    actions.push_back(static_cast<int>(ProcessAction::OpenLocation));
-    actions.push_back(static_cast<int>(ProcessAction::Separator));
-    
-    actions.push_back(static_cast<int>(ProcessAction::SetPriorityRealtime));
-    actions.push_back(static_cast<int>(ProcessAction::SetPriorityHigh));
-    actions.push_back(static_cast<int>(ProcessAction::SetPriorityAboveNormal));
-    actions.push_back(static_cast<int>(ProcessAction::SetPriorityNormal));
-    actions.push_back(static_cast<int>(ProcessAction::SetPriorityBelowNormal));
-    actions.push_back(static_cast<int>(ProcessAction::SetPriorityLow));
-    
-    actions.push_back(static_cast<int>(ProcessAction::Separator));
-    actions.push_back(static_cast<int>(ProcessAction::Terminate));
-
-    // Add common export/copy actions
-    AddCommonExportActions(actions);
-
-    return actions;
-}
-
-std::string ProcessesDataController::GetActionName(int action) const {
-    switch (static_cast<ProcessAction>(action)) {
-        case ProcessAction::Properties: return "Properties";
-        case ProcessAction::Terminate: return "Terminate Process";
-        case ProcessAction::OpenLocation: return "Open File Location";
-        case ProcessAction::SetPriorityRealtime: return "Set Priority: Realtime";
-        case ProcessAction::SetPriorityHigh: return "Set Priority: High";
-        case ProcessAction::SetPriorityAboveNormal: return "Set Priority: Above Normal";
-        case ProcessAction::SetPriorityNormal: return "Set Priority: Normal";
-        case ProcessAction::SetPriorityBelowNormal: return "Set Priority: Below Normal";
-        case ProcessAction::SetPriorityLow: return "Set Priority: Low";
-        default:
-            std::string commonName = GetCommonActionName(action);
-            return !commonName.empty() ? commonName : "";
-    }
+std::vector<const DataAction*> ProcessesDataController::GetActions(const DataObject* dataObject) const {
+    return CreateProcessActions();
 }
 
 VisualState ProcessesDataController::GetVisualState(const DataObject* dataObject) const {
@@ -153,13 +90,7 @@ VisualState ProcessesDataController::GetVisualState(const DataObject* dataObject
 
     return VisualState::Normal;
 }
-
-void ProcessesDataController::RenderPropertiesDialog() {
-    if (m_pPropertiesDialog && m_pPropertiesDialog->IsOpen()) {
-        m_pPropertiesDialog->Render();
-    }
-}
-
+/*
 void ProcessesDataController::DispatchAction(int action, DataActionDispatchContext& context) {
     if (context.m_selectedObjects.empty()) return;
 
@@ -265,5 +196,5 @@ void ProcessesDataController::DispatchAction(int action, DataActionDispatchConte
         DispatchCommonAction(action, context);
     }
 }
-
+*/
 } // namespace pserv

@@ -5,7 +5,6 @@
 #include <windows_api/service_manager.h>
 #include <core/async_operation.h>
 #include <utils/string_utils.h>
-#include <imgui.h>
 
 namespace pserv {
 
@@ -31,7 +30,7 @@ public:
 		return GetServiceInfo(obj)->GetCurrentState() == SERVICE_STOPPED;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -83,7 +82,7 @@ public:
 		return (state == SERVICE_RUNNING || state == SERVICE_PAUSED);
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -134,7 +133,7 @@ public:
 		return GetServiceInfo(obj)->GetCurrentState() == SERVICE_RUNNING;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -187,7 +186,7 @@ public:
 		       (svc->GetControlsAccepted() & SERVICE_ACCEPT_PAUSE_CONTINUE);
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -238,7 +237,7 @@ public:
 		return GetServiceInfo(obj)->GetCurrentState() == SERVICE_PAUSED;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -281,66 +280,6 @@ public:
 	}
 };
 
-// ============================================================================
-// Copy Actions
-// ============================================================================
-
-class ServiceCopyNameAction final : public DataAction {
-public:
-	ServiceCopyNameAction() : DataAction{"Copy Name", ActionVisibility::ContextMenu} {}
-
-	bool IsAvailableFor(const DataObject*) const override {
-		return true;
-	}
-
-	void Execute(DataActionDispatchContext& ctx) override {
-		std::string result;
-		for (const auto* svc : ctx.m_selectedObjects) {
-			if (!result.empty()) result += "\n";
-			result += GetServiceInfo(svc)->GetName();
-		}
-		ImGui::SetClipboardText(result.c_str());
-		spdlog::debug("Copied {} service name(s) to clipboard", ctx.m_selectedObjects.size());
-	}
-};
-
-class ServiceCopyDisplayNameAction final : public DataAction {
-public:
-	ServiceCopyDisplayNameAction() : DataAction{"Copy Display Name", ActionVisibility::ContextMenu} {}
-
-	bool IsAvailableFor(const DataObject*) const override {
-		return true;
-	}
-
-	void Execute(DataActionDispatchContext& ctx) override {
-		std::string result;
-		for (const auto* svc : ctx.m_selectedObjects) {
-			if (!result.empty()) result += "\n";
-			result += GetServiceInfo(svc)->GetDisplayName();
-		}
-		ImGui::SetClipboardText(result.c_str());
-		spdlog::debug("Copied {} service display name(s) to clipboard", ctx.m_selectedObjects.size());
-	}
-};
-
-class ServiceCopyBinaryPathAction final : public DataAction {
-public:
-	ServiceCopyBinaryPathAction() : DataAction{"Copy Binary Path", ActionVisibility::ContextMenu} {}
-
-	bool IsAvailableFor(const DataObject*) const override {
-		return true;
-	}
-
-	void Execute(DataActionDispatchContext& ctx) override {
-		std::string result;
-		for (const auto* svc : ctx.m_selectedObjects) {
-			if (!result.empty()) result += "\n";
-			result += GetServiceInfo(svc)->GetBinaryPathName();
-		}
-		ImGui::SetClipboardText(result.c_str());
-		spdlog::debug("Copied {} service binary path(s) to clipboard", ctx.m_selectedObjects.size());
-	}
-};
 
 // ============================================================================
 // Startup Type Configuration Actions
@@ -354,7 +293,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -403,7 +342,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -452,7 +391,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -505,7 +444,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::string serviceName = GetServiceInfo(ctx.m_selectedObjects[0])->GetName();
 		std::string regPath = std::format("SYSTEM\\CurrentControlSet\\Services\\{}", serviceName);
 
@@ -531,7 +470,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
 		if (!installLocation.empty()) {
 			spdlog::info("Opening explorer: {}", installLocation);
@@ -552,7 +491,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
 		if (!installLocation.empty()) {
 			spdlog::info("Opening terminal in: {}", installLocation);
@@ -579,7 +518,7 @@ public:
 
 	bool IsDestructive() const override { return true; }
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -643,7 +582,7 @@ public:
 
 	bool IsDestructive() const override { return true; }
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		std::vector<std::string> serviceNames;
 		for (const auto* svc : ctx.m_selectedObjects) {
 			serviceNames.push_back(GetServiceInfo(svc)->GetName());
@@ -707,24 +646,21 @@ public:
 	}
 };
 
-// ============================================================================
-// Properties Dialog Action
-// ============================================================================
 
-class ServicePropertiesAction final : public DataAction {
-public:
-	ServicePropertiesAction() : DataAction{"Properties...", ActionVisibility::Both} {}
 
-	bool IsAvailableFor(const DataObject*) const override {
-		return true;
-	}
-
-	void Execute(DataActionDispatchContext& ctx) override {
-		// Will be implemented when we integrate with controllers
-		// For now, this is a stub
-		spdlog::info("Properties action triggered for {} service(s)", ctx.m_selectedObjects.size());
-	}
-};
+ServiceStartAction theServiceStartAction;
+ServiceStopAction theServiceStopAction;
+ServiceRestartAction theServiceRestartAction;
+ServicePauseAction theServicePauseAction;
+ServiceResumeAction theServiceResumeAction;
+ServiceSetStartupAutomaticAction theServiceSetStartupAutomaticAction;
+ServiceSetStartupManualAction theServiceSetStartupManualAction;
+ServiceSetStartupDisabledAction theServiceSetStartupDisabledAction;
+ServiceOpenInRegistryEditorAction theServiceOpenInRegistryEditorAction;
+ServiceOpenInExplorerAction theServiceOpenInExplorerAction;
+ServiceOpenTerminalHereAction theServiceOpenTerminalHereAction;
+ServiceUninstallAction theServiceUninstallAction;
+ServiceDeleteRegistryKeyAction theServiceDeleteRegistryKeyAction;
 
 } // anonymous namespace
 
@@ -732,31 +668,51 @@ public:
 // Factory Function
 // ============================================================================
 
-std::vector<std::shared_ptr<DataAction>> CreateServiceActions() {
-	return {
-		std::make_shared<ServicePropertiesAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<ServiceStartAction>(),
-		std::make_shared<ServiceStopAction>(),
-		std::make_shared<ServiceRestartAction>(),
-		std::make_shared<ServicePauseAction>(),
-		std::make_shared<ServiceResumeAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<ServiceCopyNameAction>(),
-		std::make_shared<ServiceCopyDisplayNameAction>(),
-		std::make_shared<ServiceCopyBinaryPathAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<ServiceSetStartupAutomaticAction>(),
-		std::make_shared<ServiceSetStartupManualAction>(),
-		std::make_shared<ServiceSetStartupDisabledAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<ServiceOpenInRegistryEditorAction>(),
-		std::make_shared<ServiceOpenInExplorerAction>(),
-		std::make_shared<ServiceOpenTerminalHereAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<ServiceUninstallAction>(),
-		std::make_shared<ServiceDeleteRegistryKeyAction>()
-	};
+std::vector<const DataAction*> CreateServiceActions(DWORD currentState, DWORD controlsAccepted) {
+	std::vector<const DataAction*> actions{};
+
+	// State-dependent actions first
+	if (currentState == SERVICE_STOPPED) {
+		actions.push_back(&theServiceStartAction);
+	}
+	else if (currentState == SERVICE_RUNNING) {
+		actions.push_back(&theServiceStopAction);
+		actions.push_back(&theServiceRestartAction);
+
+		// Only offer Pause if service accepts pause/continue
+		if (controlsAccepted & SERVICE_ACCEPT_PAUSE_CONTINUE) {
+			actions.push_back(&theServicePauseAction);
+		}
+	}
+	else if (currentState == SERVICE_PAUSED) {
+		actions.push_back(&theServiceResumeAction);
+		actions.push_back(&theServiceStopAction);
+	}
+
+	// Separator before startup type actions
+	actions.push_back(&theDataActionSeparator);
+
+	// Startup type actions (always available). 
+	// TODO: add only those that are NOT currently set (i.e. if is automatic, no need to add "set to automatic")
+	actions.push_back(&theServiceSetStartupAutomaticAction);
+	actions.push_back(&theServiceSetStartupManualAction);
+	actions.push_back(&theServiceSetStartupDisabledAction);
+
+	// Separator before file system integration actions
+	actions.push_back(&theDataActionSeparator);
+
+	// File system integration actions (always available)
+	actions.push_back(&theServiceOpenInRegistryEditorAction);
+	actions.push_back(&theServiceOpenInExplorerAction);
+	actions.push_back(&theServiceOpenTerminalHereAction);
+
+	// Separator before deletion actions
+	actions.push_back(&theDataActionSeparator);
+
+	// Deletion actions (always available)
+	actions.push_back(&theServiceUninstallAction);
+	actions.push_back(&theServiceDeleteRegistryKeyAction);
+	return actions;
 }
 
 } // namespace pserv

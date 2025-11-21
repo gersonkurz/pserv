@@ -1,16 +1,15 @@
 #include "precomp.h"
-#include "window_manager.h"
-#include <psapi.h>
+#include <windows_api/window_manager.h>
 #include <utils/string_utils.h>
 
 namespace pserv {
 
 // Helper struct for EnumWindows callback
 struct EnumContext {
-    std::vector<WindowInfo*> windows;
+    std::vector<DataObject*> windows;
 };
 
-std::vector<WindowInfo*> WindowManager::EnumerateWindows() {
+std::vector<DataObject*> WindowManager::EnumerateWindows() {
     EnumContext context;
     EnumWindows(EnumWindowsProc, reinterpret_cast<LPARAM>(&context));
     return context.windows;

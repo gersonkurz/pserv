@@ -1,10 +1,6 @@
 #include "precomp.h"
-#include "json_exporter.h"
-#include "exporter_registry.h"
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/prettywriter.h>
-#include <rapidjson/stringbuffer.h>
+#include <core/exporters/json_exporter.h>
+#include <core/exporters/exporter_registry.h>
 
 namespace pserv {
 

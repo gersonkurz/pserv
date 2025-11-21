@@ -17,25 +17,6 @@ inline const WindowInfo* GetWindowInfo(const DataObject* obj) {
 }
 
 // ============================================================================
-// Properties Action
-// ============================================================================
-
-class WindowPropertiesAction final : public DataAction {
-public:
-	WindowPropertiesAction() : DataAction{"Properties", ActionVisibility::Both} {}
-
-	bool IsAvailableFor(const DataObject*) const override {
-		return true;
-	}
-
-	void Execute(DataActionDispatchContext& ctx) override {
-		// Will be implemented when we integrate with controllers
-		// For now, this is a stub
-		spdlog::info("Window Properties action executed (stub)");
-	}
-};
-
-// ============================================================================
 // Window State Actions
 // ============================================================================
 
@@ -47,7 +28,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		int successCount = 0;
 		for (const auto* obj : ctx.m_selectedObjects) {
 			HWND hwnd = GetWindowInfo(obj)->GetHandle();
@@ -67,7 +48,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		int successCount = 0;
 		for (const auto* obj : ctx.m_selectedObjects) {
 			HWND hwnd = GetWindowInfo(obj)->GetHandle();
@@ -87,7 +68,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		int successCount = 0;
 		for (const auto* obj : ctx.m_selectedObjects) {
 			HWND hwnd = GetWindowInfo(obj)->GetHandle();
@@ -107,7 +88,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		int successCount = 0;
 		for (const auto* obj : ctx.m_selectedObjects) {
 			HWND hwnd = GetWindowInfo(obj)->GetHandle();
@@ -127,7 +108,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		int successCount = 0;
 		for (const auto* obj : ctx.m_selectedObjects) {
 			HWND hwnd = GetWindowInfo(obj)->GetHandle();
@@ -151,7 +132,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		int successCount = 0;
 		for (const auto* obj : ctx.m_selectedObjects) {
 			HWND hwnd = GetWindowInfo(obj)->GetHandle();
@@ -175,7 +156,7 @@ public:
 		return true;
 	}
 
-	void Execute(DataActionDispatchContext& ctx) override {
+	void Execute(DataActionDispatchContext& ctx) const override {
 		int successCount = 0;
 		for (const auto* obj : ctx.m_selectedObjects) {
 			HWND hwnd = GetWindowInfo(obj)->GetHandle();
@@ -187,24 +168,30 @@ public:
 	}
 };
 
+WindowShowAction theWindowShowAction;
+WindowHideAction theWindowHideAction;
+WindowMinimizeAction theWindowMinimizeAction;
+WindowMaximizeAction theWindowMaximizeAction;
+WindowRestoreAction theWindowRestoreAction;
+WindowBringToFrontAction theWindowBringToFrontAction;
+WindowCloseAction theWindowCloseAction;
+
 } // anonymous namespace
 
 // ============================================================================
 // Factory Function
 // ============================================================================
 
-std::vector<std::shared_ptr<DataAction>> CreateWindowActions() {
+std::vector<const DataAction*> CreateWindowActions() {
 	return {
-		std::make_shared<WindowPropertiesAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<WindowShowAction>(),
-		std::make_shared<WindowHideAction>(),
-		std::make_shared<WindowMinimizeAction>(),
-		std::make_shared<WindowMaximizeAction>(),
-		std::make_shared<WindowRestoreAction>(),
-		std::make_shared<DataActionSeparator>(),
-		std::make_shared<WindowBringToFrontAction>(),
-		std::make_shared<WindowCloseAction>()
+		&theWindowShowAction,
+		&theWindowHideAction,
+		&theWindowMinimizeAction,
+		&theWindowMaximizeAction,
+		&theWindowRestoreAction,
+		&theDataActionSeparator,
+		&theWindowBringToFrontAction,
+		&theWindowCloseAction,
 	};
 }
 
