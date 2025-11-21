@@ -2,24 +2,20 @@
 
 ## Project Status
 
-### Completed (Phases 1-6)
+### Completed
 - ✅ Foundation: ImGui + DirectX 11, spdlog logging, TOML configuration, tab infrastructure
 - ✅ Windows API wrappers: ServiceManager, ProcessManager, WindowManager, ModuleManager, UninstallerManager with WIL error handling
-- ✅ Services View: Complete service management with properties dialog, filtering, sorting, async operations
-- ✅ Devices View: Driver management (inherits from ServicesDataController)
-- ✅ Processes View: Process enumeration, termination, priority control
-- ✅ Windows View: Desktop window enumeration and manipulation
-- ✅ UI: Custom title bar, modern menu bar, DPI-aware rendering
-
-### In Progress
-- 🏃 Modules View: NEEDS REDESIGN - currently enumerates all modules globally (performance issue)
-- 🏃 Uninstaller View: Bug in refresh timing (line 156), naive uninstall string parsing
+- ✅ All Views: Services, Devices, Processes, Windows, Modules, Uninstaller - complete with enumeration and management
+- ✅ Action System: DataAction abstraction with action objects for all controllers (replaces old enum-based system)
+- ✅ Properties Dialog: Generic DataPropertiesDialog working across all controllers with action buttons
+- ✅ Property Editing: Transaction-based editing for services with multi-field updates
+- ✅ UI: Custom title bar, modern menu bar, DPI-aware rendering, context menus, async operations
 
 ### Remaining
 - ⬜ Command-Line Interface: Headless mode, XML export/import, automation
 - ⬜ Polish & Beta: Testing, memory leak detection, WiX MSI installer
 
-**Current completion: ~75%**
+**Current completion: ~85%**
 
 ## Core Architecture
 
@@ -45,9 +41,15 @@
 
 **DataController (Business Logic)**
 - UI-independent controller per view type
-- Provides: `Refresh()`, `GetColumns()`, `GetAvailableActions()`, `DispatchAction()`
+- Provides: `Refresh()`, `GetColumns()`, `GetActions()`
 - Owns data objects, manages their lifecycle
 - See: `core/data_controller.h`, `controllers/services_data_controller.cpp`
+
+**DataAction (Action Abstraction)**
+- Base class for all executable actions (Start, Stop, Terminate, etc.)
+- Self-contained: knows its name, availability, and execution logic
+- Visibility flags control where actions appear (context menu, properties dialog, both)
+- See: `core/data_action.h`, `actions/service_actions.cpp`
 
 ### Memory Management Rules
 
@@ -166,10 +168,15 @@ pserv5/
 │   └── uninstaller_manager.h/.cpp
 │
 ├── dialogs/                  # Properties dialogs
-│   ├── service_properties_dialog.h/.cpp
-│   ├── process_properties_dialog.h/.cpp
-│   ├── window_properties_dialog.h/.cpp
-│   └── uninstaller_properties_dialog.h/.cpp
+│   └── data_properties_dialog.h/.cpp  # Generic dialog for all controllers
+│
+├── actions/                  # Action implementations
+│   ├── common_actions.h/.cpp
+│   ├── service_actions.h/.cpp
+│   ├── process_actions.h/.cpp
+│   ├── window_actions.h/.cpp
+│   ├── module_actions.h/.cpp
+│   └── uninstaller_actions.h/.cpp
 │
 ├── utils/                    # Utilities
 │   ├── string_utils.h        # Utf8ToWide/WideToUtf8
