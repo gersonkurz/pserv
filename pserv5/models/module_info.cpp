@@ -1,29 +1,26 @@
 #include "precomp.h"
 #include <models/module_info.h>
-#include <utils/string_utils.h>
 #include <utils/format_utils.h>
+#include <utils/string_utils.h>
 
-namespace pserv {
-
-ModuleInfo::ModuleInfo(
-    uint32_t processId,
-    void* baseAddress,
-    uint32_t size,
-    const std::string& name,
-    const std::string& path
-)
-    : m_processId{processId}
-    , m_baseAddress{baseAddress}
-    , m_size{size}
-    , m_name{name}
-    , m_path{path}
+namespace pserv
 {
-    SetRunning(true);
-    SetDisabled(false);
-}
 
-PropertyValue ModuleInfo::GetTypedProperty(int propertyId) const {
-    switch (static_cast<ModuleProperty>(propertyId)) {
+    ModuleInfo::ModuleInfo(uint32_t processId, void *baseAddress, uint32_t size, const std::string &name, const std::string &path)
+        : m_processId{processId},
+          m_baseAddress{baseAddress},
+          m_size{size},
+          m_name{name},
+          m_path{path}
+    {
+        SetRunning(true);
+        SetDisabled(false);
+    }
+
+    PropertyValue ModuleInfo::GetTypedProperty(int propertyId) const
+    {
+        switch (static_cast<ModuleProperty>(propertyId))
+        {
         case ModuleProperty::BaseAddress:
             return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_baseAddress));
         case ModuleProperty::Size:
@@ -35,11 +32,13 @@ PropertyValue ModuleInfo::GetTypedProperty(int propertyId) const {
             return static_cast<uint64_t>(m_processId);
         default:
             return std::monostate{};
+        }
     }
-}
 
-std::string ModuleInfo::GetProperty(int column) const {
-    switch (static_cast<ModuleProperty>(column)) {
+    std::string ModuleInfo::GetProperty(int column) const
+    {
+        switch (static_cast<ModuleProperty>(column))
+        {
         case ModuleProperty::BaseAddress:
             return std::format("{:#x}", reinterpret_cast<uintptr_t>(m_baseAddress));
         case ModuleProperty::Size:
@@ -52,14 +51,14 @@ std::string ModuleInfo::GetProperty(int column) const {
             return std::to_string(m_processId);
         default:
             return "";
+        }
     }
-}
 
-bool ModuleInfo::MatchesFilter(const std::string& filter) const {
-    // filter is pre-lowercased by caller
-    return pserv::utils::ToLower(m_name).find(filter) != std::string::npos ||
-           pserv::utils::ToLower(m_path).find(filter) != std::string::npos ||
-           std::to_string(m_processId).find(filter) != std::string::npos;
-}
+    bool ModuleInfo::MatchesFilter(const std::string &filter) const
+    {
+        // filter is pre-lowercased by caller
+        return pserv::utils::ToLower(m_name).find(filter) != std::string::npos || pserv::utils::ToLower(m_path).find(filter) != std::string::npos ||
+               std::to_string(m_processId).find(filter) != std::string::npos;
+    }
 
 } // namespace pserv

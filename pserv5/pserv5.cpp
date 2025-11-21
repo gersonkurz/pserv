@@ -2,17 +2,14 @@
 //
 
 #include "precomp.h"
-#include <pserv5.h>
-#include <utils/logging.h>
-#include <utils/string_utils.h>
 #include <config/settings.h>
 #include <config/toml_backend.h>
 #include <main_window.h>
+#include <pserv5.h>
+#include <utils/logging.h>
+#include <utils/string_utils.h>
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
@@ -39,7 +36,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Initialize main window
     pserv::MainWindow mainWindow;
     mainWindow.SetConfigBackend(&backend);
-    if (!mainWindow.Initialize(hInstance)) {
+    if (!mainWindow.Initialize(hInstance))
+    {
         logger->error("Failed to initialize main window");
         return 1;
     }

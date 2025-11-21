@@ -2,15 +2,18 @@
 #include <models/window_info.h>
 #include <utils/string_utils.h>
 
-namespace pserv {
-
-WindowInfo::WindowInfo(HWND hwnd)
-    : m_hwnd{ hwnd }
+namespace pserv
 {
-}
 
-PropertyValue WindowInfo::GetTypedProperty(int propertyId) const {
-    switch (static_cast<WindowProperty>(propertyId)) {
+    WindowInfo::WindowInfo(HWND hwnd)
+        : m_hwnd{hwnd}
+    {
+    }
+
+    PropertyValue WindowInfo::GetTypedProperty(int propertyId) const
+    {
+        switch (static_cast<WindowProperty>(propertyId))
+        {
         case WindowProperty::InternalID:
             return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_hwnd));
         case WindowProperty::Style:
@@ -31,11 +34,13 @@ PropertyValue WindowInfo::GetTypedProperty(int propertyId) const {
             return GetProperty(propertyId);
         default:
             return std::monostate{};
+        }
     }
-}
 
-std::string WindowInfo::GetProperty(int propertyId) const {
-    switch (static_cast<WindowProperty>(propertyId)) {
+    std::string WindowInfo::GetProperty(int propertyId) const
+    {
+        switch (static_cast<WindowProperty>(propertyId))
+        {
         case WindowProperty::InternalID:
             return std::format("{:08X}", reinterpret_cast<uintptr_t>(m_hwnd)); // Legacy format often just 32-bit hex part, but we'll show what fits
         case WindowProperty::Title:
@@ -60,22 +65,28 @@ std::string WindowInfo::GetProperty(int propertyId) const {
             return m_processName;
         default:
             return "";
+        }
     }
-}
 
-bool WindowInfo::MatchesFilter(const std::string& filter) const {
-    if (filter.empty()) return true;
+    bool WindowInfo::MatchesFilter(const std::string &filter) const
+    {
+        if (filter.empty())
+            return true;
 
-    // filter is pre-lowercased by caller
-    if (utils::ToLower(m_title).find(filter) != std::string::npos) return true;
-    if (utils::ToLower(m_className).find(filter) != std::string::npos) return true;
-    if (utils::ToLower(m_processName).find(filter) != std::string::npos) return true;
+        // filter is pre-lowercased by caller
+        if (utils::ToLower(m_title).find(filter) != std::string::npos)
+            return true;
+        if (utils::ToLower(m_className).find(filter) != std::string::npos)
+            return true;
+        if (utils::ToLower(m_processName).find(filter) != std::string::npos)
+            return true;
 
-    // Hex HWND match (using lowercase hex to match pre-lowercased filter)
-    std::string hwndStr = std::format("{:x}", reinterpret_cast<uintptr_t>(m_hwnd));
-    if (hwndStr.find(filter) != std::string::npos) return true;
+        // Hex HWND match (using lowercase hex to match pre-lowercased filter)
+        std::string hwndStr = std::format("{:x}", reinterpret_cast<uintptr_t>(m_hwnd));
+        if (hwndStr.find(filter) != std::string::npos)
+            return true;
 
-    return false;
-}
+        return false;
+    }
 
 } // namespace pserv

@@ -1,8 +1,9 @@
 #pragma once
 #include <core/data_action.h>
 
-namespace pserv {
+namespace pserv
+{
 
-std::vector<const DataAction*> CreateModuleActions();
+    std::vector<const DataAction *> CreateModuleActions();
 
 } // namespace pserv

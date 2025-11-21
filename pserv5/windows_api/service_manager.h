@@ -1,66 +1,63 @@
 #pragma once
 
-namespace pserv {
+namespace pserv
+{
 
-class DataObject;  // Forward declaration
+    class DataObject; // Forward declaration
 
-class ServiceManager {
-private:
-    wil::unique_schandle m_hScManager;
+    class ServiceManager
+    {
+    private:
+        wil::unique_schandle m_hScManager;
 
-public:
-    ServiceManager();
-    ~ServiceManager() = default;
+    public:
+        ServiceManager();
+        ~ServiceManager() = default;
 
-    // Enumerate all services on the local machine
-    // Returns raw pointers - caller is responsible for cleanup
-    // serviceType: filter by service type (default = all types)
-    std::vector<DataObject*> EnumerateServices(DWORD serviceType = SERVICE_WIN32 | SERVICE_DRIVER);
+        // Enumerate all services on the local machine
+        // Returns raw pointers - caller is responsible for cleanup
+        // serviceType: filter by service type (default = all types)
+        std::vector<DataObject *> EnumerateServices(DWORD serviceType = SERVICE_WIN32 | SERVICE_DRIVER);
 
-    // Start a service and wait for it to reach running state
-    // progressCallback is called periodically with progress (0.0-1.0) and status message
-    // Returns true on success, throws exception on failure
-    static bool StartServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
+        // Start a service and wait for it to reach running state
+        // progressCallback is called periodically with progress (0.0-1.0) and status message
+        // Returns true on success, throws exception on failure
+        static bool StartServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
 
-    // Stop a service and wait for it to reach stopped state
-    // progressCallback is called periodically with progress (0.0-1.0) and status message
-    // Returns true on success, throws exception on failure
-    static bool StopServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
+        // Stop a service and wait for it to reach stopped state
+        // progressCallback is called periodically with progress (0.0-1.0) and status message
+        // Returns true on success, throws exception on failure
+        static bool StopServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
 
-    // Pause a service and wait for it to reach paused state
-    // progressCallback is called periodically with progress (0.0-1.0) and status message
-    // Returns true on success, throws exception on failure
-    static bool PauseServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
+        // Pause a service and wait for it to reach paused state
+        // progressCallback is called periodically with progress (0.0-1.0) and status message
+        // Returns true on success, throws exception on failure
+        static bool PauseServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
 
-    // Resume a service and wait for it to reach running state
-    // progressCallback is called periodically with progress (0.0-1.0) and status message
-    // Returns true on success, throws exception on failure
-    static bool ResumeServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
+        // Resume a service and wait for it to reach running state
+        // progressCallback is called periodically with progress (0.0-1.0) and status message
+        // Returns true on success, throws exception on failure
+        static bool ResumeServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
 
-    // Restart a service (stop then start)
-    // progressCallback is called periodically with progress (0.0-1.0) and status message
-    // Returns true on success, throws exception on failure
-    static bool RestartServiceByName(const std::string& serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
+        // Restart a service (stop then start)
+        // progressCallback is called periodically with progress (0.0-1.0) and status message
+        // Returns true on success, throws exception on failure
+        static bool RestartServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
 
-    // Change service startup type
-    // startType: SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, etc.
-    // Returns true on success, throws exception on failure
-    static bool ChangeServiceStartType(const std::string& serviceName, DWORD startType);
+        // Change service startup type
+        // startType: SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, etc.
+        // Returns true on success, throws exception on failure
+        static bool ChangeServiceStartType(const std::string &serviceName, DWORD startType);
 
-    // Delete a service
-    // The service must be stopped before it can be deleted
-    // Returns true on success, throws exception on failure
-    static bool DeleteService(const std::string& serviceName);
+        // Delete a service
+        // The service must be stopped before it can be deleted
+        // Returns true on success, throws exception on failure
+        static bool DeleteService(const std::string &serviceName);
 
-    // Change service configuration (display name, description, startup type, binary path)
-    // Returns true on success, throws exception on failure
-    static bool ChangeServiceConfig(
-        const std::string& serviceName,
-        const std::string& displayName,
-        const std::string& description,
-        DWORD startType,
-        const std::string& binaryPathName
-    );
-};
+        // Change service configuration (display name, description, startup type, binary path)
+        // Returns true on success, throws exception on failure
+        static bool ChangeServiceConfig(
+            const std::string &serviceName, const std::string &displayName, const std::string &description, DWORD startType, const std::string &binaryPathName);
+    };
 
 } // namespace pserv

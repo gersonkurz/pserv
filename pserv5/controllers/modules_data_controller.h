@@ -3,16 +3,18 @@
 #include <models/module_info.h>
 #include <windows_api/module_manager.h>
 
-namespace pserv {
+namespace pserv
+{
 
-class ModulesDataController : public DataController {
-public:
-    ModulesDataController();
-    
-private:
-    void Refresh() override;
-    std::vector<const DataAction*> GetActions(const DataObject* dataObject) const override;
-    VisualState GetVisualState(const DataObject* dataObject) const override;
-};
+    class ModulesDataController : public DataController
+    {
+    public:
+        ModulesDataController();
+
+    private:
+        void Refresh() override;
+        std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
+        VisualState GetVisualState(const DataObject *dataObject) const override;
+    };
 
 } // namespace pserv

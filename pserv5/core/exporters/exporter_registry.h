@@ -1,42 +1,44 @@
 #pragma once
 #include <core/exporters/exporter_interface.h>
 
-namespace pserv {
-
-/**
- * Singleton registry for managing available IExporter implementations.
- * Exporters register themselves during static initialization.
- */
-class ExporterRegistry {
-public:
-    static ExporterRegistry& Instance();
+namespace pserv
+{
 
     /**
-     * Register an exporter implementation.
-     * @param exporter Owned pointer to exporter (registry takes ownership)
+     * Singleton registry for managing available IExporter implementations.
+     * Exporters register themselves during static initialization.
      */
-    void RegisterExporter(IExporter* exporter);
+    class ExporterRegistry
+    {
+    public:
+        static ExporterRegistry &Instance();
 
-    /**
-     * Get all registered exporters.
-     * @return Vector of exporter pointers (registry retains ownership)
-     */
-    const std::vector<IExporter*>& GetExporters() const;
+        /**
+         * Register an exporter implementation.
+         * @param exporter Owned pointer to exporter (registry takes ownership)
+         */
+        void RegisterExporter(IExporter *exporter);
 
-    /**
-     * Find an exporter by format name.
-     * @param formatName Case-sensitive format name (e.g., "JSON")
-     * @return Exporter pointer or nullptr if not found
-     */
-    IExporter* FindExporter(const std::string& formatName) const;
+        /**
+         * Get all registered exporters.
+         * @return Vector of exporter pointers (registry retains ownership)
+         */
+        const std::vector<IExporter *> &GetExporters() const;
 
-private:
-    ExporterRegistry() = default;
-    ~ExporterRegistry();
-    ExporterRegistry(const ExporterRegistry&) = delete;
-    ExporterRegistry& operator=(const ExporterRegistry&) = delete;
+        /**
+         * Find an exporter by format name.
+         * @param formatName Case-sensitive format name (e.g., "JSON")
+         * @return Exporter pointer or nullptr if not found
+         */
+        IExporter *FindExporter(const std::string &formatName) const;
 
-    std::vector<IExporter*> m_exporters;
-};
+    private:
+        ExporterRegistry() = default;
+        ~ExporterRegistry();
+        ExporterRegistry(const ExporterRegistry &) = delete;
+        ExporterRegistry &operator=(const ExporterRegistry &) = delete;
+
+        std::vector<IExporter *> m_exporters;
+    };
 
 } // namespace pserv
