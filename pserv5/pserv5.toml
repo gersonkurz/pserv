@@ -1,5 +1,5 @@
 [Application]
-ActiveView = 'Processes'
+ActiveView = 'Windows'
 FontSize = 1800
 Theme = 'Light'
 

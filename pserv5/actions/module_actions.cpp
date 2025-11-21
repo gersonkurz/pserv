@@ -27,7 +27,7 @@ namespace pserv
         {
         public:
             ModuleOpenContainingFolderAction()
-                : DataAction{"Open Containing Folder", ActionVisibility::ContextMenu}
+                : DataAction{"Open Containing Folder", ActionVisibility::Both}
             {
             }
 

@@ -28,7 +28,7 @@ namespace pserv
         {
         public:
             WindowShowAction()
-                : DataAction{"Show", ActionVisibility::ContextMenu}
+                : DataAction{"Show", ActionVisibility::Both}
             {
             }
 
@@ -56,7 +56,7 @@ namespace pserv
         {
         public:
             WindowHideAction()
-                : DataAction{"Hide", ActionVisibility::ContextMenu}
+                : DataAction{"Hide", ActionVisibility::Both}
             {
             }
 
@@ -84,7 +84,7 @@ namespace pserv
         {
         public:
             WindowMinimizeAction()
-                : DataAction{"Minimize", ActionVisibility::ContextMenu}
+                : DataAction{"Minimize", ActionVisibility::Both}
             {
             }
 
@@ -112,7 +112,7 @@ namespace pserv
         {
         public:
             WindowMaximizeAction()
-                : DataAction{"Maximize", ActionVisibility::ContextMenu}
+                : DataAction{"Maximize", ActionVisibility::Both}
             {
             }
 
@@ -140,7 +140,7 @@ namespace pserv
         {
         public:
             WindowRestoreAction()
-                : DataAction{"Restore", ActionVisibility::ContextMenu}
+                : DataAction{"Restore", ActionVisibility::Both}
             {
             }
 
@@ -172,7 +172,7 @@ namespace pserv
         {
         public:
             WindowBringToFrontAction()
-                : DataAction{"Bring To Front", ActionVisibility::ContextMenu}
+                : DataAction{"Bring To Front", ActionVisibility::Both}
             {
             }
 

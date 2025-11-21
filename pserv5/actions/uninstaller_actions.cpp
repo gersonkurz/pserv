@@ -29,7 +29,7 @@ namespace pserv
         {
         public:
             UninstallProgramAction()
-                : DataAction{"Uninstall", ActionVisibility::ContextMenu}
+                : DataAction{"Uninstall", ActionVisibility::Both}
             {
             }
 

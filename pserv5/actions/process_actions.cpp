@@ -30,7 +30,7 @@ namespace pserv
         {
         public:
             ProcessOpenLocationAction()
-                : DataAction{"Open File Location", ActionVisibility::ContextMenu}
+                : DataAction{"Open File Location", ActionVisibility::Both}
             {
             }
 
@@ -109,7 +109,7 @@ namespace pserv
         {
         public:
             ProcessTerminateAction()
-                : DataAction{"Terminate Process", ActionVisibility::ContextMenu}
+                : DataAction{"Terminate Process", ActionVisibility::Both}
             {
             }
 
