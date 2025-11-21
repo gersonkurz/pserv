@@ -1,8 +1,8 @@
 #include "precomp.h"
 #include <core/async_operation.h>
 #include <core/data_action.h>
-#include <core/data_controller.h>
 #include <core/data_action_dispatch_context.h>
+#include <core/data_controller.h>
 #include <models/service_info.h>
 #include <utils/string_utils.h>
 #include <windows_api/service_manager.h>
@@ -356,14 +356,17 @@ namespace pserv
         // ============================================================================
         // Startup Type Configuration Actions
         // ============================================================================
-
-        class ServiceSetStartupAutomaticAction final : public DataAction
+        class ServiceSetStartupAction : public DataAction
         {
         public:
-            ServiceSetStartupAutomaticAction()
-                : DataAction{"Set Startup: Automatic", ActionVisibility::ContextMenu}
+            ServiceSetStartupAction(std::string name, DWORD dwStartupAction)
+                : DataAction{std::move(name), ActionVisibility::ContextMenu},
+                  m_dwStartupAction{dwStartupAction}
             {
             }
+
+        private:
+            DWORD m_dwStartupAction;
 
             bool IsAvailableFor(const DataObject *) const override
             {
@@ -378,7 +381,7 @@ namespace pserv
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
-                spdlog::info("Starting async operation: Set startup type to Automatic for {} service(s)", serviceNames.size());
+                spdlog::info("Starting async operation: Set startup type to {} for {} service(s)", m_dwStartupAction, serviceNames.size());
 
                 if (ctx.m_pAsyncOp)
                 {
@@ -389,8 +392,10 @@ namespace pserv
                 ctx.m_pAsyncOp = new AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
+                DWORD dwStartupAction{m_dwStartupAction};
+
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, dwStartupAction](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -402,7 +407,7 @@ namespace pserv
 
                                 op->ReportProgress(progress, std::format("Setting startup type for '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::ChangeServiceStartType(serviceName, SERVICE_AUTO_START);
+                                ServiceManager::ChangeServiceStartType(serviceName, dwStartupAction);
                             }
 
                             op->ReportProgress(1.0f, std::format("Set startup type to Automatic for {} service(s)", total));
@@ -417,123 +422,30 @@ namespace pserv
             }
         };
 
-        class ServiceSetStartupManualAction final : public DataAction
+        class ServiceSetStartupAutomaticAction final : public ServiceSetStartupAction
         {
         public:
-            ServiceSetStartupManualAction()
-                : DataAction{"Set Startup: Manual", ActionVisibility::ContextMenu}
+            ServiceSetStartupAutomaticAction()
+                : ServiceSetStartupAction{"Set Startup: Automatic", SERVICE_AUTO_START}
             {
-            }
-
-            bool IsAvailableFor(const DataObject *) const override
-            {
-                return true;
-            }
-
-            void Execute(DataActionDispatchContext &ctx) const override
-            {
-                std::vector<std::string> serviceNames;
-                for (const auto *svc : ctx.m_selectedObjects)
-                {
-                    serviceNames.push_back(GetServiceInfo(svc)->GetName());
-                }
-
-                spdlog::info("Starting async operation: Set startup type to Manual for {} service(s)", serviceNames.size());
-
-                if (ctx.m_pAsyncOp)
-                {
-                    ctx.m_pAsyncOp->Wait();
-                    delete ctx.m_pAsyncOp;
-                }
-
-                ctx.m_pAsyncOp = new AsyncOperation();
-                ctx.m_bShowProgressDialog = true;
-
-                ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
-                    {
-                        try
-                        {
-                            size_t total = serviceNames.size();
-                            for (size_t i = 0; i < total; ++i)
-                            {
-                                const std::string &serviceName = serviceNames[i];
-                                float progress = static_cast<float>(i) / static_cast<float>(total);
-
-                                op->ReportProgress(progress, std::format("Setting startup type for '{}'... ({}/{})", serviceName, i + 1, total));
-
-                                ServiceManager::ChangeServiceStartType(serviceName, SERVICE_DEMAND_START);
-                            }
-
-                            op->ReportProgress(1.0f, std::format("Set startup type to Manual for {} service(s)", total));
-                            return true;
-                        }
-                        catch (const std::exception &e)
-                        {
-                            spdlog::error("Failed to change startup type: {}", e.what());
-                            return false;
-                        }
-                    });
             }
         };
 
-        class ServiceSetStartupDisabledAction final : public DataAction
+        class ServiceSetStartupManualAction final : public ServiceSetStartupAction
+        {
+        public:
+            ServiceSetStartupManualAction()
+                : ServiceSetStartupAction{"Set Startup: Manual", SERVICE_DEMAND_START}
+            {
+            }
+        };
+
+        class ServiceSetStartupDisabledAction final : public ServiceSetStartupAction
         {
         public:
             ServiceSetStartupDisabledAction()
-                : DataAction{"Set Startup: Disabled", ActionVisibility::ContextMenu}
+                : ServiceSetStartupAction{"Set Startup: Disabled", SERVICE_DISABLED}
             {
-            }
-
-            bool IsAvailableFor(const DataObject *) const override
-            {
-                return true;
-            }
-
-            void Execute(DataActionDispatchContext &ctx) const override
-            {
-                std::vector<std::string> serviceNames;
-                for (const auto *svc : ctx.m_selectedObjects)
-                {
-                    serviceNames.push_back(GetServiceInfo(svc)->GetName());
-                }
-
-                spdlog::info("Starting async operation: Set startup type to Disabled for {} service(s)", serviceNames.size());
-
-                if (ctx.m_pAsyncOp)
-                {
-                    ctx.m_pAsyncOp->Wait();
-                    delete ctx.m_pAsyncOp;
-                }
-
-                ctx.m_pAsyncOp = new AsyncOperation();
-                ctx.m_bShowProgressDialog = true;
-
-                ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
-                    {
-                        try
-                        {
-                            size_t total = serviceNames.size();
-                            for (size_t i = 0; i < total; ++i)
-                            {
-                                const std::string &serviceName = serviceNames[i];
-                                float progress = static_cast<float>(i) / static_cast<float>(total);
-
-                                op->ReportProgress(progress, std::format("Setting startup type for '{}'... ({}/{})", serviceName, i + 1, total));
-
-                                ServiceManager::ChangeServiceStartType(serviceName, SERVICE_DISABLED);
-                            }
-
-                            op->ReportProgress(1.0f, std::format("Set startup type to Disabled for {} service(s)", total));
-                            return true;
-                        }
-                        catch (const std::exception &e)
-                        {
-                            spdlog::error("Failed to change startup type: {}", e.what());
-                            return false;
-                        }
-                    });
             }
         };
 

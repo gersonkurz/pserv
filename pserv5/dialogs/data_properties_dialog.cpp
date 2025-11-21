@@ -397,54 +397,54 @@ namespace pserv
             dialogActions.push_back(action);
         }
 
-        // Render as dropdown menu if there are any actions
+        // Render as individual buttons if there are any actions
         if (!dialogActions.empty())
         {
-            if (ImGui::Button("Actions"))
+            bool firstButton = true;
+            for (const auto &action : dialogActions)
             {
-                ImGui::OpenPopup("ActionsPopup");
-            }
-
-            if (ImGui::BeginPopup("ActionsPopup"))
-            {
-                for (const auto &action : dialogActions)
+                if (action->IsSeparator())
                 {
-                    if (action->IsSeparator())
-                    {
-                        ImGui::Separator();
-                        continue;
-                    }
-
-                    // Color destructive actions red
-                    if (action->IsDestructive())
-                    {
-                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
-                    }
-
-                    if (ImGui::MenuItem(action->GetName().c_str()))
-                    {
-                        // Build dispatch context for this action
-                        DataActionDispatchContext ctx;
-                        ctx.m_pController = m_controller;
-                        ctx.m_selectedObjects = {const_cast<DataObject *>(dataObject)};
-                        ctx.m_hWnd = nullptr; // TODO: Get window handle if needed
-                        ctx.m_pAsyncOp = nullptr;
-                        ctx.m_bShowProgressDialog = false;
-
-                        // Execute action
-                        action->Execute(ctx);
-
-                        // Close the popup after action execution
-                        ImGui::CloseCurrentPopup();
-                    }
-
-                    if (action->IsDestructive())
-                    {
-                        ImGui::PopStyleColor();
-                    }
+                    // Add spacing between button groups
+                    ImGui::SameLine();
+                    ImGui::Spacing();
+                    ImGui::SameLine();
+                    continue;
                 }
 
-                ImGui::EndPopup();
+                // Place buttons on same line (except first one)
+                if (!firstButton)
+                {
+                    ImGui::SameLine();
+                }
+                firstButton = false;
+
+                // Color destructive actions red
+                if (action->IsDestructive())
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+                }
+
+                if (ImGui::Button(action->GetName().c_str()))
+                {
+                    // Build dispatch context for this action
+                    DataActionDispatchContext ctx;
+                    ctx.m_pController = m_controller;
+                    ctx.m_selectedObjects = {const_cast<DataObject *>(dataObject)};
+                    ctx.m_hWnd = nullptr; // TODO: Get window handle if needed
+                    ctx.m_pAsyncOp = nullptr;
+                    ctx.m_bShowProgressDialog = false;
+
+                    // Execute action
+                    action->Execute(ctx);
+                }
+
+                if (action->IsDestructive())
+                {
+                    ImGui::PopStyleColor(3);
+                }
             }
         }
     }
