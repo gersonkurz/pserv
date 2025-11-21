@@ -2,6 +2,7 @@
 #include <core/data_action.h>
 #include <core/data_controller.h>
 #include <core/data_object.h>
+#include <core/data_action_dispatch_context.h>
 #include <dialogs/data_properties_dialog.h>
 
 namespace pserv
@@ -16,44 +17,36 @@ namespace pserv
     void DataPropertiesDialog::Open()
     {
         if (m_dataObjects.empty())
+        {
+            spdlog::warn("DataPropertiesDialog::Open() called with empty objects");
             return;
+        }
 
         m_activeTabIndex = 0;
+        m_bOpen = true;
 
-        for (auto dataObject : m_dataObjects)
-        {
-            assert(dataObject != nullptr);
-            InitializeFields(dataObject);
-        }
-
-        if (!m_dataObjects.empty())
-        {
-            m_bOpen = true;
-        }
+        spdlog::info("DataPropertiesDialog::Open() - opened dialog with {} objects", m_dataObjects.size());
     }
 
     void DataPropertiesDialog::Close()
     {
+        spdlog::info("DataPropertiesDialog::Close() called - m_bOpen was {}", m_bOpen);
         m_bOpen = false;
         m_activeTabIndex = 0;
-    }
-
-    void DataPropertiesDialog::InitializeFields(const DataObject *dataObject)
-    {
-        /*
-        // Copy current values to edit buffers
-        strncpy_s(state.displayName, state.pService->GetDisplayName().c_str(), sizeof(state.displayName) - 1);
-        strncpy_s(state.description, state.pService->GetDescription().c_str(), sizeof(state.description) - 1);
-        strncpy_s(state.binaryPathName, state.pService->GetBinaryPathName().c_str(), sizeof(state.binaryPathName) - 1);
-        state.startupType = GetStartupTypeIndex(state.pService->GetStartType());
-        state.bDirty = false;
-        */
     }
 
     bool DataPropertiesDialog::Render()
     {
         if (m_dataObjects.empty())
         {
+            spdlog::warn("DataPropertiesDialog::Render() - no objects to render");
+            return false;
+        }
+
+        // Only render if dialog is still open
+        if (!m_bOpen)
+        {
+            spdlog::info("DataPropertiesDialog::Render() - dialog closed, not rendering");
             return false;
         }
 
@@ -63,7 +56,6 @@ namespace pserv
         std::string windowTitle = m_dataObjects.size() == 1 ? std::format("{} Properties", m_controller->GetItemName())
                                                             : std::format("{} Properties ({} services)", m_controller->GetItemName(), m_dataObjects.size());
 
-        bool m_bOpen = true;
         if (ImGui::Begin(windowTitle.c_str(), &m_bOpen, ImGuiWindowFlags_NoCollapse))
         {
 
@@ -129,6 +121,7 @@ namespace pserv
             ImGui::SameLine();
             if (ImGui::Button("OK", ImVec2(100, 0)))
             {
+                spdlog::info("DataPropertiesDialog: OK button clicked");
                 // Apply all dirty changes
                 for (auto dataObject : m_dataObjects)
                 {
@@ -145,158 +138,157 @@ namespace pserv
             ImGui::SameLine();
             if (ImGui::Button("Cancel", ImVec2(100, 0)))
             {
+                spdlog::info("DataPropertiesDialog: Cancel button clicked");
                 Close();
             }
         }
         ImGui::End();
+
+        // Check if window was closed by X button
+        if (!m_bOpen)
+        {
+            spdlog::info("DataPropertiesDialog: X button clicked (m_bOpen set to false by ImGui)");
+            Close();
+        }
 
         return changesApplied;
     }
 
     void DataPropertiesDialog::RenderContent(const DataObject *dataObject)
     {
-        /*
-        // === GENERAL SECTION ===
-        if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Service Name:");
-            ImGui::SameLine(200);
-            ImGui::TextWrapped("%s", state.pService->GetName().c_str());
+        if (!dataObject || !m_controller)
+            return;
 
-            ImGui::Separator();
+        // Get all columns from controller
+        const auto &columns = m_controller->GetColumns();
 
-            ImGui::Text("Display Name:");
-            ImGui::SameLine(200);
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::InputText("##displayname", state.displayName, sizeof(state.displayName))) {
-                state.bDirty = true;
-            }
+        // Render all properties in a single collapsing header
+        if (ImGui::CollapsingHeader("Properties", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            const float labelWidth = 200.0f;
 
-            ImGui::Separator();
+            // Loop through each column and display as read-only field
+            for (size_t i = 0; i < columns.size(); ++i)
+            {
+                const auto &column = columns[i];
+                std::string value = dataObject->GetProperty(static_cast<int>(i));
 
-            ImGui::Text("Description:");
-            ImGui::SameLine(200);
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::InputTextMultiline("##description", state.description, sizeof(state.description), ImVec2(-1, 60))) {
-                state.bDirty = true;
-            }
+                // Display label
+                ImGui::Text("%s:", column.DisplayName.c_str());
+                ImGui::SameLine(labelWidth);
 
-            ImGui::Separator();
+                // Display value in a selectable/copyable input field (read-only)
+                ImGui::SetNextItemWidth(-1);
+                if (value.empty())
+                {
+                    ImGui::TextDisabled("N/A");
+                }
+                else
+                {
+                    // Create a unique ID for each field
+                    std::string fieldId = std::format("##{}", i);
 
-            ImGui::Text("Status:");
-            ImGui::SameLine(200);
-            ImGui::TextWrapped("%s", state.pService->GetStatusString().c_str());
-        }
+                    // Check if value contains newlines
+                    bool hasNewlines = value.find('\n') != std::string::npos;
 
-        // === CONFIGURATION SECTION ===
-        if (ImGui::CollapsingHeader("Configuration", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Startup Type:");
-            ImGui::SameLine(200);
-            ImGui::SetNextItemWidth(-1);
-            const char* startupTypes[] = { "Automatic", "Manual", "Disabled", "Boot", "System" };
-            if (ImGui::Combo("##startuptype", &state.startupType, startupTypes, IM_ARRAYSIZE(startupTypes))) {
-                state.bDirty = true;
-            }
+                    if (hasNewlines)
+                    {
+                        // Use InputTextMultiline for multiline content
+                        int lineCount = std::count(value.begin(), value.end(), '\n') + 1;
+                        float height = ImGui::GetTextLineHeightWithSpacing() * std::min(lineCount, 5);
 
-            ImGui::Separator();
+                        ImGui::InputTextMultiline(fieldId.c_str(),
+                                                const_cast<char*>(value.c_str()),
+                                                value.size() + 1,
+                                                ImVec2(-1, height),
+                                                ImGuiInputTextFlags_ReadOnly);
+                    }
+                    else
+                    {
+                        // Use single-line InputText for simple values
+                        ImGui::InputText(fieldId.c_str(),
+                                       const_cast<char*>(value.c_str()),
+                                       value.size() + 1,
+                                       ImGuiInputTextFlags_ReadOnly);
+                    }
+                }
 
-            ImGui::Text("Service Type:");
-            ImGui::SameLine(200);
-            ImGui::TextWrapped("%s", state.pService->GetServiceTypeString().c_str());
-
-            ImGui::Separator();
-
-            ImGui::Text("Error Control:");
-            ImGui::SameLine(200);
-            ImGui::TextWrapped("%s", state.pService->GetErrorControlString().c_str());
-
-            ImGui::Separator();
-
-            ImGui::Text("User Account:");
-            ImGui::SameLine(200);
-            ImGui::TextWrapped("%s", state.pService->GetUser().c_str());
-
-            ImGui::Separator();
-
-            ImGui::Text("Binary Path:");
-            ImGui::SameLine(200);
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::InputText("##binarypath", state.binaryPathName, sizeof(state.binaryPathName))) {
-                state.bDirty = true;
+                // Add separator between fields
+                if (i < columns.size() - 1)
+                {
+                    ImGui::Separator();
+                }
             }
         }
 
-        // === DETAILS SECTION ===
-        if (ImGui::CollapsingHeader("Details")) {
-            ImGui::Text("Process ID:");
-            ImGui::SameLine(200);
-            if (state.pService->GetProcessId() > 0) {
-                ImGui::Text("%u", state.pService->GetProcessId());
+        // Render action buttons
+        RenderActionButtons(dataObject);
+    }
+
+    void DataPropertiesDialog::RenderActionButtons(const DataObject *dataObject)
+    {
+        if (!m_controller)
+            return;
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // Get all actions from controller for this specific object
+        const auto actions = m_controller->GetActions(dataObject);
+
+        // Filter and render actions visible in properties dialog
+        for (const auto &action : actions)
+        {
+            auto visibility = action->GetVisibility();
+            bool visibleInDialog = (static_cast<int>(visibility) & static_cast<int>(ActionVisibility::PropertiesDialog)) != 0;
+
+            if (!visibleInDialog)
+                continue;
+
+            if (!action->IsAvailableFor(dataObject))
+                continue;
+
+            if (action->IsSeparator())
+            {
+                ImGui::Spacing();
+                continue;
             }
-            else {
-                ImGui::TextDisabled("N/A");
+
+            // Color destructive actions red
+            if (action->IsDestructive())
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
             }
 
-            ImGui::Separator();
+            if (ImGui::Button(action->GetName().c_str()))
+            {
+                // Build dispatch context for this action
+                DataActionDispatchContext ctx;
+                ctx.m_pController = m_controller;
+                ctx.m_selectedObjects = {const_cast<DataObject *>(dataObject)};
+                ctx.m_hWnd = nullptr; // TODO: Get window handle if needed
+                ctx.m_pAsyncOp = nullptr;
+                ctx.m_bShowProgressDialog = false;
 
-            ImGui::Text("Win32 Exit Code:");
-            ImGui::SameLine(200);
-            ImGui::Text("%u", state.pService->GetWin32ExitCode());
+                // Execute action
+                action->Execute(ctx);
 
-            ImGui::Separator();
+                // Note: We don't close the dialog here - let the action decide
+                // Some actions might want to close dialog, others might not
+            }
 
-            ImGui::Text("Service Exit Code:");
-            ImGui::SameLine(200);
-            ImGui::Text("%u", state.pService->GetServiceSpecificExitCode());
+            if (action->IsDestructive())
+            {
+                ImGui::PopStyleColor(3);
+            }
 
-            ImGui::Separator();
-
-            ImGui::Text("Checkpoint:");
-            ImGui::SameLine(200);
-            ImGui::Text("%u", state.pService->GetCheckPoint());
-
-            ImGui::Separator();
-
-            ImGui::Text("Wait Hint:");
-            ImGui::SameLine(200);
-            ImGui::Text("%u ms", state.pService->GetWaitHint());
-
-            ImGui::Separator();
-
-            ImGui::Text("Service Flags:");
-            ImGui::SameLine(200);
-            ImGui::Text("%u", state.pService->GetServiceFlags());
-
-            ImGui::Separator();
-
-            ImGui::Text("Controls Accepted:");
-            ImGui::SameLine(200);
-            ImGui::TextWrapped("%s", state.pService->GetControlsAcceptedString().c_str());
+            ImGui::SameLine();
         }
 
-        // === DEPENDENCIES SECTION ===
-        if (ImGui::CollapsingHeader("Dependencies")) {
-            ImGui::Text("Load Order Group:");
-            ImGui::SameLine(200);
-            std::string loadOrderGroup = state.pService->GetLoadOrderGroup();
-            if (!loadOrderGroup.empty()) {
-                ImGui::TextWrapped("%s", loadOrderGroup.c_str());
-            }
-            else {
-                ImGui::TextDisabled("None");
-            }
-
-            ImGui::Separator();
-
-            ImGui::Text("Tag ID:");
-            ImGui::SameLine(200);
-            if (state.pService->GetTagId() > 0) {
-                ImGui::Text("%u", state.pService->GetTagId());
-            }
-            else {
-                ImGui::TextDisabled("None");
-            }
-        }
-            */
+        ImGui::NewLine();
     }
 
     bool DataPropertiesDialog::ApplyChanges(DataObject *dataObject)

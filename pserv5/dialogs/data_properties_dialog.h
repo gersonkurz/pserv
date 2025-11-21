@@ -23,6 +23,12 @@ namespace pserv
         // Close the dialog
         void Close();
 
+        // Check if dialog is open
+        bool IsOpen() const
+        {
+            return m_bOpen;
+        }
+
         // Render the dialog (call every frame)
         // Returns true if changes were applied
         bool Render();
@@ -31,11 +37,11 @@ namespace pserv
         // Apply changes to a specific service
         bool ApplyChanges(DataObject *dataObject);
 
-        // Initialize editable fields from service
-        void InitializeFields(const DataObject *dataObject);
-
         // Render the content for a single service
         void RenderContent(const DataObject *dataObject);
+
+        // Render action buttons for the current object
+        void RenderActionButtons(const DataObject *dataObject);
     };
 
 } // namespace pserv

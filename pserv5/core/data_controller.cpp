@@ -102,14 +102,22 @@ namespace pserv
 
     void DataController::RenderPropertiesDialog()
     {
-        // Render service properties dialog if open
+        // Render properties dialog if open
         if (m_pPropertiesDialog)
         {
             const bool changesApplied = m_pPropertiesDialog->Render();
             if (changesApplied)
             {
-                // Refresh services list to show updated data
+                // Refresh to show updated data
                 Refresh();
+            }
+
+            // Check if dialog was closed and clean up
+            if (!m_pPropertiesDialog->IsOpen())
+            {
+                spdlog::info("DataController::RenderPropertiesDialog - dialog closed, cleaning up");
+                delete m_pPropertiesDialog;
+                m_pPropertiesDialog = nullptr;
             }
         }
     }

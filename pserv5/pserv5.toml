@@ -1,5 +1,5 @@
 [Application]
-ActiveView = 'Services'
+ActiveView = 'Processes'
 FontSize = 1800
 Theme = 'Dark'
 
