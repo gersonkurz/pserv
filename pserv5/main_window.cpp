@@ -326,8 +326,16 @@ namespace pserv
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
 
-        // Setup Dear ImGui style
-        ImGui::StyleColorsDark();
+        // Setup Dear ImGui style - apply saved theme from config
+        std::string savedTheme = config::theSettings.application.theme.get();
+        if (savedTheme == "Light")
+        {
+            ImGui::StyleColorsLight();
+        }
+        else
+        {
+            ImGui::StyleColorsDark(); // Default to Dark if not set or unrecognized
+        }
         ApplyOrangeAccent();
 
         // Setup Platform/Renderer backends first
