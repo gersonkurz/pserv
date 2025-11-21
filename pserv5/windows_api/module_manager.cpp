@@ -2,6 +2,7 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/module_manager.h>
+#include <models/module_info.h>
 
 #pragma comment(lib, "psapi.lib")
 

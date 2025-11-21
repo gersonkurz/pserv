@@ -2,6 +2,7 @@
 #include <actions/process_actions.h>
 #include <controllers/processes_data_controller.h>
 #include <core/async_operation.h>
+#include <models/process_info.h>
 #include <utils/string_utils.h>
 #include <windows_api/process_manager.h>
 

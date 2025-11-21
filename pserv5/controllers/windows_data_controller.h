@@ -1,6 +1,5 @@
 #pragma once
 #include <core/data_controller.h>
-#include <models/window_info.h>
 
 namespace pserv
 {

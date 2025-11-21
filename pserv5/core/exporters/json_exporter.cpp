@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include <core/exporters/exporter_registry.h>
 #include <core/exporters/json_exporter.h>
+#include <core/data_object.h>
 
 namespace pserv
 {

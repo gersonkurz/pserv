@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include <core/async_operation.h>
 #include <core/data_action.h>
+#include <core/data_action_dispatch_context.h>
 #include <core/data_controller.h>
 #include <models/process_info.h>
 #include <utils/string_utils.h>

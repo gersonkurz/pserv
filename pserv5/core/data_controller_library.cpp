@@ -6,6 +6,9 @@
 #include <controllers/uninstaller_data_controller.h>
 #include <controllers/windows_data_controller.h>
 #include <core/data_controller_library.h>
+#include <core/data_controller.h>
+#include <core/data_object.h>
+#include <core/data_object_column.h>
 
 namespace
 {

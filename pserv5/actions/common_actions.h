@@ -1,8 +1,7 @@
 #pragma once
-#include <core/data_action.h>
-
 namespace pserv
 {
+    class DataAction;
 
     void AddCommonExportActions(std::vector<const DataAction *> &actions);
 

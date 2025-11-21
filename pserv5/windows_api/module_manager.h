@@ -1,8 +1,8 @@
 #pragma once
-#include <models/module_info.h>
 
 namespace pserv
 {
+    class ModuleInfo;
 
     class ModuleManager
     {

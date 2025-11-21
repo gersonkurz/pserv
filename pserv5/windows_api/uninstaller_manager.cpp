@@ -3,6 +3,7 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/uninstaller_manager.h>
+#include <models/installed_program_info.h>
 
 namespace
 {

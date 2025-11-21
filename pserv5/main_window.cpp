@@ -4,10 +4,12 @@
 #include <config/settings.h>
 #include <core/async_operation.h>
 #include <core/data_action.h>
+#include <core/data_object.h>
 #include <core/data_controller_library.h>
 #include <main_window.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
+#include <core/data_controller.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")

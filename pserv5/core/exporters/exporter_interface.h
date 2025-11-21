@@ -1,9 +1,10 @@
 #pragma once
-#include <core/data_object.h>
+
 #include <core/data_object_column.h>
 
 namespace pserv
 {
+    class DataObject;
 
     /**
      * Abstract interface for exporting DataObjects to various formats.

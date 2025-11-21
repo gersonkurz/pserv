@@ -1,10 +1,8 @@
 #pragma once
 #include <core/data_controller.h>
-#include <models/process_info.h>
 
 namespace pserv
 {
-
     class ProcessesDataController : public DataController
     {
     public:

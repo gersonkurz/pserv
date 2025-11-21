@@ -2,10 +2,9 @@
 
 namespace pserv
 {
-
     class DataObject;
     class DataController;
-    struct DataActionDispatchContext;
+    class DataActionDispatchContext;
 
     // Defines where an action should be visible in the UI
     enum class ActionVisibility

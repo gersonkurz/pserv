@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include <core/data_action.h>
 #include <core/data_controller.h>
+#include <core/data_action_dispatch_context.h>
 #include <models/window_info.h>
 #include <windows_api/window_manager.h>
 

@@ -1,9 +1,11 @@
 #include "precomp.h"
 #include <core/data_controller.h>
+#include <core/data_object.h>
 #include <core/exporters/exporter_registry.h>
 #include <dialogs/data_properties_dialog.h>
 #include <utils/file_dialogs.h>
 #include <utils/string_utils.h>
+#include <core/data_action_dispatch_context.h>
 
 namespace pserv
 {

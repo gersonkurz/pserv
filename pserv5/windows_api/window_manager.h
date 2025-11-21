@@ -1,9 +1,8 @@
 #pragma once
 
-#include <models/window_info.h>
-
 namespace pserv
 {
+    class DataObject;
 
     class WindowManager
     {

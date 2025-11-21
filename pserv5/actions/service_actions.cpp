@@ -2,6 +2,7 @@
 #include <core/async_operation.h>
 #include <core/data_action.h>
 #include <core/data_controller.h>
+#include <core/data_action_dispatch_context.h>
 #include <models/service_info.h>
 #include <utils/string_utils.h>
 #include <windows_api/service_manager.h>

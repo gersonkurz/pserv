@@ -3,6 +3,7 @@
 #include <controllers/windows_data_controller.h>
 #include <utils/string_utils.h>
 #include <windows_api/window_manager.h>
+#include <models/window_info.h>
 
 namespace pserv
 {

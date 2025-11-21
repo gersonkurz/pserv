@@ -40,9 +40,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dialogs\service_properties_dialog.h">
-      <Filter>dialogs</Filter>
-    </ClInclude>
     <ClInclude Include="controllers\services_data_controller.h">
       <Filter>controllers</Filter>
     </ClInclude>
@@ -166,15 +163,6 @@
     <ClInclude Include="controllers\windows_data_controller.h">
       <Filter>controllers</Filter>
     </ClInclude>
-    <ClInclude Include="dialogs\uninstaller_properties_dialog.h">
-      <Filter>dialogs</Filter>
-    </ClInclude>
-    <ClInclude Include="dialogs\process_properties_dialog.h">
-      <Filter>dialogs</Filter>
-    </ClInclude>
-    <ClInclude Include="dialogs\window_properties_dialog.h">
-      <Filter>dialogs</Filter>
-    </ClInclude>
     <ClInclude Include="models\module_info.h">
       <Filter>models</Filter>
     </ClInclude>
@@ -226,11 +214,11 @@
     <ClInclude Include="dialogs\data_properties_dialog.h">
       <Filter>dialogs</Filter>
     </ClInclude>
+    <ClInclude Include="core\data_action_dispatch_context.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dialogs\service_properties_dialog.cpp">
-      <Filter>dialogs</Filter>
-    </ClCompile>
     <ClCompile Include="controllers\services_data_controller.cpp">
       <Filter>controllers</Filter>
     </ClCompile>
@@ -306,15 +294,6 @@
     <ClCompile Include="controllers\windows_data_controller.cpp">
       <Filter>controllers</Filter>
     </ClCompile>
-    <ClCompile Include="dialogs\uninstaller_properties_dialog.cpp">
-      <Filter>dialogs</Filter>
-    </ClCompile>
-    <ClCompile Include="dialogs\process_properties_dialog.cpp">
-      <Filter>dialogs</Filter>
-    </ClCompile>
-    <ClCompile Include="dialogs\window_properties_dialog.cpp">
-      <Filter>dialogs</Filter>
-    </ClCompile>
     <ClCompile Include="models\module_info.cpp">
       <Filter>models</Filter>
     </ClCompile>
@@ -365,6 +344,9 @@
     </ClCompile>
     <ClCompile Include="dialogs\data_properties_dialog.cpp">
       <Filter>dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="core\data_action_dispatch_context.cpp">
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

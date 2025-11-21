@@ -1,8 +1,9 @@
 #pragma once
-#include <models/installed_program_info.h>
+
 
 namespace pserv
 {
+    class DataObject;
 
     class UninstallerManager final
     {

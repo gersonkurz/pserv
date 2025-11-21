@@ -4,6 +4,8 @@
 #include <models/process_info.h>
 #include <utils/string_utils.h>
 #include <windows_api/process_manager.h>
+#include <models/module_info.h>
+#include <windows_api/module_manager.h>
 
 namespace pserv
 {

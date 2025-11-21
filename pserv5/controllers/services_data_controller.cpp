@@ -4,8 +4,7 @@
 #include <core/async_operation.h>
 #include <utils/string_utils.h>
 #include <windows_api/service_manager.h>
-
-#include <imgui.h>
+#include <models/service_info.h>
 
 namespace pserv
 {

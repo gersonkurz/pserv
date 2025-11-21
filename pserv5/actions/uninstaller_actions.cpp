@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include <core/data_action.h>
 #include <core/data_controller.h>
+#include <core/data_action_dispatch_context.h>
 #include <models/installed_program_info.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>

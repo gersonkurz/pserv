@@ -1,10 +1,9 @@
 #pragma once
-#include <core/data_controller.h>
-#include <core/data_object.h>
-#include <core/data_object_column.h>
 
 namespace pserv
 {
+    class DataController;
+
     class DataControllerLibrary final
     {
 

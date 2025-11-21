@@ -1,32 +1,12 @@
 #pragma once
-#include <core/async_operation.h>
-#include <core/data_action.h>
-#include <core/data_object.h>
 #include <core/data_object_column.h>
 
 namespace pserv
 {
-    class DataController;
-
-    struct DataActionDispatchContext final
-    {
-        DataActionDispatchContext() = default;
-        ~DataActionDispatchContext()
-        {
-            if (m_pAsyncOp)
-            {
-                m_pAsyncOp->RequestCancel();
-                m_pAsyncOp->Wait();
-                delete m_pAsyncOp;
-            }
-        }
-        HWND m_hWnd{nullptr};
-        AsyncOperation *m_pAsyncOp{nullptr};         // Current async operation
-        std::vector<DataObject *> m_selectedObjects; // Selected services for multi-select
-        DataController *m_pController{nullptr};      // Owning data controller
-        bool m_bShowProgressDialog{false};
-    };
-
+    class DataAction;
+    class DataObject;
+    class DataActionDispatchContext;
+    
     enum class VisualState
     {
         Normal,      // Default text color
