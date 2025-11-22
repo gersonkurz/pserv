@@ -13,7 +13,7 @@ namespace pserv
         {
             PlainTextExporterRegistration()
             {
-                ExporterRegistry::Instance().RegisterExporter(new PlainTextExporter());
+                ExporterRegistry::Instance().RegisterExporter(DBG_NEW PlainTextExporter());
             }
         };
         static PlainTextExporterRegistration g_plainTextExporterRegistration;

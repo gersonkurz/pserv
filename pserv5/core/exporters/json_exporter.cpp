@@ -13,7 +13,7 @@ namespace pserv
         {
             JsonExporterRegistration()
             {
-                ExporterRegistry::Instance().RegisterExporter(new JsonExporter());
+                ExporterRegistry::Instance().RegisterExporter(DBG_NEW JsonExporter());
             }
         };
         static JsonExporterRegistration g_jsonExporterRegistration;

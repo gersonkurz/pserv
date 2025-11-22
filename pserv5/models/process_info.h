@@ -63,6 +63,18 @@ namespace pserv
         ~ProcessInfo() override = default;
 
         // DataObject interface
+
+        static std::string GetStableID(DWORD pid)
+        {
+            return std::to_string(pid);
+        }   
+
+        // for processes, the PID remains stable
+        std::string GetStableID() const
+        {
+            return GetStableID(m_pid);
+        }
+
         std::string GetProperty(int propertyId) const override;
         PropertyValue GetTypedProperty(int propertyId) const override;
         bool MatchesFilter(const std::string &filter) const override;

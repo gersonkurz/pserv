@@ -10,6 +10,7 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <core/data_controller.h>
+#include <core/data_object_container.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -37,6 +38,7 @@ namespace pserv
         {
             DestroyWindow(m_hWnd);
         }
+        m_Controllers.Clear();
     }
 
     bool MainWindow::Initialize(HINSTANCE hInstance)
@@ -995,7 +997,7 @@ namespace pserv
 
         // Declare these here so they're available for status bar later
         std::vector<DataObject *> filteredDataObjects;
-        const std::vector<DataObject *> *pAllDataObjects = nullptr;
+        const DataObjectContainer *pAllDataObjects = nullptr;
         ImGuiTableFlags flags = ImGuiTableFlags_Sortable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
                                 ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY |
                                 ImGuiTableFlags_SizingFixedFit;
@@ -1388,7 +1390,7 @@ namespace pserv
 
         // Calculate statistics
         size_t visibleCount = filteredDataObjects.size();
-        size_t totalCount = pAllDataObjects ? pAllDataObjects->size() : 0;
+        size_t totalCount = pAllDataObjects ? pAllDataObjects->GetSize() : 0;
         size_t selectedCount = m_dispatchContext.m_selectedObjects.size();
         size_t highlightedCount = 0;
         size_t disabledCount = 0;

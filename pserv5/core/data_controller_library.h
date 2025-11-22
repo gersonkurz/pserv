@@ -13,5 +13,6 @@ namespace pserv
 
         // Core abstract methods
         const std::vector<DataController *> &GetDataControllers();
+        void Clear();
     };
 } // namespace pserv

@@ -3,6 +3,7 @@
 #include <utils/win32_error.h>
 #include <windows_api/module_manager.h>
 #include <models/module_info.h>
+#include <core/data_object_container.h>
 
 #pragma comment(lib, "psapi.lib")
 
@@ -48,16 +49,14 @@ namespace pserv
         return pserv::utils::WideToUtf8(wPath);
     }
 
-    std::vector<ModuleInfo *> ModuleManager::EnumerateModules(uint32_t processId)
+    void ModuleManager::EnumerateModules(DataObjectContainer *doc, uint32_t processId)
     {
-        std::vector<ModuleInfo *> modules;
-
         wil::unique_handle hProcess{OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId)};
         if (!hProcess)
         {
             // Common for system processes or elevated processes. Just log as debug.
             LogExpectedWin32Error("OpenProcess", "process {}", processId);
-            return modules;
+            return;
         }
 
         std::vector<HMODULE> hModules(1024); // Start with a reasonable buffer size
@@ -66,7 +65,7 @@ namespace pserv
         if (!::EnumProcessModules(hProcess.get(), hModules.data(), static_cast<DWORD>(hModules.size()) * sizeof(HMODULE), &cbNeeded))
         {
             LogWin32Error("EnumProcessModules", "process {}", processId);
-            return modules;
+            return;
         }
 
         hModules.resize(cbNeeded / sizeof(HMODULE));
@@ -93,7 +92,13 @@ namespace pserv
                 if (::GetModuleInformation(hProcess.get(), hModule, &moduleInfo, sizeof(moduleInfo)))
                 {
                     const CachedModuleInfo &cached = cacheIt->second;
-                    modules.push_back(new ModuleInfo(processId, moduleInfo.lpBaseOfDll, cached.size, cached.name, cached.path));
+                    const auto stableId{ModuleInfo::GetStableID(processId, cached.name)};
+                    auto mi = doc->GetByStableId<ModuleInfo>(stableId);
+                    if (mi == nullptr)
+                    {
+                        mi = doc->Append<ModuleInfo>(DBG_NEW ModuleInfo{processId, cached.name});
+                    }
+                    mi->SetValues(moduleInfo.lpBaseOfDll, moduleInfo.SizeOfImage, cached.path);
                 }
             }
             else
@@ -115,7 +120,13 @@ namespace pserv
                         cached.size = moduleInfo.SizeOfImage;
                         s_moduleCache[wPath] = cached;
 
-                        modules.push_back(new ModuleInfo{processId, moduleInfo.lpBaseOfDll, moduleInfo.SizeOfImage, moduleName, modulePath});
+                        const auto stableId{ModuleInfo::GetStableID(processId, moduleName)};
+                        auto mi = doc->GetByStableId<ModuleInfo>(stableId);
+                        if (mi == nullptr)
+                        {
+                            mi = doc->Append<ModuleInfo>(DBG_NEW ModuleInfo{processId, moduleName});
+                        }
+                        mi->SetValues(moduleInfo.lpBaseOfDll, moduleInfo.SizeOfImage, modulePath);
                     }
                 }
                 else
@@ -124,8 +135,6 @@ namespace pserv
                 }
             }
         }
-
-        return modules;
     }
 
 } // namespace pserv

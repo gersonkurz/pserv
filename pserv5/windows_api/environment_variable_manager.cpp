@@ -2,30 +2,25 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/environment_variable_manager.h>
+#include <core/data_object_container.h>
 
 namespace pserv
 {
 
-    std::vector<DataObject *> EnvironmentVariableManager::EnumerateEnvironmentVariables()
+    void EnvironmentVariableManager::EnumerateEnvironmentVariables(DataObjectContainer* doc)
     {
-        std::vector<DataObject *> variables;
-
         // Enumerate system environment variables
         EnumerateFromKey(HKEY_LOCAL_MACHINE,
             L"SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment",
-            EnvironmentVariableScope::System,
-            variables);
+            EnvironmentVariableScope::System, doc);
 
         // Enumerate user environment variables
         EnumerateFromKey(HKEY_CURRENT_USER,
             L"Environment",
-            EnvironmentVariableScope::User,
-            variables);
-
-        return variables;
+            EnvironmentVariableScope::User, doc);
     }
 
-    void EnvironmentVariableManager::EnumerateFromKey(HKEY hKeyRoot, const std::wstring &subKeyPath, EnvironmentVariableScope scope, std::vector<DataObject *> &variables)
+    void EnvironmentVariableManager::EnumerateFromKey(HKEY hKeyRoot, const std::wstring &subKeyPath, EnvironmentVariableScope scope, DataObjectContainer *doc)
     {
         wil::unique_hkey hKey;
         LSTATUS status = RegOpenKeyExW(hKeyRoot, subKeyPath.c_str(), 0, KEY_READ, &hKey);
@@ -69,7 +64,16 @@ namespace pserv
             std::string name = utils::WideToUtf8(valueName);
             std::string value = utils::WideToUtf8(reinterpret_cast<wchar_t *>(valueData));
 
-            variables.push_back(new EnvironmentVariableInfo(name, value, scope));
+            const auto stableId{EnvironmentVariableInfo::GetStableID(scope, name)};
+            auto info = doc->GetByStableId<EnvironmentVariableInfo>(stableId);
+            if (info == nullptr)
+            {
+                info = doc->Append<EnvironmentVariableInfo>(DBG_NEW EnvironmentVariableInfo{name, value, scope});
+            }
+            else
+            {
+                info->SetValue(value);
+            }
         }
     }
 

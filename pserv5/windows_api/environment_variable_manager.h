@@ -1,15 +1,16 @@
 #pragma once
-#include <core/data_object.h>
+
 #include <models/environment_variable_info.h>
 
 namespace pserv
 {
+    class DataObjectContainer;
 
-    class EnvironmentVariableManager
+    class EnvironmentVariableManager final
     {
     public:
         // Enumerate all environment variables (system and user)
-        static std::vector<DataObject *> EnumerateEnvironmentVariables();
+        static void EnumerateEnvironmentVariables(DataObjectContainer *doc);
 
         // Modify environment variables
         static bool SetEnvironmentVariable(const std::string &name, const std::string &value, EnvironmentVariableScope scope);
@@ -17,7 +18,7 @@ namespace pserv
 
     private:
         // Helper to enumerate from a specific registry key
-        static void EnumerateFromKey(HKEY hKeyRoot, const std::wstring &subKeyPath, EnvironmentVariableScope scope, std::vector<DataObject *> &variables);
+        static void EnumerateFromKey(HKEY hKeyRoot, const std::wstring &subKeyPath, EnvironmentVariableScope scope, DataObjectContainer *doc);
 
         // Helper to get registry key path for scope
         static std::wstring GetRegistryPath(EnvironmentVariableScope scope);

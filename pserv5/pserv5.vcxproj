@@ -80,7 +80,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -104,7 +104,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -126,7 +126,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -150,7 +150,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -185,6 +185,7 @@
     <ClInclude Include="core\data_action.h" />
     <ClInclude Include="core\data_action_dispatch_context.h" />
     <ClInclude Include="core\data_controller_library.h" />
+    <ClInclude Include="core\data_object_container.h" />
     <ClInclude Include="dialogs\data_properties_dialog.h" />
     <ClInclude Include="models\environment_variable_info.h" />
     <ClInclude Include="models\network_connection_info.h" />
@@ -262,6 +263,7 @@
     <ClCompile Include="core\data_action_dispatch_context.cpp" />
     <ClCompile Include="core\data_controller.cpp" />
     <ClCompile Include="core\data_controller_library.cpp" />
+    <ClCompile Include="core\data_object_container.cpp" />
     <ClCompile Include="core\exporters\exporter_registry.cpp" />
     <ClCompile Include="core\exporters\json_exporter.cpp" />
     <ClCompile Include="core\exporters\plaintext_exporter.cpp" />

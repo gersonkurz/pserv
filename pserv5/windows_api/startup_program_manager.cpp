@@ -2,30 +2,29 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/startup_program_manager.h>
+#include <core/data_object_container.h>
 #include <shlobj.h>
 #include <filesystem>
 
 namespace pserv
 {
 
-    std::vector<DataObject *> StartupProgramManager::EnumerateStartupPrograms()
+    void StartupProgramManager::EnumerateStartupPrograms(DataObjectContainer *doc)
     {
-        std::vector<DataObject *> programs;
-
         // Enumerate registry Run keys (HKLM - System scope)
         EnumerateRegistryRun(HKEY_LOCAL_MACHINE,
             L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
             StartupProgramScope::System,
             StartupProgramType::RegistryRun,
             "HKLM Run",
-            programs);
+            doc);
 
         EnumerateRegistryRun(HKEY_LOCAL_MACHINE,
             L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
             StartupProgramScope::System,
             StartupProgramType::RegistryRunOnce,
             "HKLM RunOnce",
-            programs);
+            doc);
 
         // 32-bit registry on 64-bit Windows
         EnumerateRegistryRun(HKEY_LOCAL_MACHINE,
@@ -33,7 +32,7 @@ namespace pserv
             StartupProgramScope::System,
             StartupProgramType::RegistryRun,
             "HKLM Run (32-bit)",
-            programs);
+            doc);
 
         // Enumerate registry Run keys (HKCU - User scope)
         EnumerateRegistryRun(HKEY_CURRENT_USER,
@@ -41,29 +40,27 @@ namespace pserv
             StartupProgramScope::User,
             StartupProgramType::RegistryRun,
             "HKCU Run",
-            programs);
+            doc);
 
         EnumerateRegistryRun(HKEY_CURRENT_USER,
             L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
             StartupProgramScope::User,
             StartupProgramType::RegistryRunOnce,
             "HKCU RunOnce",
-            programs);
+            doc);
 
         // Enumerate startup folders
         std::wstring commonStartup = GetCommonStartupFolder();
         if (!commonStartup.empty())
         {
-            EnumerateStartupFolder(commonStartup, StartupProgramScope::System, "Common Startup Folder", programs);
+            EnumerateStartupFolder(commonStartup, StartupProgramScope::System, "Common Startup Folder", doc);
         }
 
         std::wstring userStartup = GetUserStartupFolder();
         if (!userStartup.empty())
         {
-            EnumerateStartupFolder(userStartup, StartupProgramScope::User, "User Startup Folder", programs);
+            EnumerateStartupFolder(userStartup, StartupProgramScope::User, "User Startup Folder", doc);
         }
-
-        return programs;
     }
 
     void StartupProgramManager::EnumerateRegistryRun(HKEY hKeyRoot,
@@ -71,7 +68,7 @@ namespace pserv
         StartupProgramScope scope,
         StartupProgramType type,
         const std::string &locationDesc,
-        std::vector<DataObject *> &programs)
+        DataObjectContainer *doc)
     {
         wil::unique_hkey hKey;
         LSTATUS status = RegOpenKeyExW(hKeyRoot, subKeyPath.c_str(), 0, KEY_READ, &hKey);
@@ -115,18 +112,20 @@ namespace pserv
             std::string name = utils::WideToUtf8(valueName);
             std::string command = utils::WideToUtf8(reinterpret_cast<wchar_t *>(valueData));
 
-            auto *program = new StartupProgramInfo(name, command, locationDesc, type, scope, true);
+            const auto stableId{StartupProgramInfo::GetStableID(name, type, scope)};
+            auto program = doc->GetByStableId<StartupProgramInfo>(stableId);
+            if (program == nullptr)
+            {
+                program = doc->Append<StartupProgramInfo>(DBG_NEW StartupProgramInfo{name, command, locationDesc, type, scope, true});
+            }
             program->SetRegistryPath(utils::WideToUtf8(subKeyPath));
             program->SetRegistryValueName(name);
-
-            programs.push_back(program);
         }
     }
 
     void StartupProgramManager::EnumerateStartupFolder(const std::wstring &folderPath,
         StartupProgramScope scope,
-        const std::string &locationDesc,
-        std::vector<DataObject *> &programs)
+        const std::string &locationDesc, DataObjectContainer *doc)
     {
         try
         {
@@ -157,11 +156,14 @@ namespace pserv
                 }
 
                 std::string command = utils::WideToUtf8(targetPath);
-
-                auto *program = new StartupProgramInfo(fileName, command, locationDesc, StartupProgramType::StartupFolder, scope, true);
+                const auto type = StartupProgramType::StartupFolder;
+                const auto stableId{StartupProgramInfo::GetStableID(fileName, type, scope)};
+                auto program = doc->GetByStableId<StartupProgramInfo>(stableId);
+                if (program == nullptr)
+                {
+                    program = doc->Append<StartupProgramInfo>(DBG_NEW StartupProgramInfo{fileName, command, locationDesc, type, scope, true});
+                }
                 program->SetFilePath(utils::WideToUtf8(filePath));
-
-                programs.push_back(program);
             }
         }
         catch (const std::filesystem::filesystem_error &e)

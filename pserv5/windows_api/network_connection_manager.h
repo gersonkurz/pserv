@@ -4,28 +4,29 @@
 
 namespace pserv
 {
+    class DataObjectContainer;
 
-    class NetworkConnectionManager
+    class NetworkConnectionManager final
     {
     public:
         // Enumerate all network connections
-        static std::vector<DataObject *> EnumerateConnections();
+        static void EnumerateConnections(DataObjectContainer *doc);
 
         // Close a TCP connection
         static bool CloseConnection(const NetworkConnectionInfo *connection);
 
     private:
         // Helper to enumerate TCP connections (IPv4)
-        static void EnumerateTcpConnections(std::vector<DataObject *> &connections);
+        static void EnumerateTcpConnections(DataObjectContainer *doc);
 
         // Helper to enumerate TCP connections (IPv6)
-        static void EnumerateTcp6Connections(std::vector<DataObject *> &connections);
+        static void EnumerateTcp6Connections(DataObjectContainer *doc);
 
         // Helper to enumerate UDP connections (IPv4)
-        static void EnumerateUdpConnections(std::vector<DataObject *> &connections);
+        static void EnumerateUdpConnections(DataObjectContainer *doc);
 
         // Helper to enumerate UDP connections (IPv6)
-        static void EnumerateUdp6Connections(std::vector<DataObject *> &connections);
+        static void EnumerateUdp6Connections(DataObjectContainer *doc);
 
         // Helper to get process name from PID
         static std::string GetProcessNameFromPid(DWORD pid);

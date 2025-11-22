@@ -161,7 +161,7 @@ namespace pserv
                         ctx.m_pAsyncOp = nullptr;
                     }
 
-                    ctx.m_pAsyncOp = new AsyncOperation();
+                    ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                     ctx.m_bShowProgressDialog = true;
 
                     ctx.m_pAsyncOp->Start(ctx.m_hWnd,

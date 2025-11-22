@@ -8,9 +8,22 @@
 #include <pserv5.h>
 #include <utils/logging.h>
 #include <utils/string_utils.h>
+#include <crtdbg.h>
+#include <core/data_controller_library.h>
+
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
+    int flag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+    flag |= _CRTDBG_LEAK_CHECK_DF;
+    flag |= _CRTDBG_ALLOC_MEM_DF;
+    _CrtSetDbgFlag(flag);
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+    // Change this to leaking allocation's number to break there
+    _CrtSetBreakAlloc(-1);
+
+
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 

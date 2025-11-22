@@ -1,5 +1,6 @@
 #pragma once
 #include <core/data_object_column.h>
+#include <core/data_object_container.h>
 
 namespace pserv
 {
@@ -40,12 +41,6 @@ namespace pserv
 
     class DataController
     {
-    protected:
-        const std::string m_controllerName;
-        const std::string m_itemName;
-        const std::vector<DataObjectColumn> m_columns;
-        std::vector<DataObject *> m_objects;
-
     public:
         DataController(std::string_view controllerName, std::string itemName, std::vector<DataObjectColumn> &&columns)
             : m_controllerName{std::move(controllerName)},
@@ -62,7 +57,7 @@ namespace pserv
         // Core abstract methods
         virtual void Refresh() = 0;
 
-        const std::vector<DataObject *> &GetDataObjects() const
+        const DataObjectContainer &GetDataObjects() const
         {
             return m_objects;
         }
@@ -128,9 +123,13 @@ namespace pserv
         void Clear();
 
     protected:
+        const std::string m_controllerName;
+        const std::string m_itemName;
+        const std::vector<DataObjectColumn> m_columns;
+        DataObjectContainer m_objects;
+        int m_lastSortColumn{-1};
         bool m_bLoaded{false};
         bool m_bNeedsRefresh{false};
-        int m_lastSortColumn{-1};
         bool m_lastSortAscending{true};
 
     private:

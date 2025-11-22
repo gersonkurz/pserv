@@ -36,7 +36,15 @@ namespace pserv
         {
             return GetProperty(static_cast<int>(EnvironmentVariableProperty::Name));
         }
+        static std::string GetStableID(EnvironmentVariableScope scope, const std::string& name)
+        {
+            return std::format("{}:{}", static_cast<int>(scope), name);
+        }
 
+        std::string GetStableID() const
+        {
+            return GetStableID(m_scope, m_name);
+        }
         // Getters
         const std::string &GetName() const
         {

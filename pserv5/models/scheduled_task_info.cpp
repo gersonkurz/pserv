@@ -5,8 +5,14 @@
 namespace pserv
 {
 
-    ScheduledTaskInfo::ScheduledTaskInfo(std::string name,
-        std::string path,
+    ScheduledTaskInfo::ScheduledTaskInfo(std::string name)
+        : m_name{name},
+          m_bEnabled{},
+          m_state{}
+    {
+    }
+
+    void ScheduledTaskInfo::SetValues(std::string path,
         std::string statusString,
         std::string trigger,
         std::string lastRunTime,
@@ -14,18 +20,17 @@ namespace pserv
         std::string author,
         bool enabled,
         ScheduledTaskState state)
-        : m_name(std::move(name))
-        , m_path(std::move(path))
-        , m_statusString(std::move(statusString))
-        , m_trigger(std::move(trigger))
-        , m_lastRunTime(std::move(lastRunTime))
-        , m_nextRunTime(std::move(nextRunTime))
-        , m_author(std::move(author))
-        , m_bEnabled(enabled)
-        , m_state(state)
-    {
-    }
 
+    {
+        m_path = path;
+        m_statusString = statusString;
+        m_trigger = trigger;
+        m_lastRunTime = lastRunTime;
+        m_nextRunTime = nextRunTime;
+        m_author = author;
+        m_bEnabled = enabled;
+        m_state = state;
+    }
     std::string ScheduledTaskInfo::GetProperty(int propertyId) const
     {
         switch (static_cast<ScheduledTaskProperty>(propertyId))
@@ -79,10 +84,8 @@ namespace pserv
 
         const auto lowerFilter = utils::ToLower(filter);
 
-        return utils::ContainsIgnoreCase(m_name, lowerFilter) ||
-               utils::ContainsIgnoreCase(m_statusString, lowerFilter) ||
-               utils::ContainsIgnoreCase(m_trigger, lowerFilter) ||
-               utils::ContainsIgnoreCase(m_author, lowerFilter);
+        return utils::ContainsIgnoreCase(m_name, lowerFilter) || utils::ContainsIgnoreCase(m_statusString, lowerFilter) ||
+               utils::ContainsIgnoreCase(m_trigger, lowerFilter) || utils::ContainsIgnoreCase(m_author, lowerFilter);
     }
 
     std::string ScheduledTaskInfo::GetEnabledString() const

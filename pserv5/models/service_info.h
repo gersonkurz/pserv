@@ -51,13 +51,25 @@ namespace pserv
         DWORD m_serviceFlags;            // Service flags
 
     public:
-        ServiceInfo(std::string name, std::string displayName, DWORD currentState, DWORD serviceType);
+        ServiceInfo(std::string name);
+        void SetValues(std::string displayName, DWORD currentState, DWORD serviceType);
         ~ServiceInfo() override = default;
 
         // DataObject interface
         std::string GetProperty(int propertyId) const override;
         PropertyValue GetTypedProperty(int propertyId) const override;
         bool MatchesFilter(const std::string &filter) const override;
+
+        static std::string GetStableID(const std::string& name)
+        {
+            return name;
+        }
+
+        std::string GetStableID() const
+        {
+            return GetStableID(m_name);
+        }
+
         std::string GetItemName() const
         {
             return GetProperty(static_cast<int>(ServiceProperty::Name));

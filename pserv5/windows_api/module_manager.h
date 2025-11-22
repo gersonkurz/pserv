@@ -2,13 +2,13 @@
 
 namespace pserv
 {
-    class ModuleInfo;
+    class DataObjectContainer;
 
-    class ModuleManager
+    class ModuleManager final
     {
     public:
         // Enumerates all modules for a given process ID
-        static std::vector<ModuleInfo *> EnumerateModules(uint32_t processId);
+        static void EnumerateModules(DataObjectContainer *doc, uint32_t processId);
 
     private:
         // Helper to get module base name (e.g., "ntdll.dll")

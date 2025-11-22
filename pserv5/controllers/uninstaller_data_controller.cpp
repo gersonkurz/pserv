@@ -30,7 +30,9 @@ namespace pserv
         spdlog::info("Refreshing installed programs...");
         Clear();
 
-        m_objects = UninstallerManager::EnumerateInstalledPrograms();
+        m_objects.StartRefresh();
+        UninstallerManager::EnumerateInstalledPrograms(&m_objects);
+        m_objects.FinishRefresh();
 
         // Re-apply last sort order if any
         if (m_lastSortColumn >= 0)
@@ -38,7 +40,7 @@ namespace pserv
             Sort(m_lastSortColumn, m_lastSortAscending);
         }
 
-        spdlog::info("Refreshed {} installed programs", m_objects.size());
+        spdlog::info("Refreshed {} installed programs", m_objects.GetSize());
         m_bLoaded = true;
     }
 

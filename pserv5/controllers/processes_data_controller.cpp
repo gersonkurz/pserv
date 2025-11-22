@@ -53,7 +53,9 @@ namespace pserv
 
         try
         {
-            m_objects = ProcessManager::EnumerateProcesses();
+            m_objects.StartRefresh();
+            ProcessManager::EnumerateProcesses(&m_objects);
+            m_objects.FinishRefresh();
 
             // Re-apply sort
             if (m_lastSortColumn >= 0)
@@ -61,7 +63,7 @@ namespace pserv
                 Sort(m_lastSortColumn, m_lastSortAscending);
             }
 
-            spdlog::info("Refreshed {} processes", m_objects.size());
+            spdlog::info("Refreshed {} processes", m_objects.GetSize());
             m_bLoaded = true;
         }
         catch (const std::exception &e)

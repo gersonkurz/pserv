@@ -16,7 +16,9 @@ namespace pserv
     class ModuleInfo : public DataObject
     {
     public:
-        ModuleInfo(uint32_t processId, void *baseAddress, uint32_t size, const std::string &name, const std::string &path);
+        ModuleInfo(uint32_t processId, const std::string &name);
+
+        void SetValues(void *baseAddress, uint32_t size, const std::string &path);
 
         // DataObject interface
         std::string GetProperty(int column) const override;
@@ -27,6 +29,15 @@ namespace pserv
             return std::format("{} ({})", GetProperty(static_cast<int>(ModuleProperty::Name)), GetProperty(static_cast<int>(ModuleProperty::ProcessId)));
         }
 
+        static std::string GetStableID(uint32_t processId, const std::string &name)
+        {
+            return std::format("{}:{}", processId, name);
+        }
+
+        std::string GetStableID() const
+        {
+            return GetStableID(m_processId, m_name);
+        }
         // Module-specific getters
         uint32_t GetProcessId() const
         {

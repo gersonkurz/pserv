@@ -23,6 +23,11 @@ namespace pserv
 {
     DataControllerLibrary::~DataControllerLibrary()
     {
+        Clear();
+    }
+
+    void DataControllerLibrary::Clear()
+    {
         for (const auto ptr : dataControllers)
         {
             delete ptr;
@@ -35,16 +40,16 @@ namespace pserv
         // layz initialization
         if (dataControllers.empty())
         {
-            dataControllers.push_back(new ServicesDataController());
-            dataControllers.push_back(new DevicesDataController());
-            dataControllers.push_back(new ProcessesDataController());
-            dataControllers.push_back(new WindowsDataController());
-            dataControllers.push_back(new ModulesDataController());
-            dataControllers.push_back(new UninstallerDataController());
-            dataControllers.push_back(new EnvironmentVariablesDataController());
-            dataControllers.push_back(new StartupProgramsDataController());
-            dataControllers.push_back(new NetworkConnectionsDataController());
-            dataControllers.push_back(new ScheduledTasksDataController());
+            dataControllers.push_back(DBG_NEW ServicesDataController());
+            dataControllers.push_back(DBG_NEW DevicesDataController());
+            dataControllers.push_back(DBG_NEW ProcessesDataController());
+            dataControllers.push_back(DBG_NEW WindowsDataController());
+            dataControllers.push_back(DBG_NEW ModulesDataController());
+            dataControllers.push_back(DBG_NEW UninstallerDataController());
+            dataControllers.push_back(DBG_NEW EnvironmentVariablesDataController());
+            dataControllers.push_back(DBG_NEW StartupProgramsDataController());
+            dataControllers.push_back(DBG_NEW NetworkConnectionsDataController());
+            dataControllers.push_back(DBG_NEW ScheduledTasksDataController());
         }
         return dataControllers;
     }

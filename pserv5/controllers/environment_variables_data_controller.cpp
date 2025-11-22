@@ -24,7 +24,9 @@ namespace pserv
 
         try
         {
-            m_objects = EnvironmentVariableManager::EnumerateEnvironmentVariables();
+            m_objects.StartRefresh();
+            EnvironmentVariableManager::EnumerateEnvironmentVariables(&m_objects);
+            m_objects.FinishRefresh();
 
             // Re-apply last sort order if any
             if (m_lastSortColumn >= 0)
@@ -32,7 +34,7 @@ namespace pserv
                 Sort(m_lastSortColumn, m_lastSortAscending);
             }
 
-            spdlog::info("Successfully refreshed {} environment variables", m_objects.size());
+            spdlog::info("Successfully refreshed {} environment variables", m_objects.GetSize());
             m_bLoaded = true;
         }
         catch (const std::exception &e)

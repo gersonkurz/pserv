@@ -3,6 +3,7 @@
 #include <utils/win32_error.h>
 #include <windows_api/window_manager.h>
 #include <models/window_info.h>
+#include <core/data_object_container.h>
 
 namespace pserv
 {
@@ -10,17 +11,16 @@ namespace pserv
     // Helper struct for EnumWindows callback
     struct EnumContext
     {
-        std::vector<DataObject *> windows;
+        DataObjectContainer* doc;
     };
 
-    std::vector<DataObject *> WindowManager::EnumerateWindows()
+    void WindowManager::EnumerateWindows(DataObjectContainer* doc)
     {
-        EnumContext context;
+        EnumContext context{doc};
         if (!EnumWindows(EnumWindowsProc, reinterpret_cast<LPARAM>(&context)))
         {
             LogWin32Error("EnumWindows");
         }
-        return context.windows;
     }
 
     BOOL CALLBACK WindowManager::EnumWindowsProc(HWND hwnd, LPARAM lParam)
@@ -28,14 +28,20 @@ namespace pserv
         EnumContext *context = reinterpret_cast<EnumContext *>(lParam);
 
         // Get basic info
-        std::string title = GetWindowTextUtf8(hwnd);
+        auto title = GetWindowTextUtf8(hwnd);
         if (title.empty())
         {
             // Skip windows with no title (mimicking legacy behavior/common practice to filter hidden message windows)
             return TRUE;
         }
+        
+        const auto stableId{WindowInfo::GetStableID(hwnd)};
+        auto info = context->doc->GetByStableId<WindowInfo>(stableId);
+        if (info == nullptr)
+        {
+            info = context->doc->Append<WindowInfo>(DBG_NEW WindowInfo{hwnd});
+        }
 
-        auto *info = new WindowInfo(hwnd);
         info->SetTitle(std::move(title));
         info->SetClassName(GetClassNameUtf8(hwnd));
 
@@ -87,8 +93,6 @@ namespace pserv
 
         info->SetDisabled(isDisabled);
         info->SetRunning(isRunning);
-
-        context->windows.push_back(info);
         return TRUE;
     }
 

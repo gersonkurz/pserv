@@ -2,30 +2,24 @@
 
 namespace pserv
 {
+    class DataObjectContainer;
 
-    class ProcessInfo; // Forward declaration
-    class DataObject;
-
-    class ProcessManager
+    namespace ProcessManager
     {
-    public:
-        ProcessManager() = default;
-        ~ProcessManager() = default;
-
         // Enumerate all running processes
         // Returns raw pointers - caller is responsible for cleanup (typically via RefCount/release)
-        static std::vector<DataObject *> EnumerateProcesses();
+        void EnumerateProcesses(DataObjectContainer *doc);
 
         // Terminate a process by ID
         // Returns true on success
-        static bool TerminateProcessById(DWORD pid);
+        bool TerminateProcessById(DWORD pid);
 
         // Set process priority
         // priorityClass: IDLE_PRIORITY_CLASS, NORMAL_PRIORITY_CLASS, etc.
-        static bool SetProcessPriority(DWORD pid, DWORD priorityClass);
+        bool SetProcessPriority(DWORD pid, DWORD priorityClass);
 
         // Get full path for a process ID (helper)
-        static std::string GetProcessPath(DWORD pid);
+        std::string GetProcessPath(DWORD pid);
     };
 
 } // namespace pserv

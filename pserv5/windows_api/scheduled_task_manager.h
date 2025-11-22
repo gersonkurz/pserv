@@ -1,15 +1,16 @@
 #pragma once
-#include <core/data_object.h>
-#include <models/scheduled_task_info.h>
+
 
 namespace pserv
 {
+    class DataObjectContainer;
+    class ScheduledTaskInfo;
 
     class ScheduledTaskManager
     {
     public:
         // Enumerate all scheduled tasks
-        static std::vector<DataObject *> EnumerateTasks();
+        static void EnumerateTasks(DataObjectContainer *doc);
 
         // Enable/disable a task
         static bool SetTaskEnabled(const ScheduledTaskInfo *task, bool enabled);
@@ -23,11 +24,10 @@ namespace pserv
     private:
         // Helper to recursively enumerate tasks from a folder
         static void EnumerateTasksInFolder(ITaskFolder *pFolder,
-            const std::wstring &folderPath,
-            std::vector<DataObject *> &tasks);
+            const std::wstring &folderPath, DataObjectContainer *doc);
 
         // Helper to extract task information
-        static ScheduledTaskInfo *ExtractTaskInfo(IRegisteredTask *pTask, const std::wstring &taskPath);
+        static void ExtractTaskInfo(DataObjectContainer *doc, IRegisteredTask *pTask, const std::wstring &taskPath);
 
         // Helper to format SYSTEMTIME to string
         static std::string FormatSystemTime(const SYSTEMTIME &st);

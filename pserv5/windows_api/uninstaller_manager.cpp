@@ -4,55 +4,24 @@
 #include <utils/win32_error.h>
 #include <windows_api/uninstaller_manager.h>
 #include <models/installed_program_info.h>
+#include <core/data_object_container.h>
 
-namespace
-{
-    std::string GetInstalledProgramInfoGetId(const pserv::InstalledProgramInfo *program)
-    {
-        // A combination of DisplayName and UninstallString should be unique enough
-        return std::format("{}_{}", program->GetDisplayName(), program->GetUninstallString());
-    }
-
-} // namespace
 
 namespace pserv
 {
 
-    std::vector<DataObject *> UninstallerManager::EnumerateInstalledPrograms()
+    void UninstallerManager::EnumerateInstalledPrograms(DataObjectContainer* doc)
     {
-        std::vector<DataObject *> programs;
-        std::set<std::string> uniqueIds; // To store unique IDs and prevent duplicates
-
         // Enumerate from HKEY_LOCAL_MACHINE (64-bit and 32-bit uninstall paths)
-        EnumerateProgramsInKey(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall", programs);
-        EnumerateProgramsInKey(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall", programs);
+        EnumerateProgramsInKey(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall", doc);
+        EnumerateProgramsInKey(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall", doc);
 
         // Enumerate from HKEY_CURRENT_USER
-        EnumerateProgramsInKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall", programs);
-
-        // Filter out duplicates. Programs can appear in multiple locations (e.g., user-specific vs. machine-wide)
-        std::vector<DataObject *> uniquePrograms;
-        for (const auto program : programs)
-        {
-            const auto id = GetInstalledProgramInfoGetId(static_cast<InstalledProgramInfo *>(program));
-            if (uniqueIds.find(id) == uniqueIds.end())
-            {
-                uniqueIds.insert(id);
-                uniquePrograms.push_back(program);
-            }
-            else
-            {
-                // Duplicate, delete it
-                delete program;
-            }
-        }
-
-        return uniquePrograms;
+        EnumerateProgramsInKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall", doc);
     }
 
-    void UninstallerManager::EnumerateProgramsInKey(HKEY hKeyParent, const std::wstring &subKeyPath, std::vector<DataObject *> &programs)
+    void UninstallerManager::EnumerateProgramsInKey(HKEY hKeyParent, const std::wstring &subKeyPath, DataObjectContainer *doc)
     {
-
         wil::unique_hkey hKey;
         LSTATUS status = RegOpenKeyExW(hKeyParent, subKeyPath.c_str(), 0, KEY_READ, &hKey);
         if (status != ERROR_SUCCESS)
@@ -102,17 +71,23 @@ namespace pserv
             // Format size as string for display
             std::string sizeStr = utils::FormatSize(sizeBytes);
 
-            programs.push_back(new InstalledProgramInfo(displayName,
-                GetRegistryStringValue(hSubKey.get(), L"DisplayVersion"),
+            const auto displayVersion = GetRegistryStringValue(hSubKey.get(), L"DisplayVersion");
+            const auto uninstallString = GetRegistryStringValue(hSubKey.get(), L"UninstallString");
+            const auto stableId{InstalledProgramInfo::GetStableID(displayName, displayVersion, uninstallString)};
+            auto ipi = doc->GetByStableId<InstalledProgramInfo>(stableId);
+            if (ipi == nullptr)
+            {
+                ipi = doc->Append<InstalledProgramInfo>(DBG_NEW InstalledProgramInfo{displayName, displayVersion, uninstallString});
+            }
+            ipi->SetValues(
                 GetRegistryStringValue(hSubKey.get(), L"Publisher"),
                 GetRegistryStringValue(hSubKey.get(), L"InstallLocation"),
-                GetRegistryStringValue(hSubKey.get(), L"UninstallString"),
                 GetRegistryStringValue(hSubKey.get(), L"InstallDate"),
                 sizeStr,
                 GetRegistryStringValue(hSubKey.get(), L"Comments"),
                 GetRegistryStringValue(hSubKey.get(), L"HelpLink"),
                 GetRegistryStringValue(hSubKey.get(), L"URLInfoAbout"),
-                sizeBytes));
+                sizeBytes);
         }
     }
 

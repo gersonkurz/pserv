@@ -46,9 +46,20 @@ namespace pserv
             StartupProgramType type,
             StartupProgramScope scope,
             bool enabled);
+
         ~StartupProgramInfo() override = default;
 
         // DataObject interface
+        static std::string GetStableID(const std::string &name, StartupProgramType type, StartupProgramScope scope)
+        {
+            return std::format("{}:{}:{}", name, static_cast<int>(type), static_cast<int>(scope));
+        }
+       
+        std::string GetStableID() const
+        {
+            return GetStableID(m_name, m_type, m_scope);
+        }
+
         std::string GetProperty(int propertyId) const override;
         PropertyValue GetTypedProperty(int propertyId) const override;
         bool MatchesFilter(const std::string &filter) const override;

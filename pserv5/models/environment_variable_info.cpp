@@ -26,7 +26,6 @@ namespace pserv
             return "";
         }
     }
-
     PropertyValue EnvironmentVariableInfo::GetTypedProperty(int propertyId) const
     {
         return PropertyValue{GetProperty(propertyId)};

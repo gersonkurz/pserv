@@ -21,11 +21,11 @@ namespace pserv
     class InstalledProgramInfo : public DataObject
     {
     public:
-        InstalledProgramInfo(std::string displayName,
-            std::string displayVersion,
+        InstalledProgramInfo(std::string displayName, std::string displayVersion, std::string uninstallString);
+
+        void SetValues(
             std::string publisher,
             std::string installLocation,
-            std::string uninstallString,
             std::string installDate,
             std::string estimatedSize,
             std::string comments,
@@ -37,10 +37,22 @@ namespace pserv
         std::string GetProperty(int columnIndex) const override;
         PropertyValue GetTypedProperty(int propertyId) const override;
         bool MatchesFilter(const std::string &filter) const override;
+        
+        static std::string GetStableID(const std::string &displayName, const std::string &displayVersion, const std::string& uninstallString)
+        {
+            return std::format("{}:{}:{}", displayName, displayVersion, uninstallString);
+        }
+
+        std::string GetStableID() const
+        {
+            return GetStableID(m_displayName, m_displayVersion, m_uninstallString);
+        }
+
         std::string GetItemName() const
         {
             return GetProperty(static_cast<int>(ProgramProperty::DisplayName));
         }
+
         // Getters
         const std::string &GetDisplayName() const
         {

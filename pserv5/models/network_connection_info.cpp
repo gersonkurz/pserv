@@ -7,21 +7,27 @@ namespace pserv
 
     NetworkConnectionInfo::NetworkConnectionInfo(NetworkProtocol protocol,
         std::string localAddress,
-        DWORD localPort,
-        std::string remoteAddress,
+        DWORD localPort)
+        : m_protocol{protocol},
+          m_localAddress{std::move(localAddress)},
+          m_localPort{localPort},
+          m_remotePort{},
+          m_state{},
+          m_processId{}
+    {
+    }
+
+    void NetworkConnectionInfo::SetValues(std::string remoteAddress,
         DWORD remotePort,
         TcpState state,
         DWORD processId,
         std::string processName)
-        : m_protocol{protocol},
-          m_localAddress{std::move(localAddress)},
-          m_localPort{localPort},
-          m_remoteAddress{std::move(remoteAddress)},
-          m_remotePort{remotePort},
-          m_state{state},
-          m_processId{processId},
-          m_processName{std::move(processName)}
     {
+        m_remoteAddress = remoteAddress;
+        m_remotePort = remotePort;
+        m_state = state;
+        m_processId = processId;
+        m_processName = processName;
     }
 
     std::string NetworkConnectionInfo::GetProperty(int propertyId) const
@@ -72,10 +78,8 @@ namespace pserv
                utils::ToLower(m_localAddress).find(lowerFilter) != std::string::npos ||
                utils::ToLower(m_remoteAddress).find(lowerFilter) != std::string::npos ||
                utils::ToLower(GetStateString()).find(lowerFilter) != std::string::npos ||
-               utils::ToLower(m_processName).find(lowerFilter) != std::string::npos ||
-               std::to_string(m_localPort).find(filter) != std::string::npos ||
-               std::to_string(m_remotePort).find(filter) != std::string::npos ||
-               std::to_string(m_processId).find(filter) != std::string::npos;
+               utils::ToLower(m_processName).find(lowerFilter) != std::string::npos || std::to_string(m_localPort).find(filter) != std::string::npos ||
+               std::to_string(m_remotePort).find(filter) != std::string::npos || std::to_string(m_processId).find(filter) != std::string::npos;
     }
 
     std::string NetworkConnectionInfo::GetProtocolString() const

@@ -33,36 +33,54 @@ namespace pserv
         {
             return GetProperty(static_cast<int>(WindowProperty::InternalID));
         }
+        
+        // for windows, HWND is stable across the whole desktop
+        static std::string GetStableID(HWND hWnd)
+        {
+            return std::format("{:p}", reinterpret_cast<void *>(hWnd));
+        }
+
+        std::string GetStableID() const
+        {
+            return GetStableID(m_hwnd);
+        }
 
         // Getters
         HWND GetHandle() const
         {
             return m_hwnd;
         }
+
         const std::string &GetTitle() const
         {
             return m_title;
         }
+
         const std::string &GetClassName() const
         {
             return m_className;
         }
+
         DWORD GetProcessId() const
         {
             return m_processId;
         }
+
         DWORD GetThreadId() const
         {
             return m_threadId;
         }
+
         DWORD GetStyle() const
         {
             return m_style;
         }
+
         DWORD GetExStyle() const
         {
             return m_exStyle;
         }
+
         DWORD GetWindowId() const
         {
             return m_windowId;

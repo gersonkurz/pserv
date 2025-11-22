@@ -7,32 +7,39 @@ namespace pserv
 
     InstalledProgramInfo::InstalledProgramInfo(std::string displayName,
         std::string displayVersion,
-        std::string publisher,
-        std::string installLocation,
-        std::string uninstallString,
-        std::string installDate,
-        std::string estimatedSize,
-        std::string comments,
-        std::string helpLink,
-        std::string urlInfoAbout,
-        uint64_t estimatedSizeBytes)
+        std::string uninstallString
+    )
         : m_displayName{std::move(displayName)},
           m_displayVersion{std::move(displayVersion)},
-          m_publisher{std::move(publisher)},
-          m_installLocation{std::move(installLocation)},
-          m_uninstallString{std::move(uninstallString)},
-          m_installDate{std::move(installDate)},
-          m_estimatedSize{std::move(estimatedSize)},
-          m_estimatedSizeBytes{estimatedSizeBytes},
-          m_comments{std::move(comments)},
-          m_helpLink{std::move(helpLink)},
-          m_urlInfoAbout{std::move(urlInfoAbout)}
+          m_uninstallString{std::move(uninstallString)}
     {
         // Set flags for DataObject base class
         SetRunning(false);  // Programs aren't 'running' in the same sense as services/processes
         SetDisabled(false); // Programs aren't 'disabled'
     }
 
+    void InstalledProgramInfo::SetValues(
+        std::string publisher,
+        std::string installLocation,
+        std::string installDate,
+        std::string estimatedSize,
+        std::string comments,
+        std::string helpLink,
+        std::string urlInfoAbout,
+        uint64_t estimatedSizeBytes)
+    {
+        // Set flags for DataObject base class
+        m_publisher = publisher;
+        m_installLocation = installLocation;        
+        m_installDate = installDate;
+        m_estimatedSize = estimatedSize;        
+        m_estimatedSizeBytes = estimatedSizeBytes;        
+        m_comments = comments;
+        m_helpLink = helpLink;
+        m_urlInfoAbout = urlInfoAbout;
+    }
+    
+    
     PropertyValue InstalledProgramInfo::GetTypedProperty(int propertyId) const
     {
         switch (static_cast<ProgramProperty>(propertyId))

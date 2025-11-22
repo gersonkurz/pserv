@@ -11,7 +11,7 @@ namespace pserv
     WindowsDataController::WindowsDataController()
         : DataController{WINDOWS_DATA_CONTROLLER_NAME,
               "Window",
-              {{"InternalID", "InternalID", ColumnDataType::UnsignedInteger},
+              {{"HWND", "HWND", ColumnDataType::UnsignedInteger},
                   {"Title", "Title", ColumnDataType::String},
                   {"Class", "Class", ColumnDataType::String},
                   {"Size", "Size", ColumnDataType::String},
@@ -29,9 +29,11 @@ namespace pserv
     {
         spdlog::info("Refreshing windows...");
 
-        m_objects = WindowManager::EnumerateWindows();
+        m_objects.StartRefresh();
+        WindowManager::EnumerateWindows(&m_objects);
+        m_objects.FinishRefresh();
 
-        spdlog::info("Refreshed {} windows", m_objects.size());
+        spdlog::info("Refreshed {} windows", m_objects.GetSize());
         m_bLoaded = true;
     }
 

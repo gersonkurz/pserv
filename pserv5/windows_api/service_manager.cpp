@@ -3,6 +3,7 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/service_manager.h>
+#include <core/data_object_container.h>
 
 namespace pserv
 {
@@ -46,14 +47,12 @@ namespace pserv
         }
     }
 
-    std::vector<DataObject *> ServiceManager::EnumerateServices(DWORD serviceType)
+    void ServiceManager::EnumerateServices(DataObjectContainer *doc, DWORD serviceType)
     {
-        std::vector<DataObject *> services;
-
         if (!m_hScManager)
         {
             spdlog::warn("Service Control Manager not available");
-            return services;
+            return;
         }
 
         // First call to get required buffer size
@@ -75,7 +74,7 @@ namespace pserv
         if (GetLastError() != ERROR_MORE_DATA)
         {
             LogWin32Error("EnumServicesStatusExW", "size query");
-            return services;
+            return;
         }
 
         // Allocate buffer and enumerate
@@ -94,17 +93,22 @@ namespace pserv
                 nullptr))
         {
             LogWin32Error("EnumServicesStatusExW");
-            return services;
+            return;
         }
 
-        // Convert to ServiceInfo objects
-        services.reserve(servicesReturned);
         for (DWORD i = 0; i < servicesReturned; ++i)
         {
-            auto *info = new ServiceInfo(utils::WideToUtf8(pServices[i].lpServiceName),
-                utils::WideToUtf8(pServices[i].lpDisplayName),
+            const auto serviceName{utils::WideToUtf8(pServices[i].lpServiceName)};
+            const auto stableId{ServiceInfo::GetStableID(serviceName)};
+            auto info = doc->GetByStableId<ServiceInfo>(stableId);
+            if (info == nullptr)
+            {
+                info = doc->Append<ServiceInfo>(DBG_NEW ServiceInfo{serviceName});
+            }
+            info->SetValues(utils::WideToUtf8(pServices[i].lpDisplayName),
                 pServices[i].ServiceStatusProcess.dwCurrentState,
                 pServices[i].ServiceStatusProcess.dwServiceType);
+
             info->SetProcessId(pServices[i].ServiceStatusProcess.dwProcessId);
             info->SetControlsAccepted(pServices[i].ServiceStatusProcess.dwControlsAccepted);
             info->SetWin32ExitCode(pServices[i].ServiceStatusProcess.dwWin32ExitCode);
@@ -189,12 +193,9 @@ namespace pserv
 
                 CloseServiceHandle(hService);
             }
-
-            services.push_back(info);
         }
 
-        spdlog::info("Enumerated {} services", services.size());
-        return services;
+        spdlog::info("Enumerated {} services", doc->GetSize());
     }
 
     bool ServiceManager::StartServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback)

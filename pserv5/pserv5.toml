@@ -38,7 +38,7 @@ SortColumn = -1
 
 [ScheduledTasksProperties]
 ColumnOrder = '0,1,2,3,4,5,6'
-ColumnWidths = '250,180,120,100,80,200,400'
+ColumnWidths = '680,180,120,100,80,200,400'
 SortAscending = true
 SortColumn = -1
 

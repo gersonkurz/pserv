@@ -56,7 +56,7 @@ namespace pserv
                     delete ctx.m_pAsyncOp;
                 }
 
-                ctx.m_pAsyncOp = new AsyncOperation();
+                ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
@@ -122,7 +122,7 @@ namespace pserv
                     delete ctx.m_pAsyncOp;
                 }
 
-                ctx.m_pAsyncOp = new AsyncOperation();
+                ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
@@ -187,7 +187,7 @@ namespace pserv
                     delete ctx.m_pAsyncOp;
                 }
 
-                ctx.m_pAsyncOp = new AsyncOperation();
+                ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
@@ -253,7 +253,7 @@ namespace pserv
                     delete ctx.m_pAsyncOp;
                 }
 
-                ctx.m_pAsyncOp = new AsyncOperation();
+                ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
@@ -318,7 +318,7 @@ namespace pserv
                     delete ctx.m_pAsyncOp;
                 }
 
-                ctx.m_pAsyncOp = new AsyncOperation();
+                ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
@@ -390,7 +390,7 @@ namespace pserv
                     delete ctx.m_pAsyncOp;
                 }
 
-                ctx.m_pAsyncOp = new AsyncOperation();
+                ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
                 DWORD dwStartupAction{m_dwStartupAction};
@@ -620,7 +620,7 @@ namespace pserv
                     delete ctx.m_pAsyncOp;
                 }
 
-                ctx.m_pAsyncOp = new AsyncOperation();
+                ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
@@ -706,7 +706,7 @@ namespace pserv
                     delete ctx.m_pAsyncOp;
                 }
 
-                ctx.m_pAsyncOp = new AsyncOperation();
+                ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,

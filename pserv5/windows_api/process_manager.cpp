@@ -3,6 +3,7 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/process_manager.h>
+#include <core/data_object_container.h>
 
 #pragma comment(lib, "psapi.lib")
 #pragma comment(lib, "advapi32.lib")
@@ -239,15 +240,13 @@ namespace pserv
         return "";
     }
 
-    std::vector<DataObject *> ProcessManager::EnumerateProcesses()
+    void ProcessManager::EnumerateProcesses(DataObjectContainer *doc)
     {
-        std::vector<DataObject *> processes;
-
         wil::unique_handle hSnapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
         if (!hSnapshot)
         {
             LogWin32Error("CreateToolhelp32Snapshot");
-            return processes;
+            return;
         }
 
         PROCESSENTRY32W pe32;
@@ -256,14 +255,20 @@ namespace pserv
         if (!Process32FirstW(hSnapshot.get(), &pe32))
         {
             LogWin32Error("Process32FirstW");
-            return processes;
+            return;
         }
 
         do
         {
             std::string name = utils::WideToUtf8(pe32.szExeFile);
 
-            auto *pProcess = new ProcessInfo(pe32.th32ProcessID, name);
+            const auto stableId{ProcessInfo::GetStableID(pe32.th32ProcessID)};
+            auto pProcess = doc->GetByStableId<ProcessInfo>(stableId);
+            if (pProcess == nullptr)
+            {
+                pProcess = doc->Append<ProcessInfo>(DBG_NEW ProcessInfo{pe32.th32ProcessID, name});
+            }
+
             pProcess->SetParentPid(pe32.th32ParentProcessID);
             pProcess->SetThreadCount(pe32.cntThreads);
 
@@ -323,12 +328,7 @@ namespace pserv
                     pProcess->SetUser("SYSTEM");
                 }
             }
-
-            processes.push_back(pProcess);
-
         } while (Process32NextW(hSnapshot.get(), &pe32));
-
-        return processes;
     }
 
     bool ProcessManager::TerminateProcessById(DWORD pid)

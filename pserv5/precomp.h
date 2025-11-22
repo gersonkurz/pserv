@@ -67,3 +67,24 @@
 #include <rapidjson/stringbuffer.h>
 
 #include <toml++/toml.hpp>
+
+#ifdef _DEBUG
+#define DBG_NEW new (_NORMAL_BLOCK, __FILE__, __LINE__)
+#else
+#define DBG_NEW new
+#endif
+
+// see http://stackoverflow.com/questions/5641427/how-to-make-preprocessor-generate-a-string-for-line-keyword
+#define S(x) #x
+#define S_(x) S(x)
+#define S__LINE__ S_(__LINE__)
+
+// see http://msdn.microsoft.com/de-de/library/b0084kay.aspx
+#define FUNCTION_CONTEXT __FUNCTION__ "[" S__LINE__ "]"
+
+/// This macro can be used on classes that should not enable a copy / move constructor / assignment operator
+#define DECLARE_NON_COPYABLE(__CLASSNAME__) \
+    __CLASSNAME__(const __CLASSNAME__ &) = delete; \
+    __CLASSNAME__ &operator=(const __CLASSNAME__ &) = delete; \
+    __CLASSNAME__(__CLASSNAME__ &&) = delete; \
+    __CLASSNAME__ &operator=(__CLASSNAME__ &&) = delete;

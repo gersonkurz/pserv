@@ -45,9 +45,11 @@ namespace pserv
         {
             // Enumerate services with the configured service type filter
             ServiceManager sm;
-            m_objects = sm.EnumerateServices(m_serviceType);
+            m_objects.StartRefresh();
+            sm.EnumerateServices(&m_objects, m_serviceType);
+            m_objects.FinishRefresh();
 
-            spdlog::info("Successfully refreshed {} services", m_objects.size());
+            spdlog::info("Successfully refreshed {} services", m_objects.GetSize());
 
             // Re-apply last sort order if any
             if (m_lastSortColumn >= 0)

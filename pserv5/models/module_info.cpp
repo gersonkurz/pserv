@@ -6,17 +6,22 @@
 namespace pserv
 {
 
-    ModuleInfo::ModuleInfo(uint32_t processId, void *baseAddress, uint32_t size, const std::string &name, const std::string &path)
+    ModuleInfo::ModuleInfo(uint32_t processId, const std::string &name)
         : m_processId{processId},
-          m_baseAddress{baseAddress},
-          m_size{size},
-          m_name{name},
-          m_path{path}
+          m_baseAddress{nullptr},
+          m_name{name}
     {
         SetRunning(true);
         SetDisabled(false);
     }
 
+    void ModuleInfo::SetValues(void *baseAddress, uint32_t size, const std::string &path)
+    {
+        m_baseAddress = baseAddress;
+        m_size = size;
+        m_path = path;
+    }
+    
     PropertyValue ModuleInfo::GetTypedProperty(int propertyId) const
     {
         switch (static_cast<ModuleProperty>(propertyId))

@@ -1,9 +1,9 @@
 #include "precomp.h"
+#include <core/data_object_container.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/network_connection_manager.h>
 #include <ws2tcpip.h>
-
 
 #pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "ws2_32.lib")
@@ -48,19 +48,15 @@ typedef struct _MIB_UDP6TABLE_OWNER_PID
 namespace pserv
 {
 
-    std::vector<DataObject *> NetworkConnectionManager::EnumerateConnections()
+    void NetworkConnectionManager::EnumerateConnections(DataObjectContainer *doc)
     {
-        std::vector<DataObject *> connections;
-
-        EnumerateTcpConnections(connections);
-        EnumerateTcp6Connections(connections);
-        EnumerateUdpConnections(connections);
-        EnumerateUdp6Connections(connections);
-
-        return connections;
+        EnumerateTcpConnections(doc);
+        EnumerateTcp6Connections(doc);
+        EnumerateUdpConnections(doc);
+        EnumerateUdp6Connections(doc);
     }
 
-    void NetworkConnectionManager::EnumerateTcpConnections(std::vector<DataObject *> &connections)
+    void NetworkConnectionManager::EnumerateTcpConnections(DataObjectContainer *doc)
     {
         DWORD size = 0;
         DWORD result = GetExtendedTcpTable(nullptr, &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0);
@@ -95,19 +91,18 @@ namespace pserv
             DWORD pid = row.dwOwningPid;
             std::string processName = GetProcessNameFromPid(pid);
 
-            connections.push_back(new NetworkConnectionInfo(
-                NetworkProtocol::TCP,
-                localAddr,
-                localPort,
-                remoteAddr,
-                remotePort,
-                state,
-                pid,
-                processName));
+            const auto protocol = NetworkProtocol::TCP;
+            const auto stableId{NetworkConnectionInfo::GetStableID(protocol, localAddr, localPort)};
+            auto nci = doc->GetByStableId<NetworkConnectionInfo>(stableId);
+            if (nci == nullptr)
+            {
+                nci = doc->Append<NetworkConnectionInfo>(DBG_NEW NetworkConnectionInfo{protocol, localAddr, localPort});
+            }
+            nci->SetValues(remoteAddr, remotePort, state, pid, processName);
         }
     }
 
-    void NetworkConnectionManager::EnumerateTcp6Connections(std::vector<DataObject *> &connections)
+    void NetworkConnectionManager::EnumerateTcp6Connections(DataObjectContainer *doc)
     {
         DWORD size = 0;
         DWORD result = GetExtendedTcpTable(nullptr, &size, FALSE, AF_INET6, TCP_TABLE_OWNER_PID_ALL, 0);
@@ -142,19 +137,18 @@ namespace pserv
             DWORD pid = row.dwOwningPid;
             std::string processName = GetProcessNameFromPid(pid);
 
-            connections.push_back(new NetworkConnectionInfo(
-                NetworkProtocol::TCPv6,
-                localAddr,
-                localPort,
-                remoteAddr,
-                remotePort,
-                state,
-                pid,
-                processName));
+            const auto protocol = NetworkProtocol::TCPv6;
+            const auto stableId{NetworkConnectionInfo::GetStableID(protocol, localAddr, localPort)};
+            auto nci = doc->GetByStableId<NetworkConnectionInfo>(stableId);
+            if (nci == nullptr)
+            {
+                nci = doc->Append<NetworkConnectionInfo>(DBG_NEW NetworkConnectionInfo{protocol, localAddr, localPort});
+            }
+            nci->SetValues(remoteAddr, remotePort, state, pid, processName);
         }
     }
 
-    void NetworkConnectionManager::EnumerateUdpConnections(std::vector<DataObject *> &connections)
+    void NetworkConnectionManager::EnumerateUdpConnections(DataObjectContainer *doc)
     {
         DWORD size = 0;
         DWORD result = GetExtendedUdpTable(nullptr, &size, FALSE, AF_INET, UDP_TABLE_OWNER_PID, 0);
@@ -186,19 +180,18 @@ namespace pserv
             std::string processName = GetProcessNameFromPid(pid);
 
             // UDP has no remote endpoint or state
-            connections.push_back(new NetworkConnectionInfo(
-                NetworkProtocol::UDP,
-                localAddr,
-                localPort,
-                "*",
-                0,
-                TcpState::Closed, // Not applicable for UDP
-                pid,
-                processName));
+            const auto protocol = NetworkProtocol::UDP;
+            const auto stableId{NetworkConnectionInfo::GetStableID(protocol, localAddr, localPort)};
+            auto nci = doc->GetByStableId<NetworkConnectionInfo>(stableId);
+            if (nci == nullptr)
+            {
+                nci = doc->Append<NetworkConnectionInfo>(DBG_NEW NetworkConnectionInfo{protocol, localAddr, localPort});
+            }
+            nci->SetValues("*", 0, TcpState::Closed, pid, processName);
         }
     }
 
-    void NetworkConnectionManager::EnumerateUdp6Connections(std::vector<DataObject *> &connections)
+    void NetworkConnectionManager::EnumerateUdp6Connections(DataObjectContainer *doc)
     {
         DWORD size = 0;
         DWORD result = GetExtendedUdpTable(nullptr, &size, FALSE, AF_INET6, UDP_TABLE_OWNER_PID, 0);
@@ -229,16 +222,14 @@ namespace pserv
             DWORD pid = row.dwOwningPid;
             std::string processName = GetProcessNameFromPid(pid);
 
-            // UDP has no remote endpoint or state
-            connections.push_back(new NetworkConnectionInfo(
-                NetworkProtocol::UDPv6,
-                localAddr,
-                localPort,
-                "*",
-                0,
-                TcpState::Closed, // Not applicable for UDP
-                pid,
-                processName));
+            const auto protocol = NetworkProtocol::UDPv6;
+            const auto stableId{NetworkConnectionInfo::GetStableID(protocol, localAddr, localPort)};
+            auto nci = doc->GetByStableId<NetworkConnectionInfo>(stableId);
+            if (nci == nullptr)
+            {
+                nci = doc->Append<NetworkConnectionInfo>(DBG_NEW NetworkConnectionInfo{protocol, localAddr, localPort});
+            }
+            nci->SetValues("*", 0, TcpState::Closed, pid, processName);
         }
     }
 

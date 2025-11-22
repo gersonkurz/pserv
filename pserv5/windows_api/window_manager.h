@@ -2,13 +2,13 @@
 
 namespace pserv
 {
-    class DataObject;
+    class DataObjectContainer;
 
-    class WindowManager
+    class WindowManager final
     {
     public:
         // Enumerates all top-level windows
-        static std::vector<DataObject *> EnumerateWindows();
+        static void EnumerateWindows(DataObjectContainer* doc);
 
         // Window actions
         static bool ShowWindow(HWND hwnd, int nCmdShow);

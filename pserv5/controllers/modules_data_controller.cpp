@@ -26,21 +26,18 @@ namespace pserv
         spdlog::info("Refreshing modules...");
         Clear();
 
-        // Enumerate all processes to get their modules
-        auto processes = ProcessManager::EnumerateProcesses();
-        for (const auto proc : processes)
+        // Enumerate all processes to get their modules. Actually, this is more tricky than it seems, because
+        // m_objects creates BOTH modules AND processes. 
+        DataObjectContainer processes;
+        ProcessManager::EnumerateProcesses(&processes);
+        m_objects.StartRefresh();
+        for (auto proc : processes)
         {
             // Enumerate modules for this process
-            const auto processModules{ModuleManager::EnumerateModules(static_cast<ProcessInfo *>(proc)->GetPid())};
-
-            // Add to our main list
-            m_objects.insert(m_objects.end(), processModules.begin(), processModules.end());
-
-            // Modules are owned by this controller now, so delete process info object.
-            delete proc;
+            ModuleManager::EnumerateModules(&m_objects, static_cast<ProcessInfo*>(proc)->GetPid());
         }
-        spdlog::info("Refreshed {} modules from {} processes", m_objects.size(), processes.size());
-        processes.clear(); // Clear the vector of invalidated pointers
+        m_objects.FinishRefresh();
+        spdlog::info("Refreshed {} modules from {} processes", m_objects.GetSize(), processes.GetSize());
         m_bLoaded = true;
     }
 

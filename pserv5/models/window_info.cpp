@@ -37,12 +37,13 @@ namespace pserv
         }
     }
 
+
     std::string WindowInfo::GetProperty(int propertyId) const
     {
         switch (static_cast<WindowProperty>(propertyId))
         {
         case WindowProperty::InternalID:
-            return std::format("{:08X}", reinterpret_cast<uintptr_t>(m_hwnd)); // Legacy format often just 32-bit hex part, but we'll show what fits
+            return std::format("{:p}", reinterpret_cast<void*>(m_hwnd));
         case WindowProperty::Title:
             return m_title;
         case WindowProperty::Class:

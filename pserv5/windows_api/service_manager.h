@@ -2,8 +2,7 @@
 
 namespace pserv
 {
-
-    class DataObject; // Forward declaration
+    class DataObjectContainer;
 
     class ServiceManager
     {
@@ -17,7 +16,7 @@ namespace pserv
         // Enumerate all services on the local machine
         // Returns raw pointers - caller is responsible for cleanup
         // serviceType: filter by service type (default = all types)
-        std::vector<DataObject *> EnumerateServices(DWORD serviceType = SERVICE_WIN32 | SERVICE_DRIVER);
+        void EnumerateServices(DataObjectContainer *doc, DWORD serviceType = SERVICE_WIN32 | SERVICE_DRIVER);
 
         // Start a service and wait for it to reach running state
         // progressCallback is called periodically with progress (0.0-1.0) and status message

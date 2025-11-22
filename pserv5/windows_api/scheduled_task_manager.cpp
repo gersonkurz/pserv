@@ -4,6 +4,8 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/scheduled_task_manager.h>
+#include <core/data_object_container.h>
+#include <models/scheduled_task_info.h>
 
 #pragma comment(lib, "taskschd.lib")
 #pragma comment(lib, "comsupp.lib")
@@ -11,10 +13,8 @@
 namespace pserv
 {
 
-    std::vector<DataObject *> ScheduledTaskManager::EnumerateTasks()
+    void ScheduledTaskManager::EnumerateTasks(DataObjectContainer* doc)
     {
-        std::vector<DataObject *> tasks;
-
         // Initialize COM
         HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
         bool bComInitialized = SUCCEEDED(hr);
@@ -22,7 +22,7 @@ namespace pserv
         if (!bComInitialized && hr != RPC_E_CHANGED_MODE)
         {
             LogWin32ErrorCode("CoInitializeEx", hr, "initializing COM for Task Scheduler");
-            return tasks;
+            return;
         }
         else
         {
@@ -35,7 +35,7 @@ namespace pserv
                 LogWin32ErrorCode("CoCreateInstance(TaskScheduler)", hr, "creating task service");
                 if (bComInitialized)
                     CoUninitialize();
-                return tasks;
+                return;
             }
 
             // Connect to the Task Scheduler service
@@ -45,7 +45,7 @@ namespace pserv
                 LogWin32ErrorCode("ITaskService::Connect", hr, "connecting to task scheduler");
                 if (bComInitialized)
                     CoUninitialize();
-                return tasks;
+                return;
             }
 
             // Get the root folder
@@ -56,20 +56,20 @@ namespace pserv
                 LogWin32ErrorCode("ITaskService::GetFolder", hr, "getting root folder");
                 if (bComInitialized)
                     CoUninitialize();
-                return tasks;
+                return;
             }
 
             // Recursively enumerate all tasks
-            EnumerateTasksInFolder(pRootFolder.get(), L"\\", tasks);
+            EnumerateTasksInFolder(pRootFolder.get(), L"\\", doc);
         }
 
         if (bComInitialized)
             CoUninitialize();
 
-        return tasks;
+        return;
     }
 
-    void ScheduledTaskManager::EnumerateTasksInFolder(ITaskFolder *pFolder, const std::wstring &folderPath, std::vector<DataObject *> &tasks)
+    void ScheduledTaskManager::EnumerateTasksInFolder(ITaskFolder *pFolder, const std::wstring &folderPath, DataObjectContainer* doc)
     {
         if (!pFolder)
             return;
@@ -98,11 +98,7 @@ namespace pserv
                                 taskPath += L"\\";
                             taskPath += taskName;
 
-                            ScheduledTaskInfo *taskInfo = ExtractTaskInfo(pTask.get(), taskPath);
-                            if (taskInfo)
-                            {
-                                tasks.push_back(taskInfo);
-                            }
+                            ExtractTaskInfo(doc, pTask.get(), taskPath);
 
                             SysFreeString(taskName);
                         }
@@ -135,7 +131,7 @@ namespace pserv
                                 subFolderPath += L"\\";
                             subFolderPath += subFolderName;
 
-                            EnumerateTasksInFolder(pSubFolder.get(), subFolderPath, tasks);
+                            EnumerateTasksInFolder(pSubFolder.get(), subFolderPath, doc);
 
                             SysFreeString(subFolderName);
                         }
@@ -145,10 +141,10 @@ namespace pserv
         }
     }
 
-    ScheduledTaskInfo *ScheduledTaskManager::ExtractTaskInfo(IRegisteredTask *pTask, const std::wstring &taskPath)
+    void ScheduledTaskManager::ExtractTaskInfo(DataObjectContainer *doc, IRegisteredTask *pTask, const std::wstring &taskPath)
     {
         if (!pTask)
-            return nullptr;
+            return;
 
         std::string name = utils::WideToUtf8(taskPath);
         std::string path = name;
@@ -252,7 +248,13 @@ namespace pserv
             name = name.substr(lastSlash + 1);
         }
 
-        return new ScheduledTaskInfo(name, path, statusString, trigger, lastRunTime, nextRunTime, author, enabled, state);
+        const auto stableId{ScheduledTaskInfo::GetStableID(name)};
+        auto sti = doc->GetByStableId<ScheduledTaskInfo>(stableId);
+        if (sti == nullptr)
+        {
+            sti = doc->Append<ScheduledTaskInfo>(DBG_NEW ScheduledTaskInfo{name});
+        }
+        sti->SetValues(path, statusString, trigger, lastRunTime, nextRunTime, author, enabled, state);
     }
 
     std::string ScheduledTaskManager::FormatSystemTime(const SYSTEMTIME &st)

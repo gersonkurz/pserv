@@ -5,13 +5,10 @@
 namespace pserv
 {
 
-    ServiceInfo::ServiceInfo(std::string name, std::string displayName, DWORD currentState, DWORD serviceType)
+    ServiceInfo::ServiceInfo(std::string name)
         : m_name{std::move(name)},
-          m_displayName{std::move(displayName)},
-          m_currentState{currentState},
           m_startType{},
           m_processId{},
-          m_serviceType(serviceType),
           m_controlsAccepted{},
           m_errorControl{},
           m_tagId{},
@@ -21,7 +18,14 @@ namespace pserv
           m_waitHint{},
           m_serviceFlags{}
     {
+    }
+
+    void ServiceInfo::SetValues(std::string displayName, DWORD currentState, DWORD serviceType)
+    {
         // Update running state based on service state
+        m_displayName = displayName;
+        m_currentState = currentState;        
+        m_serviceType = serviceType;
         SetRunning(m_currentState == SERVICE_RUNNING);
     }
 

@@ -38,7 +38,8 @@ namespace pserv
         ScheduledTaskState m_state;
 
     public:
-        ScheduledTaskInfo(std::string name,
+        ScheduledTaskInfo(std::string name);
+        void SetValues(
             std::string path,
             std::string statusString,
             std::string trigger,
@@ -50,6 +51,17 @@ namespace pserv
         ~ScheduledTaskInfo() override = default;
 
         // DataObject interface
+
+        static std::string GetStableID(const std::string &name)
+        {
+            return name;
+        }
+
+        std::string GetStableID() const
+        {
+            return GetStableID(m_name);
+        }
+
         std::string GetProperty(int propertyId) const override;
         PropertyValue GetTypedProperty(int propertyId) const override;
         bool MatchesFilter(const std::string &filter) const override;
@@ -68,7 +80,6 @@ namespace pserv
         const std::string &GetAuthor() const { return m_author; }
         bool IsEnabled() const { return m_bEnabled; }
         ScheduledTaskState GetState() const { return m_state; }
-
         std::string GetEnabledString() const;
     };
 

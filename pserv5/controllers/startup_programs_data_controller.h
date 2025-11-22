@@ -9,6 +9,8 @@ namespace pserv
     {
     public:
         StartupProgramsDataController();
+
+    private:
         ~StartupProgramsDataController() override = default;
 
         void Refresh() override;

@@ -4,12 +4,13 @@
 
 namespace pserv
 {
+    class DataObjectContainer;
 
-    class StartupProgramManager
+    class StartupProgramManager final
     {
     public:
         // Enumerate all startup programs
-        static std::vector<DataObject *> EnumerateStartupPrograms();
+        static void EnumerateStartupPrograms(DataObjectContainer *doc);
 
         // Enable/disable registry startup items (by renaming registry value)
         static bool SetEnabled(StartupProgramInfo *program, bool enabled);
@@ -24,13 +25,11 @@ namespace pserv
             StartupProgramScope scope,
             StartupProgramType type,
             const std::string &locationDesc,
-            std::vector<DataObject *> &programs);
+            DataObjectContainer *doc);
 
         // Helper to enumerate from startup folders
-        static void EnumerateStartupFolder(const std::wstring &folderPath,
-            StartupProgramScope scope,
-            const std::string &locationDesc,
-            std::vector<DataObject *> &programs);
+        static void EnumerateStartupFolder(
+            const std::wstring &folderPath, StartupProgramScope scope, const std::string &locationDesc, DataObjectContainer *doc);
 
         // Helper to get special folder paths
         static std::wstring GetCommonStartupFolder();

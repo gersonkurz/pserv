@@ -9,6 +9,8 @@ namespace pserv
     class DataObject : public RefCountImpl
     {
     private:
+        friend class DataObjectContainer;
+        uint64_t m_LastSeenGeneration{0};
         bool m_bIsRunning{false};
         bool m_bIsDisabled{false};
 

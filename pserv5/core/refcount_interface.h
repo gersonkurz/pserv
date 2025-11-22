@@ -11,8 +11,9 @@
 
 namespace pserv
 {
-    struct IRefCounted
+    class IRefCounted
     {
+    public:
         IRefCounted() = default; // Default constructor
         virtual ~IRefCounted() = default;
 
@@ -25,7 +26,7 @@ namespace pserv
         /// @brief Increment the reference count.
         /// This method should be called when a new reference to the object is created.
         /// It is expected to be thread-safe.
-        virtual void retain(REFCOUNT_DEBUG_SPEC) const = 0;
+        virtual void Retain(REFCOUNT_DEBUG_SPEC) const = 0;
 
         /// @brief Decrement the reference count.
         /// This method should be called when a reference to the object is no longer needed.
@@ -33,12 +34,16 @@ namespace pserv
         /// It is expected to be thread-safe.
         /// @note After calling this method, the object should not be used anymore.
         /// @note If the object is deleted, it should not call any methods on itself after this point.
-        virtual void release(REFCOUNT_DEBUG_SPEC) const = 0;
+        virtual void Release(REFCOUNT_DEBUG_SPEC) const = 0;
 
         /// @brief Clear the internal state of the object.
         /// This method is intended to reset the internal state of the object without deleting it.
         /// It can be used to free resources or reset data. It does NOT touch the reference count.
-        virtual void clear() = 0;
+        virtual void Clear() = 0;
+
+        /// @brief Get a stable identifier for the object.
+        /// This is used so that we can update objects previously created instead of creating them anew.
+        virtual std::string GetStableID() const = 0;
     };
 
     template <typename T> class RefCounted : public T
@@ -49,16 +54,16 @@ namespace pserv
         {
         }
 
-        void retain(REFCOUNT_DEBUG_SPEC) const override final
+        void Retain(REFCOUNT_DEBUG_SPEC) const override final
         {
             ++m_refCount;
         }
-        void release(REFCOUNT_DEBUG_SPEC) const override final
+        void Release(REFCOUNT_DEBUG_SPEC) const override final
         {
             if (--m_refCount == 0)
                 delete this;
         }
-        void clear() override
+        void Clear() override
         {
         } // Often unused in non-UI objects
 
@@ -74,18 +79,18 @@ namespace pserv
         {
         }
 
-        void retain(REFCOUNT_DEBUG_SPEC) const override final
+        void Retain(REFCOUNT_DEBUG_SPEC) const override final
         {
             ++m_refCount;
         }
 
-        void release(REFCOUNT_DEBUG_SPEC) const override final
+        void Release(REFCOUNT_DEBUG_SPEC) const override final
         {
             if (--m_refCount == 0)
                 delete this;
         }
 
-        void clear() override
+        void Clear() override
         {
         } // Often unused in non-UI objects
 

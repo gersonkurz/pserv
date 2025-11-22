@@ -26,7 +26,9 @@ namespace pserv
 
         try
         {
-            m_objects = StartupProgramManager::EnumerateStartupPrograms();
+            m_objects.StartRefresh();
+            StartupProgramManager::EnumerateStartupPrograms(&m_objects);
+            m_objects.FinishRefresh();
 
             // Re-apply last sort order if any
             if (m_lastSortColumn >= 0)
@@ -34,7 +36,7 @@ namespace pserv
                 Sort(m_lastSortColumn, m_lastSortAscending);
             }
 
-            spdlog::info("Successfully refreshed {} startup programs", m_objects.size());
+            spdlog::info("Successfully refreshed {} startup programs", m_objects.GetSize());
             m_bLoaded = true;
         }
         catch (const std::exception &e)

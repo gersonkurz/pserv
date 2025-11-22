@@ -56,7 +56,8 @@ namespace pserv
     public:
         NetworkConnectionInfo(NetworkProtocol protocol,
             std::string localAddress,
-            DWORD localPort,
+            DWORD localPort);
+        void SetValues(
             std::string remoteAddress,
             DWORD remotePort,
             TcpState state,
@@ -65,6 +66,16 @@ namespace pserv
         ~NetworkConnectionInfo() override = default;
 
         // DataObject interface
+        static std::string GetStableID(NetworkProtocol protocol, const std::string& localAddress, DWORD localPort)
+        {
+            return std::format("{}:{}:{}", static_cast<int>(protocol), localAddress, std::to_string(localPort));
+        }
+
+        std::string GetStableID() const
+        {
+            return GetStableID(m_protocol, m_localAddress, m_localPort);
+        }
+
         std::string GetProperty(int propertyId) const override;
         PropertyValue GetTypedProperty(int propertyId) const override;
         bool MatchesFilter(const std::string &filter) const override;
