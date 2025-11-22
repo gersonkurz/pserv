@@ -63,6 +63,18 @@ namespace pserv
                 TypedValue<std::string> theme{this, "Theme", "Dark"};       // Dark, Light, or Classic
             } application{this};
 
+            struct AutoRefreshSettings : public Section
+            {
+                AutoRefreshSettings(Section *pParent)
+                    : Section{pParent, "AutoRefresh"}
+                {
+                }
+                TypedValue<bool> enabled{this, "Enabled", false};
+                TypedValue<int32_t> intervalMs{this, "IntervalMs", 2000}; // 1-10 seconds
+                TypedValue<bool> pauseDuringActions{this, "PauseDuringActions", true};
+                TypedValue<bool> pauseDuringEdits{this, "PauseDuringEdits", true};
+            } autoRefresh{this};
+
             DisplayTable *getSectionFor(const std::string &name);
 
         private:
