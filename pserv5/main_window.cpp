@@ -1206,9 +1206,11 @@ namespace pserv
                                     m_dispatchContext.m_selectedObjects.erase(
                                         std::remove(m_dispatchContext.m_selectedObjects.begin(), m_dispatchContext.m_selectedObjects.end(), dataObject),
                                         m_dispatchContext.m_selectedObjects.end());
+                                    dataObject->Release(REFCOUNT_DEBUG_ARGS);
                                 }
                                 else
                                 {
+                                    dataObject->Retain(REFCOUNT_DEBUG_ARGS);
                                     m_dispatchContext.m_selectedObjects.push_back(dataObject);
                                 }
                                 m_lastClickedObject = dataObject;
@@ -1223,6 +1225,10 @@ namespace pserv
                                 if (lastIt != filteredDataObjects.end() && currentIt != filteredDataObjects.end())
                                 {
                                     // Clear selection first
+                                    for (auto *obj : m_dispatchContext.m_selectedObjects)
+                                    {
+                                        obj->Release(REFCOUNT_DEBUG_ARGS);
+                                    }
                                     m_dispatchContext.m_selectedObjects.clear();
 
                                     // Select range
@@ -1231,6 +1237,7 @@ namespace pserv
 
                                     for (auto it = start; it <= end; ++it)
                                     {
+                                        (*it)->Retain(REFCOUNT_DEBUG_ARGS);
                                         m_dispatchContext.m_selectedObjects.push_back(*it);
                                     }
                                 }
@@ -1238,7 +1245,12 @@ namespace pserv
                             else
                             {
                                 // Normal click: clear selection and select only this one
+                                for (auto *obj : m_dispatchContext.m_selectedObjects)
+                                {
+                                    obj->Release(REFCOUNT_DEBUG_ARGS);
+                                }
                                 m_dispatchContext.m_selectedObjects.clear();
+                                dataObject->Retain(REFCOUNT_DEBUG_ARGS);
                                 m_dispatchContext.m_selectedObjects.push_back(dataObject);
                                 m_lastClickedObject = dataObject;
                             }
@@ -1258,7 +1270,12 @@ namespace pserv
                             // If right-clicked on non-selected item, select only that one
                             if (!isSelected)
                             {
+                                for (auto *obj : m_dispatchContext.m_selectedObjects)
+                                {
+                                    obj->Release(REFCOUNT_DEBUG_ARGS);
+                                }
                                 m_dispatchContext.m_selectedObjects.clear();
+                                dataObject->Retain(REFCOUNT_DEBUG_ARGS);
                                 m_dispatchContext.m_selectedObjects.push_back(dataObject);
                             }
 
