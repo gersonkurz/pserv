@@ -1,5 +1,6 @@
 #include "precomp.h"
 #include <controllers/devices_data_controller.h>
+#include <controllers/environment_variables_data_controller.h>
 #include <controllers/modules_data_controller.h>
 #include <controllers/processes_data_controller.h>
 #include <controllers/services_data_controller.h>
@@ -37,6 +38,7 @@ namespace pserv
             dataControllers.push_back(new WindowsDataController());
             dataControllers.push_back(new ModulesDataController());
             dataControllers.push_back(new UninstallerDataController());
+            dataControllers.push_back(new EnvironmentVariablesDataController());
         }
         return dataControllers;
     }

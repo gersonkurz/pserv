@@ -168,16 +168,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="actions\common_actions.h" />
+    <ClInclude Include="actions\environment_variable_actions.h" />
     <ClInclude Include="actions\module_actions.h" />
     <ClInclude Include="actions\process_actions.h" />
     <ClInclude Include="actions\service_actions.h" />
     <ClInclude Include="actions\uninstaller_actions.h" />
     <ClInclude Include="actions\window_actions.h" />
     <ClInclude Include="controllers\devices_data_controller.h" />
+    <ClInclude Include="controllers\environment_variables_data_controller.h" />
     <ClInclude Include="core\data_action.h" />
     <ClInclude Include="core\data_action_dispatch_context.h" />
     <ClInclude Include="core\data_controller_library.h" />
     <ClInclude Include="dialogs\data_properties_dialog.h" />
+    <ClInclude Include="models\environment_variable_info.h" />
     <ClInclude Include="precomp.h" />
     <ClInclude Include="pserv5.h" />
     <ClInclude Include="Resource.h" />
@@ -205,6 +208,7 @@
     <ClInclude Include="core\exporters\plaintext_exporter.h" />
     <ClInclude Include="controllers\services_data_controller.h" />
     <ClInclude Include="models\service_info.h" />
+    <ClInclude Include="windows_api\environment_variable_manager.h" />
     <ClInclude Include="windows_api\service_manager.h" />
     <ClInclude Include="models\module_info.h" />
     <ClInclude Include="windows_api\module_manager.h" />
@@ -229,11 +233,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="actions\common_actions.cpp" />
+    <ClCompile Include="actions\environment_variable_actions.cpp" />
     <ClCompile Include="actions\module_actions.cpp" />
     <ClCompile Include="actions\process_actions.cpp" />
     <ClCompile Include="actions\service_actions.cpp" />
     <ClCompile Include="actions\uninstaller_actions.cpp" />
     <ClCompile Include="actions\window_actions.cpp" />
+    <ClCompile Include="controllers\environment_variables_data_controller.cpp" />
     <ClCompile Include="core\data_action.cpp" />
     <ClCompile Include="core\data_action_dispatch_context.cpp" />
     <ClCompile Include="core\data_controller.cpp" />
@@ -242,6 +248,7 @@
     <ClCompile Include="core\exporters\json_exporter.cpp" />
     <ClCompile Include="core\exporters\plaintext_exporter.cpp" />
     <ClCompile Include="dialogs\data_properties_dialog.cpp" />
+    <ClCompile Include="models\environment_variable_info.cpp" />
     <ClCompile Include="precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -255,6 +262,7 @@
     <ClCompile Include="core\async_operation.cpp" />
     <ClCompile Include="controllers\services_data_controller.cpp" />
     <ClCompile Include="models\service_info.cpp" />
+    <ClCompile Include="windows_api\environment_variable_manager.cpp" />
     <ClCompile Include="windows_api\service_manager.cpp" />
     <ClCompile Include="models\process_info.cpp" />
     <ClCompile Include="windows_api\process_manager.cpp" />

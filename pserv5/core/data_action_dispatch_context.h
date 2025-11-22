@@ -17,5 +17,6 @@ namespace pserv
         std::vector<DataObject *> m_selectedObjects; // Selected services for multi-select
         DataController *m_pController{nullptr};      // Owning data controller
         bool m_bShowProgressDialog{false};
+        bool m_bNeedsRefresh{false};
     };
 } // namespace pserv

@@ -69,6 +69,7 @@ namespace pserv
             DisplayTable windowsTable{this, "WindowsTable"};
             DisplayTable modulesTable{this, "ModulesTable"};
             DisplayTable uninstallerTable{this, "UninstallerTable"};
+            DisplayTable environmentVariablesTable{this, "EnvironmentVariablesTable"};
 
             DisplayTable *getSectionFor(const std::string &name)
             {
@@ -95,6 +96,10 @@ namespace pserv
                 if (name == "Uninstaller")
                 {
                     return &uninstallerTable;
+                }
+                if (name == "Environment Variables")
+                {
+                    return &environmentVariablesTable;
                 }
                 return nullptr;
             }
