@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include <models/process_info.h>
 #include <utils/string_utils.h>
+#include <utils/win32_error.h>
 #include <windows_api/process_manager.h>
 
 #pragma comment(lib, "psapi.lib")
@@ -15,6 +16,7 @@ namespace pserv
         wil::unique_handle hToken;
         if (!OpenProcessToken(hProcess, TOKEN_QUERY, &hToken))
         {
+            LogWin32Error("OpenProcessToken");
             return "";
         }
 
@@ -22,12 +24,14 @@ namespace pserv
         GetTokenInformation(hToken.get(), TokenUser, nullptr, 0, &len);
         if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
         {
+            LogWin32Error("GetTokenInformation", "size query");
             return "";
         }
 
         auto buffer = std::make_unique<BYTE[]>(len);
         if (!GetTokenInformation(hToken.get(), TokenUser, buffer.get(), len, &len))
         {
+            LogWin32Error("GetTokenInformation");
             return "";
         }
 
@@ -40,12 +44,13 @@ namespace pserv
         DWORD domainLen = sizeof(domain) / sizeof(wchar_t);
         SID_NAME_USE type;
 
-        if (LookupAccountSidW(nullptr, user->User.Sid, name, &nameLen, domain, &domainLen, &type))
+        if (!LookupAccountSidW(nullptr, user->User.Sid, name, &nameLen, domain, &domainLen, &type))
         {
-            return std::format("{}\\{}", utils::WideToUtf8(domain), utils::WideToUtf8(name));
+            LogWin32Error("LookupAccountSidW");
+            return "";
         }
 
-        return "";
+        return std::format("{}\\{}", utils::WideToUtf8(domain), utils::WideToUtf8(name));
     }
 
     // Helper to get path
@@ -53,11 +58,12 @@ namespace pserv
     {
         char buffer[MAX_PATH];
         DWORD size = MAX_PATH;
-        if (QueryFullProcessImageNameA(hProcess, 0, buffer, &size))
+        if (!QueryFullProcessImageNameA(hProcess, 0, buffer, &size))
         {
-            return std::string(buffer, size);
+            LogWin32Error("QueryFullProcessImageNameA");
+            return "";
         }
-        return "";
+        return std::string(buffer, size);
     }
 
 // Definitions for PEB access
@@ -114,11 +120,18 @@ namespace pserv
     {
         static auto NtQueryInformationProcess = (pfnNtQueryInformationProcess)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "NtQueryInformationProcess");
         if (!NtQueryInformationProcess)
+        {
+            spdlog::error("NtQueryInformationProcess not found in ntdll.dll");
             return "";
+        }
 
         // Determine if target is 32-bit (WoW64) or 64-bit
         BOOL bIsWow64 = FALSE;
-        IsWow64Process(hProcess, &bIsWow64);
+        if (!IsWow64Process(hProcess, &bIsWow64))
+        {
+            LogWin32Error("IsWow64Process");
+            return "";
+        }
 
         // We are a 64-bit process (pserv5)
 
@@ -129,40 +142,53 @@ namespace pserv
             // NtQueryInformationProcess with ProcessWow64Information returns the PEB address.
 
             ULONG_PTR peb32Address = 0;
-            if (NT_SUCCESS(NtQueryInformationProcess(hProcess, ProcessWow64Information, &peb32Address, sizeof(peb32Address), nullptr)) && peb32Address != 0)
+            NTSTATUS status = NtQueryInformationProcess(hProcess, ProcessWow64Information, &peb32Address, sizeof(peb32Address), nullptr);
+            if (!NT_SUCCESS(status))
+            {
+                spdlog::error("NtQueryInformationProcess(ProcessWow64Information) failed: NTSTATUS 0x{:08X}", static_cast<DWORD>(status));
+                return "";
+            }
+
+            if (peb32Address != 0)
             {
                 // Read ProcessParameters address from PEB32
                 // PEB32 offset 0x10 is ProcessParameters (pointer)
 
                 DWORD32 processParameters32 = 0;
-                if (ReadProcessMemory(hProcess, (PVOID)((char *)peb32Address + 0x10), &processParameters32, sizeof(processParameters32), nullptr))
+                if (!ReadProcessMemory(hProcess, (PVOID)((char *)peb32Address + 0x10), &processParameters32, sizeof(processParameters32), nullptr))
                 {
+                    LogWin32Error("ReadProcessMemory", "PEB32 ProcessParameters");
+                    return "";
+                }
 
-                    // Read CommandLine UNICODE_STRING32 from ProcessParameters32
-                    // RTL_USER_PROCESS_PARAMETERS32 offset 0x40 is CommandLine
+                // Read CommandLine UNICODE_STRING32 from ProcessParameters32
+                // RTL_USER_PROCESS_PARAMETERS32 offset 0x40 is CommandLine
 
-                    struct
+                struct
+                {
+                    USHORT Length;
+                    USHORT MaximumLength;
+                    DWORD32 Buffer;
+                } cmdLineString32;
+
+                // Cast DWORD32 to DWORD64 before casting to void* to avoid warning
+                if (!ReadProcessMemory(
+                        hProcess, (PVOID)(DWORD64)((char *)(DWORD64)processParameters32 + 0x40), &cmdLineString32, sizeof(cmdLineString32), nullptr))
+                {
+                    LogWin32Error("ReadProcessMemory", "PEB32 CommandLine string");
+                    return "";
+                }
+
+                if (cmdLineString32.Length > 0 && cmdLineString32.Buffer != 0)
+                {
+                    std::vector<wchar_t> buffer(cmdLineString32.Length / 2 + 1);
+                    if (!ReadProcessMemory(hProcess, (PVOID)(DWORD64)cmdLineString32.Buffer, buffer.data(), cmdLineString32.Length, nullptr))
                     {
-                        USHORT Length;
-                        USHORT MaximumLength;
-                        DWORD32 Buffer;
-                    } cmdLineString32;
-
-                    // Cast DWORD32 to DWORD64 before casting to void* to avoid warning
-                    if (ReadProcessMemory(
-                            hProcess, (PVOID)(DWORD64)((char *)(DWORD64)processParameters32 + 0x40), &cmdLineString32, sizeof(cmdLineString32), nullptr))
-                    {
-
-                        if (cmdLineString32.Length > 0 && cmdLineString32.Buffer != 0)
-                        {
-                            std::vector<wchar_t> buffer(cmdLineString32.Length / 2 + 1);
-                            if (ReadProcessMemory(hProcess, (PVOID)(DWORD64)cmdLineString32.Buffer, buffer.data(), cmdLineString32.Length, nullptr))
-                            {
-                                buffer[cmdLineString32.Length / 2] = L'\0';
-                                return utils::WideToUtf8(buffer.data());
-                            }
-                        }
+                        LogWin32Error("ReadProcessMemory", "PEB32 CommandLine buffer");
+                        return "";
                     }
+                    buffer[cmdLineString32.Length / 2] = L'\0';
+                    return utils::WideToUtf8(buffer.data());
                 }
             }
         }
@@ -170,34 +196,43 @@ namespace pserv
         {
             // Target is 64-bit
             PROCESS_BASIC_INFORMATION64 pbi = {0};
-            if (NT_SUCCESS(NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), nullptr)))
+            NTSTATUS status = NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), nullptr);
+            if (!NT_SUCCESS(status))
             {
+                spdlog::error("NtQueryInformationProcess(ProcessBasicInformation) failed: NTSTATUS 0x{:08X}", static_cast<DWORD>(status));
+                return "";
+            }
 
-                // Read ProcessParameters address from PEB
-                // PEB64 offset 0x20 is ProcessParameters
+            // Read ProcessParameters address from PEB
+            // PEB64 offset 0x20 is ProcessParameters
 
-                DWORD64 processParameters = 0;
-                if (ReadProcessMemory(hProcess, (PVOID)(pbi.PebBaseAddress + 0x20), &processParameters, sizeof(processParameters), nullptr))
+            DWORD64 processParameters = 0;
+            if (!ReadProcessMemory(hProcess, (PVOID)(pbi.PebBaseAddress + 0x20), &processParameters, sizeof(processParameters), nullptr))
+            {
+                LogWin32Error("ReadProcessMemory", "PEB64 ProcessParameters");
+                return "";
+            }
+
+            // Read CommandLine UNICODE_STRING from ProcessParameters
+            // RTL_USER_PROCESS_PARAMETERS64 offset 0x70 is CommandLine
+
+            UNICODE_STRING_T cmdLineString;
+            if (!ReadProcessMemory(hProcess, (PVOID)(processParameters + 0x70), &cmdLineString, sizeof(cmdLineString), nullptr))
+            {
+                LogWin32Error("ReadProcessMemory", "PEB64 CommandLine string");
+                return "";
+            }
+
+            if (cmdLineString.Length > 0 && cmdLineString.Buffer != nullptr)
+            {
+                std::vector<wchar_t> buffer(cmdLineString.Length / 2 + 1);
+                if (!ReadProcessMemory(hProcess, cmdLineString.Buffer, buffer.data(), cmdLineString.Length, nullptr))
                 {
-
-                    // Read CommandLine UNICODE_STRING from ProcessParameters
-                    // RTL_USER_PROCESS_PARAMETERS64 offset 0x70 is CommandLine
-
-                    UNICODE_STRING_T cmdLineString;
-                    if (ReadProcessMemory(hProcess, (PVOID)(processParameters + 0x70), &cmdLineString, sizeof(cmdLineString), nullptr))
-                    {
-
-                        if (cmdLineString.Length > 0 && cmdLineString.Buffer != nullptr)
-                        {
-                            std::vector<wchar_t> buffer(cmdLineString.Length / 2 + 1);
-                            if (ReadProcessMemory(hProcess, cmdLineString.Buffer, buffer.data(), cmdLineString.Length, nullptr))
-                            {
-                                buffer[cmdLineString.Length / 2] = L'\0';
-                                return utils::WideToUtf8(buffer.data());
-                            }
-                        }
-                    }
+                    LogWin32Error("ReadProcessMemory", "PEB64 CommandLine buffer");
+                    return "";
                 }
+                buffer[cmdLineString.Length / 2] = L'\0';
+                return utils::WideToUtf8(buffer.data());
             }
         }
 
@@ -211,7 +246,7 @@ namespace pserv
         wil::unique_handle hSnapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
         if (!hSnapshot)
         {
-            spdlog::error("CreateToolhelp32Snapshot failed: {}", GetLastError());
+            LogWin32Error("CreateToolhelp32Snapshot");
             return processes;
         }
 
@@ -220,7 +255,7 @@ namespace pserv
 
         if (!Process32FirstW(hSnapshot.get(), &pe32))
         {
-            spdlog::error("Process32FirstW failed: {}", GetLastError());
+            LogWin32Error("Process32FirstW");
             return processes;
         }
 
@@ -244,13 +279,21 @@ namespace pserv
                 pProcess->SetCommandLine(GetProcessCommandLine(hProcess.get()));
 
                 DWORD handleCount = 0;
-                if (GetProcessHandleCount(hProcess.get(), &handleCount))
+                if (!GetProcessHandleCount(hProcess.get(), &handleCount))
+                {
+                    LogWin32Error("GetProcessHandleCount", "PID {}", pe32.th32ProcessID);
+                }
+                else
                 {
                     pProcess->SetHandleCount(handleCount);
                 }
 
                 PROCESS_MEMORY_COUNTERS_EX pmc;
-                if (GetProcessMemoryInfo(hProcess.get(), (PROCESS_MEMORY_COUNTERS *)&pmc, sizeof(pmc)))
+                if (!GetProcessMemoryInfo(hProcess.get(), (PROCESS_MEMORY_COUNTERS *)&pmc, sizeof(pmc)))
+                {
+                    LogWin32Error("GetProcessMemoryInfo", "PID {}", pe32.th32ProcessID);
+                }
+                else
                 {
                     pProcess->SetWorkingSetSize(pmc.WorkingSetSize);
                     pProcess->SetPeakWorkingSetSize(pmc.PeakWorkingSetSize);
@@ -261,14 +304,20 @@ namespace pserv
                 }
 
                 FILETIME creation, exit, kernel, user;
-                if (GetProcessTimes(hProcess.get(), &creation, &exit, &kernel, &user))
+                if (!GetProcessTimes(hProcess.get(), &creation, &exit, &kernel, &user))
+                {
+                    LogWin32Error("GetProcessTimes", "PID {}", pe32.th32ProcessID);
+                }
+                else
                 {
                     pProcess->SetTimes(creation, exit, kernel, user);
                 }
             }
             else
             {
-                // Access denied or system process
+                // Access denied or system process - common, log at debug level
+                LogExpectedWin32Error("OpenProcess", "PID {} during enumeration", pe32.th32ProcessID);
+
                 if (pe32.th32ProcessID == 0 || pe32.th32ProcessID == 4)
                 {
                     pProcess->SetUser("SYSTEM");
@@ -287,13 +336,13 @@ namespace pserv
         wil::unique_handle hProcess(OpenProcess(PROCESS_TERMINATE, FALSE, pid));
         if (!hProcess)
         {
-            spdlog::error("OpenProcess for terminate failed: {}", GetLastError());
+            LogWin32Error("OpenProcess", "PID {} for terminate", pid);
             return false;
         }
 
         if (!TerminateProcess(hProcess.get(), 1))
         {
-            spdlog::error("TerminateProcess failed: {}", GetLastError());
+            LogWin32Error("TerminateProcess", "PID {}", pid);
             return false;
         }
         return true;
@@ -304,13 +353,13 @@ namespace pserv
         wil::unique_handle hProcess(OpenProcess(PROCESS_SET_INFORMATION, FALSE, pid));
         if (!hProcess)
         {
-            spdlog::error("OpenProcess for SetPriority failed: {}", GetLastError());
+            LogWin32Error("OpenProcess", "PID {} for SetPriority", pid);
             return false;
         }
 
         if (!SetPriorityClass(hProcess.get(), priorityClass))
         {
-            spdlog::error("SetPriorityClass failed: {}", GetLastError());
+            LogWin32Error("SetPriorityClass", "PID {}", pid);
             return false;
         }
         return true;
@@ -319,11 +368,12 @@ namespace pserv
     std::string ProcessManager::GetProcessPath(DWORD pid)
     {
         wil::unique_handle hProcess(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid));
-        if (hProcess)
+        if (!hProcess)
         {
-            return GetProcessPathInternal(hProcess.get());
+            LogWin32Error("OpenProcess", "PID {} for GetProcessPath", pid);
+            return "";
         }
-        return "";
+        return GetProcessPathInternal(hProcess.get());
     }
 
 } // namespace pserv

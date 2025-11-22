@@ -104,7 +104,8 @@ namespace pserv
                             std::ofstream outFile{filePath, std::ios::binary};
                             if (!outFile)
                             {
-                                throw std::runtime_error("Failed to open file for writing");
+                                spdlog::error("Failed to open file for writing");
+                                return;
                             }
 
                             outFile.write(exportedData.c_str(), exportedData.size());
@@ -112,7 +113,8 @@ namespace pserv
 
                             if (outFile.fail())
                             {
-                                throw std::runtime_error("Failed to write data to file");
+                                spdlog::error("Failed to write data to file");
+                                return;
                             }
 
                             spdlog::info("Exported {} object(s) as {} to file: {}",

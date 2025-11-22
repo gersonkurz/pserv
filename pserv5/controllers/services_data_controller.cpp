@@ -60,7 +60,6 @@ namespace pserv
         catch (const std::exception &e)
         {
             spdlog::error("Failed to refresh services: {}", e.what());
-            throw;
         }
     }
 

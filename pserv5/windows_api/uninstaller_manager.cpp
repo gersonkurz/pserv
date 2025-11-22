@@ -57,7 +57,7 @@ namespace pserv
         LSTATUS status = RegOpenKeyExW(hKeyParent, subKeyPath.c_str(), 0, KEY_READ, &hKey);
         if (status != ERROR_SUCCESS)
         {
-            spdlog::trace("Failed to open registry key {}: {}", pserv::utils::WideToUtf8(subKeyPath), pserv::utils::GetWin32ErrorMessage(status));
+            LogExpectedWin32ErrorCode("RegOpenKeyExW", status, "key '{}'", pserv::utils::WideToUtf8(subKeyPath));
             return;
         }
 
@@ -76,8 +76,7 @@ namespace pserv
             }
             if (status != ERROR_SUCCESS)
             {
-                spdlog::warn(
-                    "Failed to enumerate registry subkeys under {}: {}", pserv::utils::WideToUtf8(subKeyPath), pserv::utils::GetWin32ErrorMessage(status));
+                LogWin32ErrorCode("RegEnumKeyExW", status, "under key '{}'", pserv::utils::WideToUtf8(subKeyPath));
                 break;
             }
 
@@ -85,7 +84,7 @@ namespace pserv
             status = RegOpenKeyExW(hKey.get(), subKeyName, 0, KEY_READ, &hSubKey);
             if (status != ERROR_SUCCESS)
             {
-                spdlog::warn("Failed to open registry subkey {}: {}", pserv::utils::WideToUtf8(subKeyName), pserv::utils::GetWin32ErrorMessage(status));
+                LogWin32ErrorCode("RegOpenKeyExW", status, "subkey '{}'", pserv::utils::WideToUtf8(subKeyName));
                 continue;
             }
 
@@ -125,8 +124,19 @@ namespace pserv
 
         // Query size first
         LSTATUS status = RegQueryValueExW(hKey, valueName.c_str(), nullptr, &type, nullptr, &dataSize);
-        if (status != ERROR_SUCCESS || (type != REG_SZ && type != REG_EXPAND_SZ))
+        if (status != ERROR_SUCCESS)
         {
+            // Missing values are common/expected for optional registry entries
+            if (status != ERROR_FILE_NOT_FOUND)
+            {
+                LogWin32ErrorCode("RegQueryValueExW", status, "value '{}'", pserv::utils::WideToUtf8(valueName));
+            }
+            return "";
+        }
+
+        if (type != REG_SZ && type != REG_EXPAND_SZ)
+        {
+            // Wrong type, not an error but not what we want
             return "";
         }
 
@@ -134,6 +144,7 @@ namespace pserv
         status = RegQueryValueExW(hKey, valueName.c_str(), nullptr, nullptr, reinterpret_cast<LPBYTE>(data.data()), &dataSize);
         if (status != ERROR_SUCCESS)
         {
+            LogWin32ErrorCode("RegQueryValueExW", status, "value '{}'", pserv::utils::WideToUtf8(valueName));
             return "";
         }
 
@@ -150,8 +161,19 @@ namespace pserv
         DWORD dataSize = sizeof(DWORD);
 
         LSTATUS status = RegQueryValueExW(hKey, valueName.c_str(), nullptr, &type, reinterpret_cast<LPBYTE>(&value), &dataSize);
-        if (status != ERROR_SUCCESS || type != REG_DWORD)
+        if (status != ERROR_SUCCESS)
         {
+            // Missing values are common/expected for optional registry entries
+            if (status != ERROR_FILE_NOT_FOUND)
+            {
+                LogWin32ErrorCode("RegQueryValueExW", status, "DWORD value '{}'", pserv::utils::WideToUtf8(valueName));
+            }
+            return 0;
+        }
+
+        if (type != REG_DWORD)
+        {
+            // Wrong type, not an error but not what we want
             return 0;
         }
 

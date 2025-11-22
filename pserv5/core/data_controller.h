@@ -66,9 +66,6 @@ namespace pserv
         // Generic sort implementation using column metadata and GetTypedProperty()
         void Sort(int columnIndex, bool ascending);
 
-        // Common export/copy functionality
-        void DispatchCommonAction(int action, DataActionDispatchContext &context);
-
         // Property editing transaction methods
         virtual void BeginPropertyEdits(DataObject *obj)
         {

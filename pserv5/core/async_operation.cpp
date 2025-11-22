@@ -1,5 +1,6 @@
 #include "precomp.h"
 #include <core/async_operation.h>
+#include <utils/win32_error.h>
 
 namespace pserv
 {
@@ -65,7 +66,10 @@ namespace pserv
                 // Notify completion on UI thread
                 if (m_hWnd)
                 {
-                    PostMessage(m_hWnd, WM_ASYNC_OPERATION_COMPLETE, 0, 0);
+                    if (!PostMessage(m_hWnd, WM_ASYNC_OPERATION_COMPLETE, 0, 0))
+                    {
+                        LogWin32Error("PostMessage", "WM_ASYNC_OPERATION_COMPLETE to HWND {:#x}", reinterpret_cast<uintptr_t>(m_hWnd));
+                    }
                 }
             });
     }

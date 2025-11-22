@@ -1,5 +1,6 @@
 #include "precomp.h"
 #include <utils/string_utils.h>
+#include <utils/win32_error.h>
 #include <windows_api/window_manager.h>
 #include <models/window_info.h>
 
@@ -15,7 +16,10 @@ namespace pserv
     std::vector<DataObject *> WindowManager::EnumerateWindows()
     {
         EnumContext context;
-        EnumWindows(EnumWindowsProc, reinterpret_cast<LPARAM>(&context));
+        if (!EnumWindows(EnumWindowsProc, reinterpret_cast<LPARAM>(&context)))
+        {
+            LogWin32Error("EnumWindows");
+        }
         return context.windows;
     }
 
@@ -37,7 +41,11 @@ namespace pserv
 
         // Rect
         RECT r;
-        if (GetWindowRect(hwnd, &r))
+        if (!GetWindowRect(hwnd, &r))
+        {
+            LogExpectedWin32Error("GetWindowRect", "HWND {:#x}", reinterpret_cast<uintptr_t>(hwnd));
+        }
+        else
         {
             info->SetRect(r);
         }
@@ -86,13 +94,21 @@ namespace pserv
 
     bool WindowManager::ShowWindow(HWND hwnd, int nCmdShow)
     {
-        return ::ShowWindow(hwnd, nCmdShow) != 0;
+        BOOL result = ::ShowWindow(hwnd, nCmdShow);
+        // ShowWindow returns previous visibility state, not error status
+        // No error logging needed - return value indicates state, not success
+        return result != 0;
     }
 
     bool WindowManager::CloseWindow(HWND hwnd)
     {
         // Send WM_CLOSE instead of just CloseWindow (which minimizes)
-        return ::PostMessageW(hwnd, WM_CLOSE, 0, 0) != 0;
+        if (!::PostMessageW(hwnd, WM_CLOSE, 0, 0))
+        {
+            LogWin32Error("PostMessageW(WM_CLOSE)", "HWND {:#x}", reinterpret_cast<uintptr_t>(hwnd));
+            return false;
+        }
+        return true;
     }
 
     bool WindowManager::BringToFront(HWND hwnd)
@@ -101,17 +117,31 @@ namespace pserv
         {
             ::ShowWindow(hwnd, SW_RESTORE);
         }
-        return ::SetForegroundWindow(hwnd) != 0;
+
+        if (!::SetForegroundWindow(hwnd))
+        {
+            LogWin32Error("SetForegroundWindow", "HWND {:#x}", reinterpret_cast<uintptr_t>(hwnd));
+            return false;
+        }
+        return true;
     }
 
     std::string WindowManager::GetWindowTextUtf8(HWND hwnd)
     {
         int len = ::GetWindowTextLengthW(hwnd);
         if (len <= 0)
+        {
+            // Zero length is valid (empty title), don't log
             return "";
+        }
 
         std::vector<wchar_t> buf(len + 1);
-        ::GetWindowTextW(hwnd, buf.data(), len + 1);
+        int result = ::GetWindowTextW(hwnd, buf.data(), len + 1);
+        if (result == 0 && len > 0)
+        {
+            LogExpectedWin32Error("GetWindowTextW", "HWND {:#x}", reinterpret_cast<uintptr_t>(hwnd));
+            return "";
+        }
         return utils::WideToUtf8(buf.data());
     }
 
@@ -119,7 +149,10 @@ namespace pserv
     {
         wchar_t buf[256];
         if (::GetClassNameW(hwnd, buf, 256) == 0)
+        {
+            LogExpectedWin32Error("GetClassNameW", "HWND {:#x}", reinterpret_cast<uintptr_t>(hwnd));
             return "";
+        }
         return utils::WideToUtf8(buf);
     }
 
@@ -127,25 +160,32 @@ namespace pserv
     {
         std::string name;
         HANDLE hProcess = ::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-        if (hProcess)
+        if (!hProcess)
         {
-            wchar_t buf[MAX_PATH];
-            DWORD size = MAX_PATH;
-            if (QueryFullProcessImageNameW(hProcess, 0, buf, &size))
-            {
-                // Extract just filename
-                wchar_t *filePart = wcsrchr(buf, L'\\');
-                if (filePart)
-                {
-                    name = utils::WideToUtf8(filePart + 1);
-                }
-                else
-                {
-                    name = utils::WideToUtf8(buf);
-                }
-            }
-            ::CloseHandle(hProcess);
+            LogExpectedWin32Error("OpenProcess", "PID {} for window process name", pid);
+            return name;
         }
+
+        wchar_t buf[MAX_PATH];
+        DWORD size = MAX_PATH;
+        if (!QueryFullProcessImageNameW(hProcess, 0, buf, &size))
+        {
+            LogExpectedWin32Error("QueryFullProcessImageNameW", "PID {}", pid);
+        }
+        else
+        {
+            // Extract just filename
+            wchar_t *filePart = wcsrchr(buf, L'\\');
+            if (filePart)
+            {
+                name = utils::WideToUtf8(filePart + 1);
+            }
+            else
+            {
+                name = utils::WideToUtf8(buf);
+            }
+        }
+        ::CloseHandle(hProcess);
         return name;
     }
 

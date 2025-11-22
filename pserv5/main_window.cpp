@@ -60,7 +60,7 @@ namespace pserv
 
         if (!RegisterClassExW(&wcex))
         {
-            spdlog::error("Failed to register window class");
+            LogWin32Error("RegisterClassExW");
             return false;
         }
 
@@ -88,7 +88,7 @@ namespace pserv
 
         if (!m_hWnd)
         {
-            spdlog::error("Failed to create window");
+            LogWin32Error("CreateWindowW");
             return false;
         }
 
@@ -122,7 +122,7 @@ namespace pserv
         {
             // Default to a neutral blue if we can't get the accent color
             m_accentColor = RGB(0, 120, 212);
-            spdlog::warn("Failed to get Windows accent color, using default");
+            LogWin32ErrorCode("DwmGetColorizationColor", hr);
         }
 
         // Load active tab from settings
@@ -293,7 +293,7 @@ namespace pserv
 
         if (FAILED(hr))
         {
-            spdlog::error("D3D11CreateDeviceAndSwapChain failed: {:#x}", static_cast<unsigned int>(hr));
+            LogWin32ErrorCode("D3D11CreateDeviceAndSwapChain", hr);
             return false;
         }
 
@@ -313,10 +313,17 @@ namespace pserv
     void MainWindow::CreateRenderTarget()
     {
         Microsoft::WRL::ComPtr<ID3D11Texture2D> pBackBuffer;
-        m_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
-        if (pBackBuffer)
+        HRESULT hr = m_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+        if (FAILED(hr))
         {
-            m_pDevice->CreateRenderTargetView(pBackBuffer.Get(), nullptr, &m_pRenderTargetView);
+            LogWin32ErrorCode("IDXGISwapChain::GetBuffer", hr);
+            return;
+        }
+
+        hr = m_pDevice->CreateRenderTargetView(pBackBuffer.Get(), nullptr, &m_pRenderTargetView);
+        if (FAILED(hr))
+        {
+            LogWin32ErrorCode("ID3D11Device::CreateRenderTargetView", hr);
         }
     }
 
@@ -410,7 +417,7 @@ namespace pserv
         wchar_t windowsDir[MAX_PATH];
         if (GetWindowsDirectoryW(windowsDir, MAX_PATH) == 0)
         {
-            spdlog::warn("GetWindowsDirectory failed, using default font");
+            LogWin32Error("GetWindowsDirectoryW");
             io.Fonts->AddFontDefault();
         }
         else
@@ -487,13 +494,18 @@ namespace pserv
 
         if (!hBitmap)
         {
-            spdlog::error("Failed to load splash bitmap resource: {}", GetLastError());
+            LogWin32Error("LoadImageW", "splash bitmap resource");
             return false;
         }
 
         // Get bitmap dimensions
         BITMAP bmp;
-        GetObject(hBitmap, sizeof(BITMAP), &bmp);
+        if (!GetObject(hBitmap, sizeof(BITMAP), &bmp))
+        {
+            LogWin32Error("GetObject", "splash bitmap");
+            DeleteObject(hBitmap);
+            return false;
+        }
         m_splashWidth = bmp.bmWidth;
         m_splashHeight = bmp.bmHeight;
 
@@ -508,7 +520,20 @@ namespace pserv
 
         std::vector<uint8_t> pixels(bmp.bmWidth * bmp.bmHeight * 4);
         HDC hdc = GetDC(nullptr);
-        GetDIBits(hdc, hBitmap, 0, bmp.bmHeight, pixels.data(), &bmi, DIB_RGB_COLORS);
+        if (!hdc)
+        {
+            LogWin32Error("GetDC");
+            DeleteObject(hBitmap);
+            return false;
+        }
+
+        if (!GetDIBits(hdc, hBitmap, 0, bmp.bmHeight, pixels.data(), &bmi, DIB_RGB_COLORS))
+        {
+            LogWin32Error("GetDIBits", "splash bitmap");
+            ReleaseDC(nullptr, hdc);
+            DeleteObject(hBitmap);
+            return false;
+        }
         ReleaseDC(nullptr, hdc);
         DeleteObject(hBitmap);
 
@@ -538,7 +563,7 @@ namespace pserv
         HRESULT hr = m_pDevice->CreateTexture2D(&texDesc, &initData, &pTexture);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to create splash texture: 0x{:08X}", hr);
+            LogWin32ErrorCode("ID3D11Device::CreateTexture2D", hr, "splash texture");
             return false;
         }
 
@@ -551,7 +576,7 @@ namespace pserv
         hr = m_pDevice->CreateShaderResourceView(pTexture.Get(), &srvDesc, &m_pSplashTexture);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to create splash shader resource view: 0x{:08X}", hr);
+            LogWin32ErrorCode("ID3D11Device::CreateShaderResourceView", hr, "splash texture");
             return false;
         }
 
@@ -1518,11 +1543,12 @@ namespace pserv
 
         WINDOWPLACEMENT wp{};
         wp.length = sizeof(WINDOWPLACEMENT);
-        if (GetWindowPlacement(m_hWnd, &wp))
+        if (!GetWindowPlacement(m_hWnd, &wp))
         {
-            return wp.showCmd == SW_SHOWMAXIMIZED;
+            LogWin32Error("GetWindowPlacement");
+            return false;
         }
-        return false;
+        return wp.showCmd == SW_SHOWMAXIMIZED;
     }
 
     void MainWindow::RenderTitleBar()
@@ -1740,7 +1766,12 @@ namespace pserv
 
                 if (ImGui::MenuItem("Documentation"))
                 {
-                    ShellExecuteW(nullptr, L"open", L"http://p-nand-q.com/download/pserv_cpl/index.html", nullptr, nullptr, SW_SHOWNORMAL);
+                    HINSTANCE result = ShellExecuteW(nullptr, L"open", L"http://p-nand-q.com/download/pserv_cpl/index.html", nullptr, nullptr, SW_SHOWNORMAL);
+                    if (reinterpret_cast<INT_PTR>(result) <= 32)
+                    {
+                        // ShellExecute returns a value <= 32 on error
+                        LogWin32Error("ShellExecuteW", "documentation URL");
+                    }
                 }
 
                 ImGui::Separator();

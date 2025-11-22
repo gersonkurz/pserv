@@ -27,7 +27,7 @@ namespace pserv
         DWORD result = ::GetModuleBaseNameW(hProcess, hModule, wName.data(), static_cast<DWORD>(wName.size()));
         if (result == 0)
         {
-            spdlog::warn("GetModuleBaseNameW failed for module {:#x}: {}", reinterpret_cast<uintptr_t>(hModule), pserv::utils::GetLastWin32ErrorMessage());
+            LogWin32Error("GetModuleBaseNameW", "module {:#x}", reinterpret_cast<uintptr_t>(hModule));
             return "";
         }
         wName.resize(result);
@@ -41,7 +41,7 @@ namespace pserv
         DWORD result = ::GetModuleFileNameExW(hProcess, hModule, wPath.data(), static_cast<DWORD>(wPath.size()));
         if (result == 0)
         {
-            spdlog::warn("GetModuleFileNameExW failed for module {:#x}: {}", reinterpret_cast<uintptr_t>(hModule), pserv::utils::GetLastWin32ErrorMessage());
+            LogWin32Error("GetModuleFileNameExW", "module {:#x}", reinterpret_cast<uintptr_t>(hModule));
             return "";
         }
         wPath.resize(result);
@@ -52,11 +52,11 @@ namespace pserv
     {
         std::vector<ModuleInfo *> modules;
 
-        wil::unique_handle hProcess(OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId));
+        wil::unique_handle hProcess{OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId)};
         if (!hProcess)
         {
-            // Common for system processes or elevated processes. Just log as debug/trace.
-            spdlog::trace("Failed to open process {}: {}", processId, pserv::utils::GetLastWin32ErrorMessage());
+            // Common for system processes or elevated processes. Just log as debug.
+            LogExpectedWin32Error("OpenProcess", "process {}", processId);
             return modules;
         }
 
@@ -65,7 +65,7 @@ namespace pserv
 
         if (!::EnumProcessModules(hProcess.get(), hModules.data(), static_cast<DWORD>(hModules.size()) * sizeof(HMODULE), &cbNeeded))
         {
-            spdlog::warn("EnumProcessModules failed for process {}: {}", processId, pserv::utils::GetLastWin32ErrorMessage());
+            LogWin32Error("EnumProcessModules", "process {}", processId);
             return modules;
         }
 
@@ -79,10 +79,7 @@ namespace pserv
             DWORD pathResult = ::GetModuleFileNameExW(hProcess.get(), hModule, wPath.data(), static_cast<DWORD>(wPath.size()));
             if (pathResult == 0)
             {
-                spdlog::warn("GetModuleFileNameExW failed for module {:#x} in process {}: {}",
-                    reinterpret_cast<uintptr_t>(hModule),
-                    processId,
-                    pserv::utils::GetLastWin32ErrorMessage());
+                LogWin32Error("GetModuleFileNameExW", "module {:#x} in process {}", reinterpret_cast<uintptr_t>(hModule), processId);
                 continue;
             }
             wPath.resize(pathResult);
@@ -123,10 +120,7 @@ namespace pserv
                 }
                 else
                 {
-                    spdlog::warn("GetModuleInformation failed for module {:#x} in process {}: {}",
-                        reinterpret_cast<uintptr_t>(hModule),
-                        processId,
-                        pserv::utils::GetLastWin32ErrorMessage());
+                    LogWin32Error("GetModuleInformation", "module {:#x} in process {}", reinterpret_cast<uintptr_t>(hModule), processId);
                 }
             }
         }

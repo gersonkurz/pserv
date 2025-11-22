@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include <models/service_info.h>
 #include <utils/string_utils.h>
+#include <utils/win32_error.h>
 #include <windows_api/service_manager.h>
 
 namespace pserv
@@ -40,15 +41,20 @@ namespace pserv
 
         if (!m_hScManager)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open Service Control Manager: error {}", error);
-            throw std::runtime_error("Failed to open Service Control Manager");
+            LogWin32Error("OpenSCManagerW");
+            // Don't throw - keep object usable but methods will return empty data
         }
     }
 
     std::vector<DataObject *> ServiceManager::EnumerateServices(DWORD serviceType)
     {
         std::vector<DataObject *> services;
+
+        if (!m_hScManager)
+        {
+            spdlog::warn("Service Control Manager not available");
+            return services;
+        }
 
         // First call to get required buffer size
         DWORD bytesNeeded = 0;
@@ -68,7 +74,7 @@ namespace pserv
 
         if (GetLastError() != ERROR_MORE_DATA)
         {
-            spdlog::error("EnumServicesStatusEx failed unexpectedly: error {}", GetLastError());
+            LogWin32Error("EnumServicesStatusExW", "size query");
             return services;
         }
 
@@ -87,7 +93,7 @@ namespace pserv
                 &resumeHandle,
                 nullptr))
         {
-            spdlog::error("EnumServicesStatusEx failed: error {}", GetLastError());
+            LogWin32Error("EnumServicesStatusExW");
             return services;
         }
 
@@ -110,17 +116,30 @@ namespace pserv
             // Query service configuration to get additional details
             SC_HANDLE hService = OpenServiceW(m_hScManager.get(), pServices[i].lpServiceName, SERVICE_QUERY_CONFIG);
 
-            if (hService)
+            if (!hService)
+            {
+                LogWin32Error("OpenServiceW", "service '{}'", utils::WideToUtf8(pServices[i].lpServiceName));
+            }
+            else
             {
                 DWORD bytesNeeded = 0;
-                QueryServiceConfigW(hService, nullptr, 0, &bytesNeeded);
+                BOOL result = QueryServiceConfigW(hService, nullptr, 0, &bytesNeeded);
+                DWORD error = GetLastError();
 
-                if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+                if (!result && error != ERROR_INSUFFICIENT_BUFFER)
+                {
+                    LogWin32Error("QueryServiceConfigW", "size query for '{}'", utils::WideToUtf8(pServices[i].lpServiceName));
+                }
+                else if (error == ERROR_INSUFFICIENT_BUFFER)
                 {
                     std::vector<BYTE> configBuffer(bytesNeeded);
                     auto *pConfig = reinterpret_cast<QUERY_SERVICE_CONFIGW *>(configBuffer.data());
 
-                    if (QueryServiceConfigW(hService, pConfig, bytesNeeded, &bytesNeeded))
+                    if (!QueryServiceConfigW(hService, pConfig, bytesNeeded, &bytesNeeded))
+                    {
+                        LogWin32Error("QueryServiceConfigW", "service '{}'", utils::WideToUtf8(pServices[i].lpServiceName));
+                    }
+                    else
                     {
                         info->SetStartType(pConfig->dwStartType);
                         info->SetErrorControl(pConfig->dwErrorControl);
@@ -143,14 +162,23 @@ namespace pserv
 
                 // Query service description
                 bytesNeeded = 0;
-                QueryServiceConfig2W(hService, SERVICE_CONFIG_DESCRIPTION, nullptr, 0, &bytesNeeded);
+                result = QueryServiceConfig2W(hService, SERVICE_CONFIG_DESCRIPTION, nullptr, 0, &bytesNeeded);
+                error = GetLastError();
 
-                if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+                if (!result && error != ERROR_INSUFFICIENT_BUFFER)
+                {
+                    LogWin32Error("QueryServiceConfig2W", "size query for '{}'", utils::WideToUtf8(pServices[i].lpServiceName));
+                }
+                else if (error == ERROR_INSUFFICIENT_BUFFER)
                 {
                     std::vector<BYTE> descBuffer(bytesNeeded);
                     auto *pDesc = reinterpret_cast<SERVICE_DESCRIPTIONW *>(descBuffer.data());
 
-                    if (QueryServiceConfig2W(hService, SERVICE_CONFIG_DESCRIPTION, descBuffer.data(), bytesNeeded, &bytesNeeded))
+                    if (!QueryServiceConfig2W(hService, SERVICE_CONFIG_DESCRIPTION, descBuffer.data(), bytesNeeded, &bytesNeeded))
+                    {
+                        LogWin32Error("QueryServiceConfig2W", "service '{}'", utils::WideToUtf8(pServices[i].lpServiceName));
+                    }
+                    else
                     {
                         if (pDesc->lpDescription)
                         {
@@ -177,9 +205,8 @@ namespace pserv
         SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open Service Control Manager: error {}", error);
-            throw std::runtime_error(std::format("Failed to open SCM: error {}", error));
+            LogWin32Error("OpenSCManagerW");
+            return false;
         }
 
         // Convert service name to wide string
@@ -189,10 +216,9 @@ namespace pserv
         SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_START | SERVICE_QUERY_STATUS);
         if (!hService)
         {
-            DWORD error = GetLastError();
             CloseServiceHandle(hScManager);
-            spdlog::error("Failed to open service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to open service: error {}", error));
+            LogWin32Error("OpenServiceW", "service '{}'", serviceName);
+            return false;
         }
 
         // Start the service
@@ -203,8 +229,8 @@ namespace pserv
         {
             CloseServiceHandle(hService);
             CloseServiceHandle(hScManager);
-            spdlog::error("Failed to start service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to start service: error {}", error));
+            LogWin32Error("StartServiceW", "service '{}'", serviceName);
+            return false;
         }
 
         // Wait for service to reach running state
@@ -219,11 +245,10 @@ namespace pserv
         {
             if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded))
             {
-                error = GetLastError();
                 CloseServiceHandle(hService);
                 CloseServiceHandle(hScManager);
-                spdlog::error("Failed to query service status: error {}", error);
-                throw std::runtime_error(std::format("Failed to query service status: error {}", error));
+                LogWin32Error("QueryServiceStatusEx", "service '{}'", serviceName);
+                return false;
             }
 
             // Get service state string
@@ -263,7 +288,7 @@ namespace pserv
                 CloseServiceHandle(hService);
                 CloseServiceHandle(hScManager);
                 spdlog::error("Service '{}' stopped unexpectedly during start", serviceName);
-                throw std::runtime_error("Service stopped unexpectedly during start");
+                return false;
             }
 
             Sleep(pollInterval);
@@ -276,7 +301,7 @@ namespace pserv
         if (totalWait >= maxWaitTime)
         {
             spdlog::warn("Service '{}' did not reach running state within timeout", serviceName);
-            throw std::runtime_error("Service start timed out");
+            return false;
         }
 
         spdlog::info("Service '{}' started successfully", serviceName);
@@ -291,9 +316,8 @@ namespace pserv
         SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open Service Control Manager: error {}", error);
-            throw std::runtime_error(std::format("Failed to open SCM: error {}", error));
+            LogWin32Error("OpenSCManagerW");
+            return false;
         }
 
         // Convert service name to wide string
@@ -303,10 +327,9 @@ namespace pserv
         SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_STOP | SERVICE_QUERY_STATUS);
         if (!hService)
         {
-            DWORD error = GetLastError();
             CloseServiceHandle(hScManager);
-            spdlog::error("Failed to open service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to open service: error {}", error));
+            LogWin32Error("OpenServiceW", "service '{}'", serviceName);
+            return false;
         }
 
         // Stop the service
@@ -318,8 +341,8 @@ namespace pserv
         {
             CloseServiceHandle(hService);
             CloseServiceHandle(hScManager);
-            spdlog::error("Failed to stop service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to stop service: error {}", error));
+            LogWin32Error("ControlService(STOP)", "service '{}'", serviceName);
+            return false;
         }
 
         // Wait for service to reach stopped state
@@ -333,11 +356,10 @@ namespace pserv
         {
             if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded))
             {
-                error = GetLastError();
                 CloseServiceHandle(hService);
                 CloseServiceHandle(hScManager);
-                spdlog::error("Failed to query service status: error {}", error);
-                throw std::runtime_error(std::format("Failed to query service status: error {}", error));
+                LogWin32Error("QueryServiceStatusEx", "service '{}'", serviceName);
+                return false;
             }
 
             // Get service state string
@@ -382,7 +404,7 @@ namespace pserv
         if (totalWait >= maxWaitTime)
         {
             spdlog::warn("Service '{}' did not reach stopped state within timeout", serviceName);
-            throw std::runtime_error("Service stop timed out");
+            return false;
         }
 
         spdlog::info("Service '{}' stopped successfully", serviceName);
@@ -397,9 +419,8 @@ namespace pserv
         SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open Service Control Manager: error {}", error);
-            throw std::runtime_error(std::format("Failed to open SCM: error {}", error));
+            LogWin32Error("OpenSCManagerW");
+            return false;
         }
 
         // Convert service name to wide string
@@ -409,10 +430,9 @@ namespace pserv
         SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_STATUS);
         if (!hService)
         {
-            DWORD error = GetLastError();
             CloseServiceHandle(hScManager);
-            spdlog::error("Failed to open service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to open service: error {}", error));
+            LogWin32Error("OpenServiceW", "service '{}'", serviceName);
+            return false;
         }
 
         // Pause the service
@@ -424,8 +444,8 @@ namespace pserv
         {
             CloseServiceHandle(hService);
             CloseServiceHandle(hScManager);
-            spdlog::error("Failed to pause service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to pause service: error {}", error));
+            LogWin32Error("ControlService(PAUSE)", "service '{}'", serviceName);
+            return false;
         }
 
         // Wait for service to reach paused state
@@ -439,11 +459,10 @@ namespace pserv
         {
             if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded))
             {
-                error = GetLastError();
                 CloseServiceHandle(hService);
                 CloseServiceHandle(hScManager);
-                spdlog::error("Failed to query service status: error {}", error);
-                throw std::runtime_error(std::format("Failed to query service status: error {}", error));
+                LogWin32Error("QueryServiceStatusEx", "service '{}'", serviceName);
+                return false;
             }
 
             std::string stateStr = GetServiceStateString(ssp.dwCurrentState);
@@ -483,7 +502,7 @@ namespace pserv
         if (totalWait >= maxWaitTime)
         {
             spdlog::warn("Service '{}' did not reach paused state within timeout", serviceName);
-            throw std::runtime_error("Service pause timed out");
+            return false;
         }
 
         spdlog::info("Service '{}' paused successfully", serviceName);
@@ -498,9 +517,8 @@ namespace pserv
         SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open Service Control Manager: error {}", error);
-            throw std::runtime_error(std::format("Failed to open SCM: error {}", error));
+            LogWin32Error("OpenSCManagerW");
+            return false;
         }
 
         // Convert service name to wide string
@@ -510,10 +528,9 @@ namespace pserv
         SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_STATUS);
         if (!hService)
         {
-            DWORD error = GetLastError();
             CloseServiceHandle(hScManager);
-            spdlog::error("Failed to open service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to open service: error {}", error));
+            LogWin32Error("OpenServiceW", "service '{}'", serviceName);
+            return false;
         }
 
         // Resume the service
@@ -525,8 +542,8 @@ namespace pserv
         {
             CloseServiceHandle(hService);
             CloseServiceHandle(hScManager);
-            spdlog::error("Failed to resume service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to resume service: error {}", error));
+            LogWin32Error("ControlService(CONTINUE)", "service '{}'", serviceName);
+            return false;
         }
 
         // Wait for service to reach running state
@@ -540,11 +557,10 @@ namespace pserv
         {
             if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded))
             {
-                error = GetLastError();
                 CloseServiceHandle(hService);
                 CloseServiceHandle(hScManager);
-                spdlog::error("Failed to query service status: error {}", error);
-                throw std::runtime_error(std::format("Failed to query service status: error {}", error));
+                LogWin32Error("QueryServiceStatusEx", "service '{}'", serviceName);
+                return false;
             }
 
             std::string stateStr = GetServiceStateString(ssp.dwCurrentState);
@@ -584,7 +600,7 @@ namespace pserv
         if (totalWait >= maxWaitTime)
         {
             spdlog::warn("Service '{}' did not reach running state within timeout", serviceName);
-            throw std::runtime_error("Service resume timed out");
+            return false;
         }
 
         spdlog::info("Service '{}' resumed successfully", serviceName);
@@ -642,9 +658,8 @@ namespace pserv
         wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
         if (!hScManager)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open SC Manager: error {}", error);
-            throw std::runtime_error(std::format("Failed to open SC Manager: error {}", error));
+            LogWin32Error("OpenSCManagerW");
+            return false;
         }
 
         // Open the service with change config access
@@ -652,9 +667,8 @@ namespace pserv
 
         if (!hService)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to open service '{}': error {}", serviceName, error));
+            LogWin32Error("OpenServiceW", "service '{}'", serviceName);
+            return false;
         }
 
         // Change the service configuration
@@ -671,9 +685,8 @@ namespace pserv
                 nullptr            // lpDisplayName
                 ))
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to change service '{}' start type: error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to change service start type: error {}", error));
+            LogWin32Error("ChangeServiceConfigW", "service '{}'", serviceName);
+            return false;
         }
 
         spdlog::info("Service '{}' startup type changed successfully", serviceName);
@@ -691,9 +704,8 @@ namespace pserv
         wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
         if (!hScManager)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open SC Manager: error {}", error);
-            throw std::runtime_error(std::format("Failed to open SC Manager: error {}", error));
+            LogWin32Error("OpenSCManagerW");
+            return false;
         }
 
         // Open the service with delete access
@@ -701,17 +713,15 @@ namespace pserv
 
         if (!hService)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to open service '{}': error {}", serviceName, error));
+            LogWin32Error("OpenServiceW", "service '{}'", serviceName);
+            return false;
         }
 
         // Delete the service
         if (!::DeleteService(hService.get()))
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to delete service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to delete service: error {}", error));
+            LogWin32Error("DeleteService", "service '{}'", serviceName);
+            return false;
         }
 
         spdlog::info("Service '{}' deleted successfully", serviceName);
@@ -733,9 +743,8 @@ namespace pserv
         wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
         if (!hScManager)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open SC Manager: error {}", error);
-            throw std::runtime_error(std::format("Failed to open SC Manager: error {}", error));
+            LogWin32Error("OpenSCManagerW");
+            return false;
         }
 
         // Open the service with change config access
@@ -743,9 +752,8 @@ namespace pserv
 
         if (!hService)
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to open service '{}': error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to open service '{}': error {}", serviceName, error));
+            LogWin32Error("OpenServiceW", "service '{}'", serviceName);
+            return false;
         }
 
         // Change the service configuration
@@ -762,9 +770,8 @@ namespace pserv
                 wDisplayName.empty() ? nullptr : wDisplayName.c_str()        // lpDisplayName
                 ))
         {
-            DWORD error = GetLastError();
-            spdlog::error("Failed to change service '{}' configuration: error {}", serviceName, error);
-            throw std::runtime_error(std::format("Failed to change service configuration: error {}", error));
+            LogWin32Error("ChangeServiceConfigW", "service '{}'", serviceName);
+            return false;
         }
 
         // Update description using ChangeServiceConfig2W
@@ -775,9 +782,8 @@ namespace pserv
 
             if (!::ChangeServiceConfig2W(hService.get(), SERVICE_CONFIG_DESCRIPTION, &sd))
             {
-                DWORD error = GetLastError();
-                spdlog::warn("Failed to update service '{}' description: error {}", serviceName, error);
-                // Don't throw - description update is not critical
+                LogWin32Error("ChangeServiceConfig2W", "service '{}' description", serviceName);
+                return false;
             }
         }
 

@@ -4,6 +4,7 @@
 #include <core/async_operation.h>
 #include <models/process_info.h>
 #include <utils/string_utils.h>
+#include <utils/win32_error.h>
 #include <windows_api/process_manager.h>
 
 namespace pserv
@@ -44,6 +45,10 @@ namespace pserv
         if (GetUserNameA(buffer, &size))
         {
             m_currentUserName = buffer;
+        }
+        else
+        {
+            LogExpectedWin32Error("GetUserNameA");
         }
 
         try

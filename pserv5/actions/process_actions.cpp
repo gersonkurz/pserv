@@ -5,6 +5,7 @@
 #include <core/data_controller.h>
 #include <models/process_info.h>
 #include <utils/string_utils.h>
+#include <utils/win32_error.h>
 #include <windows_api/process_manager.h>
 
 namespace pserv
@@ -50,7 +51,11 @@ namespace pserv
                         // Select file in explorer
                         std::wstring wPath = utils::Utf8ToWide(path);
                         std::wstring cmd = L"/select,\"" + wPath + L"\"";
-                        ShellExecuteW(NULL, L"open", L"explorer.exe", cmd.c_str(), NULL, SW_SHOW);
+                        HINSTANCE result = ShellExecuteW(NULL, L"open", L"explorer.exe", cmd.c_str(), NULL, SW_SHOW);
+                        if (reinterpret_cast<INT_PTR>(result) <= 32)
+                        {
+                            LogWin32Error("ShellExecuteW", "path '{}'", path);
+                        }
                     }
                 }
             }

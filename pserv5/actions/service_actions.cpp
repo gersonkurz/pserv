@@ -5,6 +5,7 @@
 #include <core/data_controller.h>
 #include <models/service_info.h>
 #include <utils/string_utils.h>
+#include <utils/win32_error.h>
 #include <windows_api/service_manager.h>
 
 namespace pserv
@@ -472,17 +473,29 @@ namespace pserv
                 std::string regPath = std::format("SYSTEM\\CurrentControlSet\\Services\\{}", serviceName);
 
                 HKEY hKey;
-                if (RegCreateKeyExW(
-                        HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit", 0, NULL, 0, KEY_SET_VALUE, NULL, &hKey, NULL) ==
-                    ERROR_SUCCESS)
+                LSTATUS status = RegCreateKeyExW(
+                    HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit", 0, NULL, 0, KEY_SET_VALUE, NULL, &hKey, NULL);
+                if (status == ERROR_SUCCESS)
                 {
                     std::wstring fullPath = utils::Utf8ToWide(std::format("HKEY_LOCAL_MACHINE\\{}", regPath));
-                    RegSetValueExW(hKey, L"LastKey", 0, REG_SZ, (const BYTE *)fullPath.c_str(), (DWORD)(fullPath.length() + 1) * sizeof(wchar_t));
+                    status = RegSetValueExW(hKey, L"LastKey", 0, REG_SZ, (const BYTE *)fullPath.c_str(), (DWORD)(fullPath.length() + 1) * sizeof(wchar_t));
+                    if (status != ERROR_SUCCESS)
+                    {
+                        LogWin32ErrorCode("RegSetValueExW", status, "setting LastKey for service '{}'", serviceName);
+                    }
                     RegCloseKey(hKey);
+                }
+                else
+                {
+                    LogWin32ErrorCode("RegCreateKeyExW", status, "opening Regedit settings key");
                 }
 
                 spdlog::info("Opening registry editor for: {}", serviceName);
-                ShellExecuteW(NULL, L"open", L"regedit.exe", NULL, NULL, SW_SHOW);
+                HINSTANCE result = ShellExecuteW(NULL, L"open", L"regedit.exe", NULL, NULL, SW_SHOW);
+                if (reinterpret_cast<INT_PTR>(result) <= 32)
+                {
+                    LogWin32Error("ShellExecuteW", "opening regedit.exe");
+                }
             }
         };
 
@@ -506,7 +519,11 @@ namespace pserv
                 {
                     spdlog::info("Opening explorer: {}", installLocation);
                     std::wstring wInstallLocation = utils::Utf8ToWide(installLocation);
-                    ShellExecuteW(NULL, L"open", wInstallLocation.c_str(), NULL, NULL, SW_SHOW);
+                    HINSTANCE result = ShellExecuteW(NULL, L"open", wInstallLocation.c_str(), NULL, NULL, SW_SHOW);
+                    if (reinterpret_cast<INT_PTR>(result) <= 32)
+                    {
+                        LogWin32Error("ShellExecuteW", "opening install location '{}'", installLocation);
+                    }
                 }
                 else
                 {
@@ -535,7 +552,11 @@ namespace pserv
                 {
                     spdlog::info("Opening terminal in: {}", installLocation);
                     std::wstring wInstallLocation = utils::Utf8ToWide(installLocation);
-                    ShellExecuteW(NULL, L"open", L"cmd.exe", NULL, wInstallLocation.c_str(), SW_SHOW);
+                    HINSTANCE result = ShellExecuteW(NULL, L"open", L"cmd.exe", NULL, wInstallLocation.c_str(), SW_SHOW);
+                    if (reinterpret_cast<INT_PTR>(result) <= 32)
+                    {
+                        LogWin32Error("ShellExecuteW", "opening terminal in '{}'", installLocation);
+                    }
                 }
                 else
                 {
@@ -707,7 +728,8 @@ namespace pserv
                                 LSTATUS result = RegDeleteTreeW(HKEY_LOCAL_MACHINE, keyPath.c_str());
                                 if (result != ERROR_SUCCESS && result != ERROR_FILE_NOT_FOUND)
                                 {
-                                    throw std::runtime_error(std::format("Failed to delete registry key for '{}': error {}", serviceName, result));
+                                    LogWin32ErrorCode("RegDeleteTreeW", result, "deleting registry key for service '{}'", serviceName);
+                                    return false;
                                 }
                             }
 
