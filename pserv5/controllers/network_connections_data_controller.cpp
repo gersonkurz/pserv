@@ -8,7 +8,7 @@ namespace pserv
 {
 
     NetworkConnectionsDataController::NetworkConnectionsDataController()
-        : DataController{"Network Connections",
+        : DataController{NETWORK_CONNECTIONS_DATA_CONTROLLER_NAME,
               "Network Connection",
               {{"Protocol", "Protocol", ColumnDataType::String},
                   {"Local Address", "LocalAddress", ColumnDataType::String},

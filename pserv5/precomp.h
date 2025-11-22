@@ -6,6 +6,7 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <iphlpapi.h>
+#include <taskschd.h>
 //#include <ws2tcpip.h>
 #include <dwmapi.h>
 #pragma comment(lib, "dwmapi.lib")

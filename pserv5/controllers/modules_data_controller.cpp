@@ -11,7 +11,7 @@ namespace pserv
 {
 
     ModulesDataController::ModulesDataController()
-        : DataController{"Modules",
+        : DataController{MODULES_DATA_CONTROLLER_NAME,
               "Module",
               {{"Base Address", "Base Address", ColumnDataType::UnsignedInteger},
                   {"Size", "Size", ColumnDataType::Size},

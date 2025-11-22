@@ -63,6 +63,9 @@ namespace pserv
                 TypedValue<std::string> theme{this, "Theme", "Dark"};       // Dark, Light, or Classic
             } application{this};
 
+            DisplayTable *getSectionFor(const std::string &name);
+
+        private:
             DisplayTable servicesTable{this, "ServicesTable"};
             DisplayTable devicesTable{this, "DevicesTable"};
             DisplayTable processesTable{this, "ProcessesTable"};
@@ -72,47 +75,7 @@ namespace pserv
             DisplayTable environmentVariablesTable{this, "EnvironmentVariablesTable"};
             DisplayTable startupProgramsTable{this, "StartupProgramsTable"};
             DisplayTable networkConnectionsProperties{this, "NetworkConnectionsProperties"};
-
-            DisplayTable *getSectionFor(const std::string &name)
-            {
-                if (name == "Services")
-                {
-                    return &servicesTable;
-                }
-                if (name == "Devices")
-                {
-                    return &devicesTable;
-                }
-                if (name == "Processes")
-                {
-                    return &processesTable;
-                }
-                if (name == "Windows")
-                {
-                    return &windowsTable;
-                }
-                if (name == "Modules")
-                {
-                    return &modulesTable;
-                }
-                if (name == "Uninstaller")
-                {
-                    return &uninstallerTable;
-                }
-                if (name == "Environment Variables")
-                {
-                    return &environmentVariablesTable;
-                }
-                if (name == "Startup Programs")
-                {
-                    return &startupProgramsTable;
-                }
-                if (name == "Network Connections")
-                {
-                    return &networkConnectionsProperties;
-                }
-                return nullptr;
-            }
+            DisplayTable scheduledTasksProperties{this, "ScheduledTasksProperties"};
         };
 
         extern RootSettings theSettings;

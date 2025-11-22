@@ -4,6 +4,7 @@
 #include <controllers/modules_data_controller.h>
 #include <controllers/network_connections_data_controller.h>
 #include <controllers/processes_data_controller.h>
+#include <controllers/scheduled_tasks_data_controller.h>
 #include <controllers/services_data_controller.h>
 #include <controllers/startup_programs_data_controller.h>
 #include <controllers/uninstaller_data_controller.h>
@@ -43,6 +44,7 @@ namespace pserv
             dataControllers.push_back(new EnvironmentVariablesDataController());
             dataControllers.push_back(new StartupProgramsDataController());
             dataControllers.push_back(new NetworkConnectionsDataController());
+            dataControllers.push_back(new ScheduledTasksDataController());
         }
         return dataControllers;
     }

@@ -9,7 +9,7 @@ namespace pserv
 {
 
     WindowsDataController::WindowsDataController()
-        : DataController{"Windows",
+        : DataController{WINDOWS_DATA_CONTROLLER_NAME,
               "Window",
               {{"InternalID", "InternalID", ColumnDataType::UnsignedInteger},
                   {"Title", "Title", ColumnDataType::String},

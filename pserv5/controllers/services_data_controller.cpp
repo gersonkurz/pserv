@@ -10,7 +10,7 @@ namespace pserv
 {
 
     ServicesDataController::ServicesDataController(DWORD serviceType, const char *viewName, const char *itemName)
-        : DataController{viewName ? viewName : "Services",
+        : DataController{viewName ? viewName : SERVICES_DATA_CONTROLLER_NAME,
               itemName ? itemName : "Service",
               {{"Display Name", "DisplayName", ColumnDataType::String, true, ColumnEditType::Text},
                   {"Name", "Name", ColumnDataType::String},

@@ -36,6 +36,12 @@ ColumnWidths = '285,70,208,93,72,182,93,317,364,100,100,100,100,100,100,100,100'
 SortAscending = true
 SortColumn = -1
 
+[ScheduledTasksProperties]
+ColumnOrder = '0,1,2,3,4,5,6'
+ColumnWidths = '250,180,120,100,80,200,400'
+SortAscending = true
+SortColumn = -1
+
 [ServicesTable]
 ColumnOrder = '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17'
 ColumnWidths = '250,367,80,80,80,277,474,300,100,100,80,80,80,80,80,80,80,80'

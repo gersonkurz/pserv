@@ -9,7 +9,7 @@ namespace pserv
     {
     public:
         DevicesDataController()
-            : ServicesDataController{SERVICE_DRIVER, "Devices", "Device"}
+            : ServicesDataController{SERVICE_DRIVER, DEVICES_DATA_CONTROLLER_NAME.data(), "Device"}
         {
         }
     };

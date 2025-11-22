@@ -172,6 +172,7 @@
     <ClInclude Include="actions\module_actions.h" />
     <ClInclude Include="actions\network_connection_actions.h" />
     <ClInclude Include="actions\process_actions.h" />
+    <ClInclude Include="actions\scheduled_task_actions.h" />
     <ClInclude Include="actions\service_actions.h" />
     <ClInclude Include="actions\startup_program_actions.h" />
     <ClInclude Include="actions\uninstaller_actions.h" />
@@ -179,6 +180,7 @@
     <ClInclude Include="controllers\devices_data_controller.h" />
     <ClInclude Include="controllers\environment_variables_data_controller.h" />
     <ClInclude Include="controllers\network_connections_data_controller.h" />
+    <ClInclude Include="controllers\scheduled_tasks_data_controller.h" />
     <ClInclude Include="controllers\startup_programs_data_controller.h" />
     <ClInclude Include="core\data_action.h" />
     <ClInclude Include="core\data_action_dispatch_context.h" />
@@ -186,6 +188,7 @@
     <ClInclude Include="dialogs\data_properties_dialog.h" />
     <ClInclude Include="models\environment_variable_info.h" />
     <ClInclude Include="models\network_connection_info.h" />
+    <ClInclude Include="models\scheduled_task_info.h" />
     <ClInclude Include="models\startup_program_info.h" />
     <ClInclude Include="precomp.h" />
     <ClInclude Include="pserv5.h" />
@@ -216,6 +219,7 @@
     <ClInclude Include="models\service_info.h" />
     <ClInclude Include="windows_api\environment_variable_manager.h" />
     <ClInclude Include="windows_api\network_connection_manager.h" />
+    <ClInclude Include="windows_api\scheduled_task_manager.h" />
     <ClInclude Include="windows_api\service_manager.h" />
     <ClInclude Include="models\module_info.h" />
     <ClInclude Include="windows_api\module_manager.h" />
@@ -245,12 +249,14 @@
     <ClCompile Include="actions\module_actions.cpp" />
     <ClCompile Include="actions\network_connection_actions.cpp" />
     <ClCompile Include="actions\process_actions.cpp" />
+    <ClCompile Include="actions\scheduled_task_actions.cpp" />
     <ClCompile Include="actions\service_actions.cpp" />
     <ClCompile Include="actions\startup_program_actions.cpp" />
     <ClCompile Include="actions\uninstaller_actions.cpp" />
     <ClCompile Include="actions\window_actions.cpp" />
     <ClCompile Include="controllers\environment_variables_data_controller.cpp" />
     <ClCompile Include="controllers\network_connections_data_controller.cpp" />
+    <ClCompile Include="controllers\scheduled_tasks_data_controller.cpp" />
     <ClCompile Include="controllers\startup_programs_data_controller.cpp" />
     <ClCompile Include="core\data_action.cpp" />
     <ClCompile Include="core\data_action_dispatch_context.cpp" />
@@ -262,6 +268,7 @@
     <ClCompile Include="dialogs\data_properties_dialog.cpp" />
     <ClCompile Include="models\environment_variable_info.cpp" />
     <ClCompile Include="models\network_connection_info.cpp" />
+    <ClCompile Include="models\scheduled_task_info.cpp" />
     <ClCompile Include="models\startup_program_info.cpp" />
     <ClCompile Include="precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -278,6 +285,7 @@
     <ClCompile Include="models\service_info.cpp" />
     <ClCompile Include="windows_api\environment_variable_manager.cpp" />
     <ClCompile Include="windows_api\network_connection_manager.cpp" />
+    <ClCompile Include="windows_api\scheduled_task_manager.cpp" />
     <ClCompile Include="windows_api\service_manager.cpp" />
     <ClCompile Include="models\process_info.cpp" />
     <ClCompile Include="windows_api\process_manager.cpp" />
@@ -340,6 +348,10 @@
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="pserv5.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\claude.md" />
+    <None Include="..\instructions.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

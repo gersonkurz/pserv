@@ -35,4 +35,9 @@ namespace pserv::utils
         return result;
     }
 
+    inline bool ContainsIgnoreCase(const std::string& key, const std::string& lowerFilter)
+    {
+        return utils::ToLower(key).find(lowerFilter) != std::string::npos;
+    }
+
 } // namespace pserv::utils

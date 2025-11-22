@@ -11,7 +11,7 @@ namespace pserv
 {
 
     ProcessesDataController::ProcessesDataController()
-        : DataController{"Processes",
+        : DataController{PROCESSES_DATA_CONTROLLER_NAME,
               "Process",
               {{"Name", "Name", ColumnDataType::String},
                   {"PID", "PID", ColumnDataType::UnsignedInteger},

@@ -1,0 +1,78 @@
+#include "precomp.h"
+#include <actions/scheduled_task_actions.h>
+#include <controllers/scheduled_tasks_data_controller.h>
+#include <models/scheduled_task_info.h>
+#include <windows_api/scheduled_task_manager.h>
+
+namespace pserv
+{
+
+    ScheduledTasksDataController::ScheduledTasksDataController()
+        : DataController{SCHEDULED_TASKS_DATA_CONTROLLER_NAME,
+              "Scheduled Task",
+              {{"Name", "Name", ColumnDataType::String},
+                  {"Status", "Status", ColumnDataType::String},
+                  {"Trigger", "Trigger", ColumnDataType::String},
+                  {"Last Run", "LastRun", ColumnDataType::String},
+                  {"Next Run", "NextRun", ColumnDataType::String},
+                  {"Author", "Author", ColumnDataType::String},
+                  {"Enabled", "Enabled", ColumnDataType::String}}}
+    {
+    }
+
+    void ScheduledTasksDataController::Refresh()
+    {
+        spdlog::info("Refreshing scheduled tasks...");
+
+        Clear();
+
+        try
+        {
+            m_objects = ScheduledTaskManager::EnumerateTasks();
+
+            // Re-apply last sort order if any
+            if (m_lastSortColumn >= 0)
+            {
+                Sort(m_lastSortColumn, m_lastSortAscending);
+            }
+
+            spdlog::info("Successfully refreshed {} scheduled tasks", m_objects.size());
+            m_bLoaded = true;
+        }
+        catch (const std::exception &e)
+        {
+            spdlog::error("Failed to refresh scheduled tasks: {}", e.what());
+        }
+    }
+
+    std::vector<const DataAction *> ScheduledTasksDataController::GetActions(const DataObject *dataObject) const
+    {
+        const auto *task = static_cast<const ScheduledTaskInfo *>(dataObject);
+        return CreateScheduledTaskActions(task->GetState(), task->IsEnabled());
+    }
+
+    VisualState ScheduledTasksDataController::GetVisualState(const DataObject *dataObject) const
+    {
+        if (!dataObject)
+        {
+            return VisualState::Normal;
+        }
+
+        const auto *task = static_cast<const ScheduledTaskInfo *>(dataObject);
+
+        // Running tasks highlighted
+        if (task->GetState() == ScheduledTaskState::Running)
+        {
+            return VisualState::Highlighted;
+        }
+
+        // Disabled tasks grayed out
+        if (task->GetState() == ScheduledTaskState::Disabled || !task->IsEnabled())
+        {
+            return VisualState::Disabled;
+        }
+
+        return VisualState::Normal;
+    }
+
+} // namespace pserv

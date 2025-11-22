@@ -8,7 +8,7 @@ namespace pserv
 {
 
     StartupProgramsDataController::StartupProgramsDataController()
-        : DataController{"Startup Programs",
+        : DataController{STARTUP_PROGRAMS_DATA_CONTROLLER_NAME,
               "Startup Program",
               {{"Name", "Name", ColumnDataType::String},
                   {"Command", "Command", ColumnDataType::String},

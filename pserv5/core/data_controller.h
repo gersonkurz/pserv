@@ -3,10 +3,21 @@
 
 namespace pserv
 {
+    inline constexpr std::string_view SERVICES_DATA_CONTROLLER_NAME{"Services"};
+    inline constexpr std::string_view DEVICES_DATA_CONTROLLER_NAME{"Devices"};
+    inline constexpr std::string_view PROCESSES_DATA_CONTROLLER_NAME{"Processes"};
+    inline constexpr std::string_view WINDOWS_DATA_CONTROLLER_NAME{"Windows"};
+    inline constexpr std::string_view UNINSTALLER_DATA_CONTROLLER_NAME{"Uninstaller"};
+    inline constexpr std::string_view STARTUP_PROGRAMS_DATA_CONTROLLER_NAME{"Startup Programs"};
+    inline constexpr std::string_view NETWORK_CONNECTIONS_DATA_CONTROLLER_NAME{"Network Connections"};
+    inline constexpr std::string_view SCHEDULED_TASKS_DATA_CONTROLLER_NAME{"Scheduled Tasks"};
+    inline constexpr std::string_view MODULES_DATA_CONTROLLER_NAME{"Modules"};
+    inline constexpr std::string_view ENVIRONMENT_VARIABLES_CONTROLLER_NAME{"Environment Variables"};
+
     class DataAction;
     class DataObject;
     class DataActionDispatchContext;
-    
+
     enum class VisualState
     {
         Normal,      // Default text color
@@ -36,7 +47,7 @@ namespace pserv
         std::vector<DataObject *> m_objects;
 
     public:
-        DataController(std::string controllerName, std::string itemName, std::vector<DataObjectColumn> &&columns)
+        DataController(std::string_view controllerName, std::string itemName, std::vector<DataObjectColumn> &&columns)
             : m_controllerName{std::move(controllerName)},
               m_itemName{std::move(itemName)},
               m_columns{std::move(columns)},

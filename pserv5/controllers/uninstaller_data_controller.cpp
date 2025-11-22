@@ -10,7 +10,7 @@ namespace pserv
 {
 
     UninstallerDataController::UninstallerDataController()
-        : DataController{"Uninstaller",
+        : DataController{UNINSTALLER_DATA_CONTROLLER_NAME,
               "Program",
               {{"Display Name", "DisplayName", ColumnDataType::String},
                   {"Version", "Version", ColumnDataType::String},

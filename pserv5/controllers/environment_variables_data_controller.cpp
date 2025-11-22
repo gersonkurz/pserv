@@ -8,7 +8,7 @@ namespace pserv
 {
 
     EnvironmentVariablesDataController::EnvironmentVariablesDataController()
-        : DataController{"Environment Variables",
+        : DataController{ENVIRONMENT_VARIABLES_CONTROLLER_NAME,
               "Environment Variable",
               {{"Name", "Name", ColumnDataType::String, true, ColumnEditType::Text},
                   {"Value", "Value", ColumnDataType::String, true, ColumnEditType::Text},
