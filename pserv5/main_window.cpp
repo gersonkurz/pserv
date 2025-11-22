@@ -812,6 +812,26 @@ namespace pserv
             }
         }
 
+        // Handle Ctrl+Number shortcuts for view switching
+        if (io.KeyCtrl)
+        {
+            const std::vector<DataController *> &controllers = m_Controllers.GetDataControllers();
+            const ImGuiKey numberKeys[] = {
+                ImGuiKey_1, ImGuiKey_2, ImGuiKey_3, ImGuiKey_4, ImGuiKey_5,
+                ImGuiKey_6, ImGuiKey_7, ImGuiKey_8, ImGuiKey_9, ImGuiKey_0};
+
+            for (size_t i = 0; i < std::min(controllers.size(), (size_t)10); i++)
+            {
+                if (ImGui::IsKeyPressed(numberKeys[i]))
+                {
+                    const std::string tabName = controllers[i]->GetControllerName();
+                    spdlog::debug("Keyboard shortcut: Ctrl+{} pressed, switching to '{}'", i + 1, tabName);
+                    m_pendingTabSwitch = tabName;
+                    break;
+                }
+            }
+        }
+
         // Create tab bar with placeholder tabs
         if (ImGui::BeginTabBar("MainTabBar", ImGuiTabBarFlags_None))
         {
