@@ -1,6 +1,6 @@
 [Application]
-ActiveView = 'Environment Variables'
-FontSize = 1800
+ActiveView = 'Services'
+FontSize = 2300
 Theme = 'Dark'
 
 [DevicesTable]
@@ -33,6 +33,12 @@ SortColumn = -1
 [ServicesTable]
 ColumnOrder = '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17'
 ColumnWidths = '250,367,80,80,80,277,474,300,100,100,80,80,80,80,80,80,80,80'
+SortAscending = true
+SortColumn = -1
+
+[StartupProgramsTable]
+ColumnOrder = '0,1,2,3,4'
+ColumnWidths = '319,229,153,127,102'
 SortAscending = true
 SortColumn = -1
 

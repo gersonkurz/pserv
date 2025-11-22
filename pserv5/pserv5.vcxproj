@@ -172,15 +172,18 @@
     <ClInclude Include="actions\module_actions.h" />
     <ClInclude Include="actions\process_actions.h" />
     <ClInclude Include="actions\service_actions.h" />
+    <ClInclude Include="actions\startup_program_actions.h" />
     <ClInclude Include="actions\uninstaller_actions.h" />
     <ClInclude Include="actions\window_actions.h" />
     <ClInclude Include="controllers\devices_data_controller.h" />
     <ClInclude Include="controllers\environment_variables_data_controller.h" />
+    <ClInclude Include="controllers\startup_programs_data_controller.h" />
     <ClInclude Include="core\data_action.h" />
     <ClInclude Include="core\data_action_dispatch_context.h" />
     <ClInclude Include="core\data_controller_library.h" />
     <ClInclude Include="dialogs\data_properties_dialog.h" />
     <ClInclude Include="models\environment_variable_info.h" />
+    <ClInclude Include="models\startup_program_info.h" />
     <ClInclude Include="precomp.h" />
     <ClInclude Include="pserv5.h" />
     <ClInclude Include="Resource.h" />
@@ -214,6 +217,7 @@
     <ClInclude Include="windows_api\module_manager.h" />
     <ClInclude Include="controllers\modules_data_controller.h" />
     <ClInclude Include="models\installed_program_info.h" />
+    <ClInclude Include="windows_api\startup_program_manager.h" />
     <ClInclude Include="windows_api\uninstaller_manager.h" />
     <ClInclude Include="controllers\uninstaller_data_controller.h" />
     <ClInclude Include="models\process_info.h" />
@@ -237,9 +241,11 @@
     <ClCompile Include="actions\module_actions.cpp" />
     <ClCompile Include="actions\process_actions.cpp" />
     <ClCompile Include="actions\service_actions.cpp" />
+    <ClCompile Include="actions\startup_program_actions.cpp" />
     <ClCompile Include="actions\uninstaller_actions.cpp" />
     <ClCompile Include="actions\window_actions.cpp" />
     <ClCompile Include="controllers\environment_variables_data_controller.cpp" />
+    <ClCompile Include="controllers\startup_programs_data_controller.cpp" />
     <ClCompile Include="core\data_action.cpp" />
     <ClCompile Include="core\data_action_dispatch_context.cpp" />
     <ClCompile Include="core\data_controller.cpp" />
@@ -249,6 +255,7 @@
     <ClCompile Include="core\exporters\plaintext_exporter.cpp" />
     <ClCompile Include="dialogs\data_properties_dialog.cpp" />
     <ClCompile Include="models\environment_variable_info.cpp" />
+    <ClCompile Include="models\startup_program_info.cpp" />
     <ClCompile Include="precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -269,6 +276,7 @@
     <ClCompile Include="controllers\processes_data_controller.cpp" />
     <ClCompile Include="controllers\windows_data_controller.cpp" />
     <ClCompile Include="models\window_info.cpp" />
+    <ClCompile Include="windows_api\startup_program_manager.cpp" />
     <ClCompile Include="windows_api\window_manager.cpp" />
     <ClCompile Include="models\module_info.cpp" />
     <ClCompile Include="windows_api\module_manager.cpp" />

@@ -70,6 +70,7 @@ namespace pserv
             DisplayTable modulesTable{this, "ModulesTable"};
             DisplayTable uninstallerTable{this, "UninstallerTable"};
             DisplayTable environmentVariablesTable{this, "EnvironmentVariablesTable"};
+            DisplayTable startupProgramsTable{this, "StartupProgramsTable"};
 
             DisplayTable *getSectionFor(const std::string &name)
             {
@@ -100,6 +101,10 @@ namespace pserv
                 if (name == "Environment Variables")
                 {
                     return &environmentVariablesTable;
+                }
+                if (name == "Startup Programs")
+                {
+                    return &startupProgramsTable;
                 }
                 return nullptr;
             }

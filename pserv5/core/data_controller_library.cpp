@@ -4,6 +4,7 @@
 #include <controllers/modules_data_controller.h>
 #include <controllers/processes_data_controller.h>
 #include <controllers/services_data_controller.h>
+#include <controllers/startup_programs_data_controller.h>
 #include <controllers/uninstaller_data_controller.h>
 #include <controllers/windows_data_controller.h>
 #include <core/data_controller_library.h>
@@ -39,6 +40,7 @@ namespace pserv
             dataControllers.push_back(new ModulesDataController());
             dataControllers.push_back(new UninstallerDataController());
             dataControllers.push_back(new EnvironmentVariablesDataController());
+            dataControllers.push_back(new StartupProgramsDataController());
         }
         return dataControllers;
     }
