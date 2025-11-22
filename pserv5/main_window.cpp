@@ -1807,33 +1807,44 @@ namespace pserv
             ImGui::EndMenuBar();
         }
 
-        // About dialog
+        // About screen (fullscreen logo overlay)
         if (showAboutDialog)
         {
-            ImGui::OpenPopup("About pserv5");
-        }
+            ImGuiIO &aboutIO = ImGui::GetIO();
 
-        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+            // Create a fullscreen window for the logo
+            ImGui::SetNextWindowPos(ImVec2(0, 0));
+            ImGui::SetNextWindowSize(aboutIO.DisplaySize);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.8f)); // Semi-transparent black background
 
-        if (ImGui::BeginPopupModal("About pserv5", &showAboutDialog, ImGuiWindowFlags_AlwaysAutoResize))
-        {
-            ImGui::Text("pserv5");
-            ImGui::Separator();
-            ImGui::Text("Version 5.0.0");
-            ImGui::Text("A modern Windows management utility");
-            ImGui::Spacing();
-            ImGui::Text("Copyright (c) 2025");
-            ImGui::Text("http://p-nand-q.com");
-            ImGui::Spacing();
+            ImGuiWindowFlags aboutFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+                                          ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav;
 
-            if (ImGui::Button("OK", ImVec2(120, 0)))
+            if (ImGui::Begin("About", nullptr, aboutFlags))
             {
-                showAboutDialog = false;
-                ImGui::CloseCurrentPopup();
-            }
+                // Calculate centered position for logo
+                ImVec2 windowSize = ImGui::GetContentRegionAvail();
+                ImVec2 imageSize((float)m_splashWidth, (float)m_splashHeight);
 
-            ImGui::EndPopup();
+                float centerX = (windowSize.x - imageSize.x) * 0.5f;
+                float centerY = (windowSize.y - imageSize.y) * 0.5f;
+
+                ImGui::SetCursorPos(ImVec2(centerX, centerY));
+                ImGui::Image((ImTextureID)m_pSplashTexture, imageSize);
+
+                // Check for left mouse button click anywhere to close
+                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+                {
+                    showAboutDialog = false;
+                }
+            }
+            ImGui::End();
+
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar(2);
         }
     }
 
