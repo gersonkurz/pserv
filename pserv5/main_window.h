@@ -85,7 +85,11 @@ namespace pserv
         bool m_bWindowFocused{true};                    // Track window focus state for title bar styling
         COLORREF m_accentColor{0};                      // Windows accent color
 
+        // Auto-refresh state
+        std::chrono::steady_clock::time_point m_lastAutoRefreshTime;
+
         // Helper methods
+        bool ShouldAutoRefresh() const;
         void SaveWindowState();
         void SaveCurrentTableState(bool force = false);
         void RenderProgressDialog();

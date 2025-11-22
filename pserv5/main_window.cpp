@@ -22,6 +22,7 @@ namespace pserv
 {
 
     MainWindow::MainWindow()
+        : m_lastAutoRefreshTime(std::chrono::steady_clock::now())
     {
     }
 
@@ -905,6 +906,19 @@ namespace pserv
         }
 
         ImGui::End();
+
+        // Auto-refresh timer check
+        if (ShouldAutoRefresh())
+        {
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastAutoRefreshTime);
+
+            if (elapsed.count() >= config::theSettings.autoRefresh.intervalMs.get())
+            {
+                spdlog::info("Would auto-refresh now (controller: {})", m_pCurrentController->GetControllerName());
+                m_lastAutoRefreshTime = now;
+            }
+        }
 
         // Render progress dialog if active
         RenderProgressDialog();
@@ -1865,6 +1879,30 @@ namespace pserv
             ImGui::PopStyleColor();
             ImGui::PopStyleVar(2);
         }
+    }
+
+    bool MainWindow::ShouldAutoRefresh() const
+    {
+        auto &settings = config::theSettings.autoRefresh;
+
+        if (!settings.enabled.get())
+            return false;
+        if (!m_pCurrentController)
+            return false;
+
+        // Controller decides if it supports auto-refresh
+        if (!m_pCurrentController->SupportsAutoRefresh())
+            return false;
+
+        // Pause during async operations
+        if (settings.pauseDuringActions.get() && m_dispatchContext.m_pAsyncOp != nullptr)
+            return false;
+
+        // TODO STEP 7: Pause if properties dialog has pending edits
+        // if (settings.pauseDuringEdits.get() && m_pCurrentController->HasPropertiesDialogWithEdits())
+        //     return false;
+
+        return true;
     }
 
 } // namespace pserv

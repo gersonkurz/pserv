@@ -4,7 +4,7 @@ FontSize = 2300
 Theme = 'Dark'
 
 [AutoRefresh]
-Enabled = false
+Enabled = true
 IntervalMs = 2000
 PauseDuringActions = true
 PauseDuringEdits = true
