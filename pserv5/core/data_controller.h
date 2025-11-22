@@ -67,6 +67,12 @@ namespace pserv
         // Action system - new object-based interface
         virtual std::vector<const DataAction *> GetActions(const DataObject *dataObject) const = 0;
 
+        // Auto-refresh support - controllers decide if they support periodic refresh
+        virtual bool SupportsAutoRefresh() const
+        {
+            return true; // Default: most views support auto-refresh
+        }
+
         void RenderPropertiesDialog();
 
         // Generic sort implementation using column metadata and GetTypedProperty()

@@ -14,6 +14,10 @@ namespace pserv
         void Refresh() override;
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
         VisualState GetVisualState(const DataObject *dataObject) const override;
+        bool SupportsAutoRefresh() const override
+        {
+            return false; // Enumeration is slow (recursive COM calls)
+        }
     };
 
 } // namespace pserv
