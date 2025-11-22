@@ -71,6 +71,7 @@ namespace pserv
             DisplayTable uninstallerTable{this, "UninstallerTable"};
             DisplayTable environmentVariablesTable{this, "EnvironmentVariablesTable"};
             DisplayTable startupProgramsTable{this, "StartupProgramsTable"};
+            DisplayTable networkConnectionsProperties{this, "NetworkConnectionsProperties"};
 
             DisplayTable *getSectionFor(const std::string &name)
             {
@@ -105,6 +106,10 @@ namespace pserv
                 if (name == "Startup Programs")
                 {
                     return &startupProgramsTable;
+                }
+                if (name == "Network Connections")
+                {
+                    return &networkConnectionsProperties;
                 }
                 return nullptr;
             }

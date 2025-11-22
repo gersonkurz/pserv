@@ -2,6 +2,7 @@
 #include <controllers/devices_data_controller.h>
 #include <controllers/environment_variables_data_controller.h>
 #include <controllers/modules_data_controller.h>
+#include <controllers/network_connections_data_controller.h>
 #include <controllers/processes_data_controller.h>
 #include <controllers/services_data_controller.h>
 #include <controllers/startup_programs_data_controller.h>
@@ -41,6 +42,7 @@ namespace pserv
             dataControllers.push_back(new UninstallerDataController());
             dataControllers.push_back(new EnvironmentVariablesDataController());
             dataControllers.push_back(new StartupProgramsDataController());
+            dataControllers.push_back(new NetworkConnectionsDataController());
         }
         return dataControllers;
     }

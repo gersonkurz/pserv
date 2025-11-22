@@ -1,0 +1,356 @@
+#include "precomp.h"
+#include <utils/string_utils.h>
+#include <utils/win32_error.h>
+#include <windows_api/network_connection_manager.h>
+#include <ws2tcpip.h>
+
+
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "ws2_32.lib")
+
+// Define IPv6 structures if not available in SDK
+#ifndef MIB_TCP6ROW_OWNER_PID
+typedef struct _MIB_TCP6ROW_OWNER_PID
+{
+    UCHAR ucLocalAddr[16];
+    DWORD dwLocalScopeId;
+    DWORD dwLocalPort;
+    UCHAR ucRemoteAddr[16];
+    DWORD dwRemoteScopeId;
+    DWORD dwRemotePort;
+    DWORD dwState;
+    DWORD dwOwningPid;
+} MIB_TCP6ROW_OWNER_PID, *PMIB_TCP6ROW_OWNER_PID;
+
+typedef struct _MIB_TCP6TABLE_OWNER_PID
+{
+    DWORD dwNumEntries;
+    MIB_TCP6ROW_OWNER_PID table[1];
+} MIB_TCP6TABLE_OWNER_PID, *PMIB_TCP6TABLE_OWNER_PID;
+#endif
+
+#ifndef MIB_UDP6ROW_OWNER_PID
+typedef struct _MIB_UDP6ROW_OWNER_PID
+{
+    UCHAR ucLocalAddr[16];
+    DWORD dwLocalScopeId;
+    DWORD dwLocalPort;
+    DWORD dwOwningPid;
+} MIB_UDP6ROW_OWNER_PID, *PMIB_UDP6ROW_OWNER_PID;
+
+typedef struct _MIB_UDP6TABLE_OWNER_PID
+{
+    DWORD dwNumEntries;
+    MIB_UDP6ROW_OWNER_PID table[1];
+} MIB_UDP6TABLE_OWNER_PID, *PMIB_UDP6TABLE_OWNER_PID;
+#endif
+
+namespace pserv
+{
+
+    std::vector<DataObject *> NetworkConnectionManager::EnumerateConnections()
+    {
+        std::vector<DataObject *> connections;
+
+        EnumerateTcpConnections(connections);
+        EnumerateTcp6Connections(connections);
+        EnumerateUdpConnections(connections);
+        EnumerateUdp6Connections(connections);
+
+        return connections;
+    }
+
+    void NetworkConnectionManager::EnumerateTcpConnections(std::vector<DataObject *> &connections)
+    {
+        DWORD size = 0;
+        DWORD result = GetExtendedTcpTable(nullptr, &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0);
+
+        if (result != ERROR_INSUFFICIENT_BUFFER)
+        {
+            LogWin32ErrorCode("GetExtendedTcpTable", result, "querying TCP table size");
+            return;
+        }
+
+        std::vector<BYTE> buffer(size);
+        auto *pTcpTable = reinterpret_cast<MIB_TCPTABLE_OWNER_PID *>(buffer.data());
+
+        result = GetExtendedTcpTable(pTcpTable, &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0);
+        if (result != NO_ERROR)
+        {
+            LogWin32ErrorCode("GetExtendedTcpTable", result, "enumerating TCP connections");
+            return;
+        }
+
+        for (DWORD i = 0; i < pTcpTable->dwNumEntries; i++)
+        {
+            const auto &row = pTcpTable->table[i];
+
+            std::string localAddr = FormatIPv4Address(row.dwLocalAddr);
+            DWORD localPort = ntohs((u_short)row.dwLocalPort);
+
+            std::string remoteAddr = FormatIPv4Address(row.dwRemoteAddr);
+            DWORD remotePort = ntohs((u_short)row.dwRemotePort);
+
+            TcpState state = static_cast<TcpState>(row.dwState);
+            DWORD pid = row.dwOwningPid;
+            std::string processName = GetProcessNameFromPid(pid);
+
+            connections.push_back(new NetworkConnectionInfo(
+                NetworkProtocol::TCP,
+                localAddr,
+                localPort,
+                remoteAddr,
+                remotePort,
+                state,
+                pid,
+                processName));
+        }
+    }
+
+    void NetworkConnectionManager::EnumerateTcp6Connections(std::vector<DataObject *> &connections)
+    {
+        DWORD size = 0;
+        DWORD result = GetExtendedTcpTable(nullptr, &size, FALSE, AF_INET6, TCP_TABLE_OWNER_PID_ALL, 0);
+
+        if (result != ERROR_INSUFFICIENT_BUFFER)
+        {
+            LogWin32ErrorCode("GetExtendedTcpTable", result, "querying TCPv6 table size");
+            return;
+        }
+
+        std::vector<BYTE> buffer(size);
+        auto *pTcp6Table = reinterpret_cast<MIB_TCP6TABLE_OWNER_PID *>(buffer.data());
+
+        result = GetExtendedTcpTable(pTcp6Table, &size, FALSE, AF_INET6, TCP_TABLE_OWNER_PID_ALL, 0);
+        if (result != NO_ERROR)
+        {
+            LogWin32ErrorCode("GetExtendedTcpTable", result, "enumerating TCPv6 connections");
+            return;
+        }
+
+        for (DWORD i = 0; i < pTcp6Table->dwNumEntries; i++)
+        {
+            const auto &row = pTcp6Table->table[i];
+
+            std::string localAddr = FormatIPv6Address(row.ucLocalAddr);
+            DWORD localPort = ntohs((u_short)row.dwLocalPort);
+
+            std::string remoteAddr = FormatIPv6Address(row.ucRemoteAddr);
+            DWORD remotePort = ntohs((u_short)row.dwRemotePort);
+
+            TcpState state = static_cast<TcpState>(row.dwState);
+            DWORD pid = row.dwOwningPid;
+            std::string processName = GetProcessNameFromPid(pid);
+
+            connections.push_back(new NetworkConnectionInfo(
+                NetworkProtocol::TCPv6,
+                localAddr,
+                localPort,
+                remoteAddr,
+                remotePort,
+                state,
+                pid,
+                processName));
+        }
+    }
+
+    void NetworkConnectionManager::EnumerateUdpConnections(std::vector<DataObject *> &connections)
+    {
+        DWORD size = 0;
+        DWORD result = GetExtendedUdpTable(nullptr, &size, FALSE, AF_INET, UDP_TABLE_OWNER_PID, 0);
+
+        if (result != ERROR_INSUFFICIENT_BUFFER)
+        {
+            LogWin32ErrorCode("GetExtendedUdpTable", result, "querying UDP table size");
+            return;
+        }
+
+        std::vector<BYTE> buffer(size);
+        auto *pUdpTable = reinterpret_cast<MIB_UDPTABLE_OWNER_PID *>(buffer.data());
+
+        result = GetExtendedUdpTable(pUdpTable, &size, FALSE, AF_INET, UDP_TABLE_OWNER_PID, 0);
+        if (result != NO_ERROR)
+        {
+            LogWin32ErrorCode("GetExtendedUdpTable", result, "enumerating UDP connections");
+            return;
+        }
+
+        for (DWORD i = 0; i < pUdpTable->dwNumEntries; i++)
+        {
+            const auto &row = pUdpTable->table[i];
+
+            std::string localAddr = FormatIPv4Address(row.dwLocalAddr);
+            DWORD localPort = ntohs((u_short)row.dwLocalPort);
+
+            DWORD pid = row.dwOwningPid;
+            std::string processName = GetProcessNameFromPid(pid);
+
+            // UDP has no remote endpoint or state
+            connections.push_back(new NetworkConnectionInfo(
+                NetworkProtocol::UDP,
+                localAddr,
+                localPort,
+                "*",
+                0,
+                TcpState::Closed, // Not applicable for UDP
+                pid,
+                processName));
+        }
+    }
+
+    void NetworkConnectionManager::EnumerateUdp6Connections(std::vector<DataObject *> &connections)
+    {
+        DWORD size = 0;
+        DWORD result = GetExtendedUdpTable(nullptr, &size, FALSE, AF_INET6, UDP_TABLE_OWNER_PID, 0);
+
+        if (result != ERROR_INSUFFICIENT_BUFFER)
+        {
+            LogWin32ErrorCode("GetExtendedUdpTable", result, "querying UDPv6 table size");
+            return;
+        }
+
+        std::vector<BYTE> buffer(size);
+        auto *pUdp6Table = reinterpret_cast<MIB_UDP6TABLE_OWNER_PID *>(buffer.data());
+
+        result = GetExtendedUdpTable(pUdp6Table, &size, FALSE, AF_INET6, UDP_TABLE_OWNER_PID, 0);
+        if (result != NO_ERROR)
+        {
+            LogWin32ErrorCode("GetExtendedUdpTable", result, "enumerating UDPv6 connections");
+            return;
+        }
+
+        for (DWORD i = 0; i < pUdp6Table->dwNumEntries; i++)
+        {
+            const auto &row = pUdp6Table->table[i];
+
+            std::string localAddr = FormatIPv6Address(row.ucLocalAddr);
+            DWORD localPort = ntohs((u_short)row.dwLocalPort);
+
+            DWORD pid = row.dwOwningPid;
+            std::string processName = GetProcessNameFromPid(pid);
+
+            // UDP has no remote endpoint or state
+            connections.push_back(new NetworkConnectionInfo(
+                NetworkProtocol::UDPv6,
+                localAddr,
+                localPort,
+                "*",
+                0,
+                TcpState::Closed, // Not applicable for UDP
+                pid,
+                processName));
+        }
+    }
+
+    bool NetworkConnectionManager::CloseConnection(const NetworkConnectionInfo *connection)
+    {
+        // Only TCP connections can be closed
+        if (connection->GetProtocol() != NetworkProtocol::TCP && connection->GetProtocol() != NetworkProtocol::TCPv6)
+        {
+            spdlog::warn("Cannot close UDP connection");
+            return false;
+        }
+
+        if (connection->GetProtocol() == NetworkProtocol::TCP)
+        {
+            // IPv4
+            MIB_TCPROW row{};
+            row.dwState = MIB_TCP_STATE_DELETE_TCB;
+
+            // Convert address strings back to network byte order
+            // This is simplified - in production would need proper parsing
+            spdlog::warn("TCP connection closing not fully implemented - requires address parsing");
+            return false;
+        }
+        else
+        {
+            // IPv6
+            spdlog::warn("TCPv6 connection closing not implemented");
+            return false;
+        }
+    }
+
+    std::string NetworkConnectionManager::GetProcessNameFromPid(DWORD pid)
+    {
+        if (pid == 0)
+        {
+            return "System Idle Process";
+        }
+        if (pid == 4)
+        {
+            return "System";
+        }
+
+        HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+        if (!hProcess)
+        {
+            return std::format("PID {}", pid);
+        }
+
+        wchar_t processPath[MAX_PATH];
+        DWORD size = MAX_PATH;
+        if (QueryFullProcessImageNameW(hProcess, 0, processPath, &size))
+        {
+            // Extract just the filename
+            wchar_t *fileName = wcsrchr(processPath, L'\\');
+            if (fileName)
+            {
+                CloseHandle(hProcess);
+                return utils::WideToUtf8(fileName + 1);
+            }
+            CloseHandle(hProcess);
+            return utils::WideToUtf8(processPath);
+        }
+
+        CloseHandle(hProcess);
+        return std::format("PID {}", pid);
+    }
+
+    std::string NetworkConnectionManager::FormatIPv4Address(DWORD addr)
+    {
+        if (addr == 0)
+        {
+            return "0.0.0.0";
+        }
+
+        // addr is in network byte order
+        struct in_addr inAddr;
+        inAddr.S_un.S_addr = addr;
+
+        char buffer[INET_ADDRSTRLEN];
+        if (inet_ntop(AF_INET, &inAddr, buffer, sizeof(buffer)))
+        {
+            return buffer;
+        }
+
+        return "?.?.?.?";
+    }
+
+    std::string NetworkConnectionManager::FormatIPv6Address(const BYTE addr[16])
+    {
+        // Check if all zeros
+        bool allZero = true;
+        for (int i = 0; i < 16; i++)
+        {
+            if (addr[i] != 0)
+            {
+                allZero = false;
+                break;
+            }
+        }
+
+        if (allZero)
+        {
+            return "::";
+        }
+
+        char buffer[INET6_ADDRSTRLEN];
+        if (inet_ntop(AF_INET6, addr, buffer, sizeof(buffer)))
+        {
+            return buffer;
+        }
+
+        return "?";
+    }
+
+} // namespace pserv
