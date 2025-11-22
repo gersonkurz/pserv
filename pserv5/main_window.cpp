@@ -26,6 +26,11 @@ namespace pserv
 
     MainWindow::~MainWindow()
     {
+        if (m_pSplashTexture)
+        {
+            m_pSplashTexture->Release();
+            m_pSplashTexture = nullptr;
+        }
         CleanupImGui();
         CleanupDirectX();
         if (m_hWnd)
@@ -124,6 +129,9 @@ namespace pserv
         auto &appSettings = config::theSettings.application;
         m_activeTab = appSettings.activeView.get();
         spdlog::info("Loaded active tab from config: '{}'", m_activeTab);
+
+        // Load splash screen image
+        LoadSplashImage();
 
         spdlog::info("Main window initialized successfully");
         return true;
@@ -467,6 +475,170 @@ namespace pserv
         }
     }
 
+    bool MainWindow::LoadSplashImage()
+    {
+        // Load bitmap from embedded resource
+        HBITMAP hBitmap = (HBITMAP)LoadImageW(
+            m_hInstance,
+            MAKEINTRESOURCEW(IDB_SPLASH),
+            IMAGE_BITMAP,
+            0, 0,
+            LR_CREATEDIBSECTION);
+
+        if (!hBitmap)
+        {
+            spdlog::error("Failed to load splash bitmap resource: {}", GetLastError());
+            return false;
+        }
+
+        // Get bitmap dimensions
+        BITMAP bmp;
+        GetObject(hBitmap, sizeof(BITMAP), &bmp);
+        m_splashWidth = bmp.bmWidth;
+        m_splashHeight = bmp.bmHeight;
+
+        // Get bitmap bits
+        BITMAPINFO bmi = {};
+        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        bmi.bmiHeader.biWidth = bmp.bmWidth;
+        bmi.bmiHeader.biHeight = -bmp.bmHeight; // Negative for top-down
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = 32;
+        bmi.bmiHeader.biCompression = BI_RGB;
+
+        std::vector<uint8_t> pixels(bmp.bmWidth * bmp.bmHeight * 4);
+        HDC hdc = GetDC(nullptr);
+        GetDIBits(hdc, hBitmap, 0, bmp.bmHeight, pixels.data(), &bmi, DIB_RGB_COLORS);
+        ReleaseDC(nullptr, hdc);
+        DeleteObject(hBitmap);
+
+        // Convert BGRA to RGBA and fix alpha (GetDIBits returns BGR format)
+        for (size_t i = 0; i < pixels.size(); i += 4)
+        {
+            std::swap(pixels[i], pixels[i + 2]); // Swap B and R
+            pixels[i + 3] = 255;                  // Force alpha to opaque
+        }
+
+        // Create D3D11 texture
+        D3D11_TEXTURE2D_DESC texDesc = {};
+        texDesc.Width = bmp.bmWidth;
+        texDesc.Height = bmp.bmHeight;
+        texDesc.MipLevels = 1;
+        texDesc.ArraySize = 1;
+        texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        texDesc.SampleDesc.Count = 1;
+        texDesc.Usage = D3D11_USAGE_DEFAULT;
+        texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        D3D11_SUBRESOURCE_DATA initData = {};
+        initData.pSysMem = pixels.data();
+        initData.SysMemPitch = bmp.bmWidth * 4;
+
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> pTexture;
+        HRESULT hr = m_pDevice->CreateTexture2D(&texDesc, &initData, &pTexture);
+        if (FAILED(hr))
+        {
+            spdlog::error("Failed to create splash texture: 0x{:08X}", hr);
+            return false;
+        }
+
+        // Create shader resource view
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = 1;
+
+        hr = m_pDevice->CreateShaderResourceView(pTexture.Get(), &srvDesc, &m_pSplashTexture);
+        if (FAILED(hr))
+        {
+            spdlog::error("Failed to create splash shader resource view: 0x{:08X}", hr);
+            return false;
+        }
+
+        spdlog::info("Loaded splash screen from embedded resource ({}x{})", m_splashWidth, m_splashHeight);
+        return true;
+    }
+
+    void MainWindow::RenderSplashFrame()
+    {
+        if (!m_pSplashTexture)
+        {
+            return;
+        }
+
+        if (!m_pDeviceContext || !m_pRenderTargetView || !m_pSwapChain)
+        {
+            return;
+        }
+
+        // Start ImGui frame
+        ImGui_ImplDX11_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
+
+        ImGuiIO &io = ImGui::GetIO();
+
+        // Create a fullscreen window for splash
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(io.DisplaySize);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+                                 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs;
+
+        if (ImGui::Begin("Splash", nullptr, flags))
+        {
+            // Calculate centered position for splash image
+            ImVec2 windowSize = ImGui::GetContentRegionAvail();
+            ImVec2 imageSize((float)m_splashWidth, (float)m_splashHeight);
+
+            float centerX = (windowSize.x - imageSize.x) * 0.5f;
+            float centerY = (windowSize.y - imageSize.y) * 0.5f;
+
+            ImGui::SetCursorPos(ImVec2(centerX, centerY));
+            ImGui::Image((ImTextureID)m_pSplashTexture, imageSize);
+        }
+        ImGui::End();
+
+        ImGui::PopStyleVar(2);
+
+        // Render
+        ImGui::Render();
+        const float clearColor[4] = {0.15f, 0.15f, 0.15f, 1.0f};
+        m_pDeviceContext->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);
+        m_pDeviceContext->ClearRenderTargetView(m_pRenderTargetView.Get(), clearColor);
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+        m_pSwapChain->Present(1, 0);
+    }
+
+    void MainWindow::PreloadActiveController()
+    {
+        spdlog::info("Preloading active controller: {}", m_activeTab);
+
+        // Find the controller that matches the saved active tab
+        const auto &controllers = m_Controllers.GetDataControllers();
+        for (auto *controller : controllers)
+        {
+            if (controller->GetControllerName() == m_activeTab)
+            {
+                try
+                {
+                    spdlog::info("Loading data for controller: {}", controller->GetControllerName());
+                    controller->Refresh();
+                    spdlog::info("Controller loaded successfully");
+                }
+                catch (const std::exception &e)
+                {
+                    spdlog::error("Failed to preload controller: {}", e.what());
+                }
+                break;
+            }
+        }
+    }
+
     void MainWindow::RenderProgressDialog()
     {
         if (!m_dispatchContext.m_bShowProgressDialog || !m_dispatchContext.m_pAsyncOp)
@@ -506,6 +678,44 @@ namespace pserv
         {
             return;
         }
+
+        // Check if loading completed and transition states
+        if (m_appState == AppState::Loading && m_loadingComplete)
+        {
+            if (m_loadThread.joinable())
+            {
+                m_loadThread.join();
+            }
+            m_appState = AppState::Ready;
+        }
+
+        // Handle splash screen state
+        if (m_appState == AppState::Splash)
+        {
+            RenderSplashFrame();
+
+            // Start loading on first splash render
+            static bool loadingStarted = false;
+            if (!loadingStarted)
+            {
+                loadingStarted = true;
+                m_appState = AppState::Loading;
+                m_loadThread = std::thread([this]() {
+                    PreloadActiveController();
+                    m_loadingComplete = true;
+                });
+            }
+            return;
+        }
+
+        // Keep rendering splash during loading
+        if (m_appState == AppState::Loading)
+        {
+            RenderSplashFrame();
+            return;
+        }
+
+        // Normal application rendering (AppState::Ready)
 
         // Apply pending font size change BEFORE starting any ImGui frame
         if (m_pendingFontSize > 0.0f)
@@ -607,6 +817,14 @@ namespace pserv
 
                 if (ImGui::BeginTabItem(thisTabName.c_str(), nullptr, flags))
                 {
+                    // On first frame, only render the controller if it matches the active tab
+                    // This prevents lazy-loading other controllers when we preloaded the active one
+                    if (firstFrame && (thisTabName != m_activeTab))
+                    {
+                        ImGui::EndTabItem();
+                        continue;
+                    }
+
                     // Detect if active tab changed (user clicked tab or menu triggered switch)
                     // Skip change detection on first frame to allow ImGui to settle
                     if (!firstFrame && (m_activeTab != thisTabName))
@@ -615,17 +833,11 @@ namespace pserv
                         m_activeTab = thisTabName;
                         m_pCurrentController = controller;
                         auto &appSettings = config::theSettings.application;
-                        spdlog::debug("Setting appSettings.activeView to: {}", m_activeTab);
                         appSettings.activeView.set(m_activeTab);
                         if (m_pConfigBackend)
                         {
-                            spdlog::debug("Saving config with activeView: {}", appSettings.activeView.get());
                             appSettings.save(*m_pConfigBackend);
                             spdlog::info("Active tab changed to '{}' and persisted to config", m_activeTab);
-                        }
-                        else
-                        {
-                            spdlog::warn("m_pConfigBackend is null, cannot persist active tab");
                         }
                     }
 
@@ -633,10 +845,6 @@ namespace pserv
                     if (m_pCurrentController != controller)
                     {
                         m_pCurrentController = controller;
-                        if (firstFrame)
-                        {
-                            spdlog::debug("First frame: syncing controller to active tab '{}'", thisTabName);
-                        }
                     }
 
                     RenderDataController(controller);

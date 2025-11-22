@@ -12,6 +12,7 @@
 #define IDI_PSERV5			107
 #define IDI_SMALL				108
 #define IDC_PSERV5			109
+#define IDB_SPLASH			110
 #define IDC_MYICON				2
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1

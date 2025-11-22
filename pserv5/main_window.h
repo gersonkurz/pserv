@@ -26,7 +26,20 @@ namespace pserv
             m_pConfigBackend = pBackend;
         }
 
+        // Internal methods (used by Render())
+        void RenderSplashFrame();
+        void PreloadActiveController();
+
     private:
+        enum class AppState
+        {
+            Splash,      // Showing splash screen
+            Loading,     // Loading data in background
+            Ready        // Normal operation
+        };
+        AppState m_appState{AppState::Splash};
+        std::thread m_loadThread;
+        std::atomic<bool> m_loadingComplete{false};
         static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
         bool InitializeDirectX();
@@ -40,6 +53,9 @@ namespace pserv
         void Render();
         void RenderDataController(DataController *controller);
 
+        // Splash screen (internal)
+        bool LoadSplashImage();
+
         HWND m_hWnd{nullptr};
         HINSTANCE m_hInstance{nullptr};
         config::ConfigBackend *m_pConfigBackend{nullptr};
@@ -50,6 +66,11 @@ namespace pserv
         Microsoft::WRL::ComPtr<IDXGISwapChain> m_pSwapChain;
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
         DataControllerLibrary m_Controllers;
+
+        // Splash screen
+        ID3D11ShaderResourceView *m_pSplashTexture{nullptr};
+        int m_splashWidth{0};
+        int m_splashHeight{0};
 
         // ImGui state
         std::string m_activeTab;

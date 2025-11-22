@@ -42,6 +42,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
         return 1;
     }
 
+    // Show window and start message loop
+    // MainWindow will handle splash screen and async loading internally
+    logger->info("Starting application");
     mainWindow.Show(nCmdShow);
     int result = mainWindow.MessageLoop();
 
