@@ -693,6 +693,13 @@ namespace pserv
 
         if (ImGui::BeginPopupModal("Operation in Progress", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
         {
+            // Escape key to cancel operation
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+            {
+                m_dispatchContext.m_pAsyncOp->RequestCancel();
+                spdlog::info("User requested cancellation (Escape key)");
+            }
+
             float progress = m_dispatchContext.m_pAsyncOp->GetProgress();
             std::string message = m_dispatchContext.m_pAsyncOp->GetProgressMessage();
 
@@ -727,6 +734,13 @@ namespace pserv
         {
             static char machineNameBuffer[256] = "";
             static std::string errorMessage = "";
+
+            // Escape key to close dialog
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+            {
+                errorMessage.clear();
+                ImGui::CloseCurrentPopup();
+            }
 
             ImGui::Text("Enter the name or IP address of the remote machine:");
             ImGui::SetNextItemWidth(300.0f);
@@ -942,6 +956,25 @@ namespace pserv
             config::theSettings.autoRefresh.enabled.set(!config::theSettings.autoRefresh.enabled.get());
             config::theSettings.save(*m_pConfigBackend);
             spdlog::info("Auto-refresh {}", config::theSettings.autoRefresh.enabled.get() ? "enabled" : "disabled");
+        }
+
+        // Delete key to execute delete action on selected items
+        if (ImGui::IsKeyPressed(ImGuiKey_Delete) && m_pCurrentController && !m_dispatchContext.m_selectedObjects.empty())
+        {
+            // Find a "Delete" action for the first selected object
+            const DataObject* firstSelected = m_dispatchContext.m_selectedObjects[0];
+            const auto actions = m_pCurrentController->GetActions(firstSelected);
+
+            for (const auto* action : actions)
+            {
+                if (action->GetName() == "Delete")
+                {
+                    spdlog::debug("Delete key pressed, executing Delete action on {} selected object(s)",
+                        m_dispatchContext.m_selectedObjects.size());
+                    action->Execute(m_dispatchContext);
+                    break;
+                }
+            }
         }
 
         // Create tab bar with placeholder tabs

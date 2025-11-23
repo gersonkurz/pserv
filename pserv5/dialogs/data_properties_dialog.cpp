@@ -63,6 +63,19 @@ namespace pserv
 
         if (ImGui::Begin(windowTitle.c_str(), &m_bOpen, ImGuiWindowFlags_NoCollapse))
         {
+            // Escape key to close dialog
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+            {
+                m_bOpen = false;
+            }
+
+            // Enter key to apply changes (same as OK button)
+            if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter))
+            {
+                spdlog::info("DataPropertiesDialog: Enter key pressed, applying changes");
+                changesApplied = ApplyAllEdits();
+                Close();
+            }
 
             // Tab bar for multiple services
             if (m_dataObjects.size() > 1)
