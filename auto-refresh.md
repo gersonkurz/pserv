@@ -17,14 +17,14 @@ Implement periodic auto-refresh of data controllers while preserving selection, 
 | STEP 4: Add Timer Infrastructure | ✅ COMPLETED | "Add timer infrastructure for auto-refresh - STEP 4 of auto-refresh" |
 | STEP 5: Implement Actual Refresh | ✅ COMPLETED | "Implement actual refresh - STEP 5 of auto-refresh" |
 | STEP 6: Selection Cleanup | ✅ COMPLETED | Fixed update-in-place + cleanup logic |
-| STEP 7: Pause During Edits | 🔄 AWAITING VERIFICATION | Code implemented, needs testing |
-| STEP 8: Status Bar Indicator | ⏳ PENDING | - |
+| STEP 7: Pause During Edits | ✅ COMPLETED | "Add pause during property edits - STEP 7 of auto-refresh" |
+| STEP 8: Status Bar Indicator | 🔄 AWAITING VERIFICATION | Code implemented, needs testing |
 | STEP 9: Menu Toggle | ⏳ PENDING | - |
 | STEP 10: Keyboard Shortcut | ⏳ PENDING | - |
 | STEP 11: Interval Submenu | ⏳ PENDING | - |
 | STEP 12: Scroll Preservation | ⏳ PENDING | - |
 
-**RESUME POINT**: STEP 7 code implemented. Auto-refresh now pauses when properties dialog has unsaved edits. User needs to compile and test: open properties dialog, make an edit without applying, verify auto-refresh pauses (check logs), then apply/cancel edit and verify auto-refresh resumes.
+**RESUME POINT**: STEP 8 code implemented. Status bar shows "Auto-refresh: Xms" when enabled, and "(not supported for this view)" for Windows/Modules. User needs to compile and test: enable auto-refresh, verify indicator appears, switch to Windows view, verify "not supported" message, disable auto-refresh, verify indicator disappears.
 
 ---
 

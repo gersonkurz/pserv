@@ -1487,6 +1487,21 @@ namespace pserv
         ImGui::TextDisabled("|");
         ImGui::SameLine();
         ImGui::Text("%zu selected", selectedCount);
+
+        // Auto-refresh indicator
+        if (config::theSettings.autoRefresh.enabled.get())
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled("|");
+            ImGui::SameLine();
+            ImGui::Text("Auto-refresh: %ums", config::theSettings.autoRefresh.intervalMs.get());
+            if (m_pCurrentController && !m_pCurrentController->SupportsAutoRefresh())
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled("(not supported for this view)");
+            }
+        }
+
         ImGui::EndGroup();
     }
 
