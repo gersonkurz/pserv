@@ -216,11 +216,6 @@ theSettings.save();  // Persist to disk
 
 ### TODO
 
-1) **Key Handling**
-   - Delete key binding for delete actions
-   - Escape key to close dialogs
-   - Enter key to apply property changes
-
 2) **Console Variant**
    - Create a console project pservc that is in the same solution as pserv5, but without using ImGui. 
    - If built with _CONSOLE, exclude all ImGui / UI specifics from the build
