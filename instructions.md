@@ -214,13 +214,7 @@ theSettings.save();  // Persist to disk
    - User must manually refresh after delete operations
    - Files: `environment_variable_actions.cpp:130`, `scheduled_task_actions.cpp:178`, `startup_program_actions.cpp:145`
 
-### Disabled Menu Items to Remove
-These should be removed from the UI - they're obsolete or redundant:
-- **Export to XML** (`main_window.cpp:1773`) - JSON has replaced XML, remove menu item
-- **Options/Settings Dialog** (`main_window.cpp:1836`) - All settings accessible via UI (themes menu, auto-refresh menu, font scaling), remove menu item
-- **Check for Updates** (`main_window.cpp:1900`) - Not needed for initial release, remove menu item
-
-### Enhancement Opportunities
+### TODO
 - **Remote Machine Connection for Services** - Simple string parameter for remote machine name, trivial to implement
 - Delete key binding for delete actions
 - Escape key to close dialogs
