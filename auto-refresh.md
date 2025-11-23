@@ -7,6 +7,25 @@ Implement periodic auto-refresh of data controllers while preserving selection, 
 - Object lifecycle refactoring (stable IDs, reference counting) COMPLETED ✓
 - DataObjectContainer update-in-place pattern WORKING ✓
 
+## Current Status (2025-11-22)
+
+| Step | Status | Commit |
+|------|--------|--------|
+| STEP 1: Fix Selection Refcounting | ✅ COMPLETED | "Fix selection refcounting - STEP 1 of auto-refresh" |
+| STEP 2: Add SupportsAutoRefresh | ✅ COMPLETED | "Add SupportsAutoRefresh to DataController - STEP 2 of auto-refresh" |
+| STEP 3: Add Configuration | ✅ COMPLETED | "Add AutoRefresh configuration structure - STEP 3 of auto-refresh" |
+| STEP 4: Add Timer Infrastructure | ✅ COMPLETED | "Add timer infrastructure for auto-refresh - STEP 4 of auto-refresh" |
+| STEP 5: Implement Actual Refresh | 🔄 AWAITING VERIFICATION | Code implemented, needs testing |
+| STEP 6: Selection Cleanup | ⏳ PENDING | - |
+| STEP 7: Pause During Edits | ⏳ PENDING | - |
+| STEP 8: Status Bar Indicator | ⏳ PENDING | - |
+| STEP 9: Menu Toggle | ⏳ PENDING | - |
+| STEP 10: Keyboard Shortcut | ⏳ PENDING | - |
+| STEP 11: Interval Submenu | ⏳ PENDING | - |
+| STEP 12: Scroll Preservation | ⏳ PENDING | - |
+
+**RESUME POINT**: STEP 5 code is complete. User needs to compile, enable auto-refresh in config (`enabled = true`, `intervalMs = 2000`), and verify services update every 2 seconds. Once verified, commit and proceed to STEP 6.
+
 ---
 
 ## Implementation Steps

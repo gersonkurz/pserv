@@ -915,7 +915,11 @@ namespace pserv
 
             if (elapsed.count() >= config::theSettings.autoRefresh.intervalMs.get())
             {
-                spdlog::info("Would auto-refresh now (controller: {})", m_pCurrentController->GetControllerName());
+                if (m_pCurrentController)
+                {
+                    spdlog::debug("Auto-refreshing {}", m_pCurrentController->GetControllerName());
+                    m_pCurrentController->Refresh();
+                }
                 m_lastAutoRefreshTime = now;
             }
         }
