@@ -8,9 +8,10 @@
 namespace pserv
 {
 
-    DataPropertiesDialog::DataPropertiesDialog(DataController *controller, const std::vector<DataObject *> &dataObjects)
+    DataPropertiesDialog::DataPropertiesDialog(DataController *controller, const std::vector<DataObject *> &dataObjects, HWND hWnd)
         : m_controller{controller},
-          m_dataObjects{dataObjects}
+          m_dataObjects{dataObjects},
+          m_hWnd{hWnd}
     {
     }
 
@@ -433,7 +434,7 @@ namespace pserv
                     DataActionDispatchContext ctx;
                     ctx.m_pController = m_controller;
                     ctx.m_selectedObjects = {const_cast<DataObject *>(dataObject)};
-                    ctx.m_hWnd = nullptr; // TODO: Get window handle if needed
+                    ctx.m_hWnd = m_hWnd;
                     ctx.m_pAsyncOp = nullptr;
                     ctx.m_bShowProgressDialog = false;
 

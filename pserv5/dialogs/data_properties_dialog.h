@@ -17,6 +17,7 @@ namespace pserv
     private:
         const std::vector<DataObject *> &m_dataObjects;
         DataController *m_controller{nullptr};
+        HWND m_hWnd{nullptr};
         int m_activeTabIndex{0};
         bool m_bOpen{false};
 
@@ -25,7 +26,7 @@ namespace pserv
         std::map<int, std::map<int, std::string>> m_editBuffers; // [tabIndex][columnIndex] -> current edit value
 
     public:
-        DataPropertiesDialog(DataController *controller, const std::vector<DataObject *> &dataObjects);
+        DataPropertiesDialog(DataController *controller, const std::vector<DataObject *> &dataObjects, HWND hWnd);
         ~DataPropertiesDialog() = default;
 
         // Open the dialog for multiple services

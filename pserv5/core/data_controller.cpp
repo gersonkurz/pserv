@@ -23,7 +23,7 @@ namespace pserv
     {
         if (!ctx.m_selectedObjects.empty())
         {
-            m_pPropertiesDialog = DBG_NEW DataPropertiesDialog{this, ctx.m_selectedObjects};
+            m_pPropertiesDialog = DBG_NEW DataPropertiesDialog{this, ctx.m_selectedObjects, ctx.m_hWnd};
             m_pPropertiesDialog->Open();
         }
     }

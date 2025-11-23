@@ -56,9 +56,6 @@ namespace pserv::utils
 
     std::shared_ptr<spdlog::logger> InitializeLogging()
     {
-        // TODO: Remove this debug code - delete log file on startup for clean logs during development
-        std::remove("pserv5.log");
-
         // Console sink with default pattern
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         console_sink->set_level(spdlog::level::debug);
@@ -67,10 +64,29 @@ namespace pserv::utils
         auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
         msvc_sink->set_level(spdlog::level::debug);
 
-        // File sink with NDJSON format for Splunk
-        auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("pserv5.log", 1024 * 1024 * 10, 3);
+        // File sink with NDJSON format - force rotation on startup, keep 10 backups
+        // Using 10MB max size per file (will rotate on startup regardless)
+        auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("pserv5.log", 1024 * 1024 * 10, 10);
         file_sink->set_level(spdlog::level::debug);
         file_sink->set_formatter(std::make_unique<NdjsonFormatter>());
+
+        // Force rotation on startup to create new log file
+        // This happens by opening and immediately rotating if file exists
+        std::filesystem::path log_path("pserv5.log");
+        if (std::filesystem::exists(log_path) && std::filesystem::file_size(log_path) > 0)
+        {
+            // Rename current log to .1, shift others up
+            for (int i = 9; i >= 1; --i)
+            {
+                std::filesystem::path old_path = std::format("pserv5.{}.log", i);
+                std::filesystem::path new_path = std::format("pserv5.{}.log", i + 1);
+                if (std::filesystem::exists(old_path))
+                {
+                    std::filesystem::rename(old_path, new_path);
+                }
+            }
+            std::filesystem::rename(log_path, "pserv5.1.log");
+        }
 
         std::vector<spdlog::sink_ptr> sinks{console_sink, msvc_sink, file_sink};
         auto logger = std::make_shared<spdlog::logger>("pserv5", sinks.begin(), sinks.end());
