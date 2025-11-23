@@ -1,12 +1,11 @@
 #include "precomp.h"
 #include <config/section.h>
-
+#include <utils/logging.h>
 namespace pserv
 {
     namespace config
     {
-
-        std::shared_ptr<spdlog::logger> logger = spdlog::default_logger();
+        std::shared_ptr<spdlog::logger> logger = utils::InitializeLogging();
 
         // Root section constructor
         Section::Section()

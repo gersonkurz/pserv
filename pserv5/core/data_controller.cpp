@@ -40,16 +40,14 @@ namespace pserv
         std::transform(cmd_name.begin(), cmd_name.end(), cmd_name.begin(), ::tolower);
         std::replace(cmd_name.begin(), cmd_name.end(), ' ', '-');
 
-        argparse::ArgumentParser &cmd = program.add_subparser(cmd_name, std::string(GetControllerName()) + " management");
-
-        // Add common "list" subcommand
-        cmd.add_description("List all " + std::string(GetItemName()) + "s");
+        // Create subparser for this controller
+        argparse::ArgumentParser cmd(cmd_name);
+        cmd.add_description("Manage " + std::string(GetItemName()) + "s");
 
         // Add common output format option
         cmd.add_argument("--format")
             .help("Output format: table, json, csv")
-            .default_value(std::string("table"))
-            .choices("table", "json", "csv");
+            .default_value(std::string("table"));
 
         // Add filter option
         cmd.add_argument("--filter")
@@ -60,6 +58,9 @@ namespace pserv
         cmd.add_argument("--sort")
             .help("Sort by column name")
             .default_value(std::string(""));
+
+        // Add the subparser to the main program
+        program.add_subparser(cmd);
     }
 #endif
 

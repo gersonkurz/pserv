@@ -134,13 +134,17 @@ namespace pserv::utils
 
     std::shared_ptr<spdlog::logger> InitializeLogging()
     {
-        // MSVC OutputDebugString sink for Visual Studio debugger
+        // MSVC OutputDebugString sink for Visual Studio debugger only
+        // NO console sink - console output should be done via console.h in pservc
         auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
-        msvc_sink->set_level(spdlog::level::debug);
+        msvc_sink->set_level(spdlog::level::warn);
 
         std::vector<spdlog::sink_ptr> sinks{msvc_sink};
         auto logger = std::make_shared<spdlog::logger>("pserv5", sinks.begin(), sinks.end());
         logger->set_level(spdlog::level::debug);
+
+        // Explicitly drop the default logger to prevent any console output
+        spdlog::drop_all();
         spdlog::set_default_logger(logger);
 
         return logger;
