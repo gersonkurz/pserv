@@ -12,7 +12,7 @@
 - ✅ Export System: JSON and plaintext export/copy functionality for all views
 - ✅ UI: Custom title bar, modern menu bar, DPI-aware rendering, context menus, async operations
 
-**Current completion: ~90%**
+**Current completion: ~95%** (All major views implemented, auto-refresh complete)
 
 ## Core Architecture
 
@@ -189,64 +189,51 @@ theSettings.application.autoRefreshInterval.set(10);
 theSettings.save();  // Persist to disk
 ```
 
-## Future Work
+## Pre-Release Gap Analysis
 
-### New Data Sources (Next Priority)
+### Critical Issues
+1. **Window Handle Missing in Properties Dialog** (`data_properties_dialog.cpp:436`)
+   - `ctx.m_hWnd = nullptr` - prevents proper dialog parenting
+   - Actions from properties dialog may show orphaned dialogs
 
-The following data sources fit the existing DataController/DataObject/DataAction paradigm and would add significant value:
+2. **Debug Log File Deletion** (`utils/logging.cpp:59`)
+   - `std::remove("pserv5.log")` executes on every startup
+   - Prevents post-crash diagnostics
 
-**1. Scheduled Tasks**
-- Enumerate via Task Scheduler API (`ITaskService`, `ITaskFolder`)
-- Columns: Name, Status, Trigger, Last Run, Next Run, Author, Enabled
-- Actions: Run Now, Enable/Disable, Delete, Edit Configuration
-- State: Enabled/Disabled/Running
-- Similar complexity to Services view
+### Incomplete Features
+1. **Add Environment Variable** (`environment_variable_actions.cpp:158`)
+   - Shows "Not Yet Implemented" placeholder
+   - Either implement or hide action
 
-**2. Startup Programs**
-- Enumerate from multiple sources:
-  - Registry: `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
-  - Registry: `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
-  - Startup folders: `%ProgramData%\Microsoft\Windows\Start Menu\Programs\Startup`
-  - Startup folders: `%AppData%\Microsoft\Windows\Start Menu\Programs\Startup`
-  - Task Scheduler startup tasks
-- Columns: Name, Location, Type (Registry/Folder/Task), Command, Enabled
-- Actions: Enable/Disable, Open Location, Delete, Open in Registry
-- Useful for system optimization and malware detection
+2. **Close TCP Connection** (`network_connection_actions.cpp:130`)
+   - Shows "Not Yet Implemented" placeholder
+   - Requires `SetTcpEntry` implementation or hide action
 
-**3. Network Connections**
-- Enumerate via `GetExtendedTcpTable()` and `GetExtendedUdpTable()`
-- Columns: Protocol, Local Address, Local Port, Remote Address, Remote Port, State, PID, Process Name
-- Actions: Close Connection, Copy Address, Filter by Process
-- State: Established/Listening/Close_Wait/Time_Wait/etc.
-- Useful for security analysis and troubleshooting
+3. **Missing Auto-Refresh After Deletes** (3 locations)
+   - Environment variables, scheduled tasks, startup programs
+   - User must manually refresh after delete operations
+   - Files: `environment_variable_actions.cpp:130`, `scheduled_task_actions.cpp:178`, `startup_program_actions.cpp:145`
 
-**4. Environment Variables**
-- Enumerate from system and user registry locations:
-  - System: `HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment`
-  - User: `HKCU\Environment`
-- Columns: Name, Value, Scope (System/User)
-- Actions: Add, Edit, Delete, Copy Value
-- Fully editable with transaction-based updates
-- Developer-focused utility
+### Disabled Menu Items (Low Priority)
+These are intentionally disabled pending future development:
+- Export to XML (`main_window.cpp:1773`)
+- Options/Settings Dialog (`main_window.cpp:1836`)
+- Remote Machine Connection (`main_window.cpp:1841`)
+- Check for Updates (`main_window.cpp:1900`)
 
-### Implementation Notes
-- All four sources follow the existing pattern: Manager class in `windows_api/`, Model in `models/`, Controller in `controllers/`, Actions in `actions/`
-- Scheduled Tasks: Requires COM (similar to file dialogs), use WIL for handle management
-- Startup Programs: Mix of registry enumeration and filesystem scanning
-- Network Connections: Uses IP Helper API, needs inet_ntoa() for address formatting
-- Environment Variables: Pure registry operations, simplest of the four
+### Future Work
 
-### Command-Line Interface
+#### Command-Line Interface
 - Headless mode support
 - XML export/import for all views
 - Service/process automation commands
 - Reference: pserv4 XML format for compatibility
 
-### Polish & Beta Release
-- Memory leak detection (Application Verifier)
-- Performance profiling
-- WiX MSI installer project
-- Code signing for enterprise distribution
+#### Enhancement Opportunities
+- Delete key binding for delete actions
+- Escape key to close dialogs
+- Enter key to apply property changes
+- Switch logging to Info level for release builds
 
 ## Historical Context
 
