@@ -1770,11 +1770,6 @@ namespace pserv
                     }
                 }
 
-                if (ImGui::MenuItem("Export to XML...", nullptr, false, false))
-                {
-                    // TBD in future milestone
-                }
-
                 ImGui::Separator();
 
                 if (ImGui::MenuItem("Exit", "Alt+F4"))
@@ -1830,21 +1825,6 @@ namespace pserv
                 ImGui::EndMenu();
             }
 
-            // Tools menu
-            if (ImGui::BeginMenu("Tools"))
-            {
-                if (ImGui::MenuItem("Options...", nullptr, false, false))
-                {
-                    // TBD in future milestone
-                }
-
-                if (ImGui::MenuItem("Connect to Remote Machine...", nullptr, false, false))
-                {
-                    // TBD in future milestone
-                }
-
-                ImGui::EndMenu();
-            }
 
             // Themes menu
             if (ImGui::BeginMenu("Themes"))
@@ -1893,13 +1873,6 @@ namespace pserv
                         // ShellExecute returns a value <= 32 on error
                         LogWin32Error("ShellExecuteW", "documentation URL");
                     }
-                }
-
-                ImGui::Separator();
-
-                if (ImGui::MenuItem("Check for Updates...", nullptr, false, false))
-                {
-                    // TBD in future milestone
                 }
 
                 ImGui::EndMenu();
