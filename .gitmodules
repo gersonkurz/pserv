@@ -13,3 +13,6 @@
 [submodule "wil"]
 	path = wil
 	url = https://github.com/microsoft/wil.git
+[submodule "argparse"]
+	path = argparse
+	url = https://github.com/jamolnng/argparse.git
