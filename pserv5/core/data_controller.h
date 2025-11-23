@@ -1,6 +1,10 @@
 #pragma once
 #include <core/data_object_column.h>
 #include <core/data_object_container.h>
+#ifdef PSERV_CONSOLE_BUILD
+#include <argparse/argparse.hpp>
+#endif
+
 
 namespace pserv
 {
@@ -62,6 +66,10 @@ namespace pserv
 
         // Core abstract methods
         virtual void Refresh(bool isAutoRefresh = false) = 0;
+
+#ifdef PSERV_CONSOLE_BUILD
+        void RegisterArguments(argparse::ArgumentParser &program) const;
+#endif
 
         const DataObjectContainer &GetDataObjects() const
         {

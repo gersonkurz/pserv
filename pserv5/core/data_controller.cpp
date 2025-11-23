@@ -31,6 +31,12 @@ namespace pserv
         }
     }
 #endif
+#ifdef PSERV_CONSOLE_BUILD
+    void DataController::RegisterArguments(argparse::ArgumentParser &program) const
+    {
+        program.add_argument(GetControllerName());
+    }
+#endif
 
     void DataController::Sort(int columnIndex, bool ascending)
     {
