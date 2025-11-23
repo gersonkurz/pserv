@@ -38,12 +38,11 @@ namespace pserv
     {
         spdlog::info("Refreshing services...");
 
-        // Clear existing services
-        Clear();
-
         try
         {
             // Enumerate services with the configured service type filter
+            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
+            // update-in-place for existing objects and removes stale ones
             ServiceManager sm;
             m_objects.StartRefresh();
             sm.EnumerateServices(&m_objects, m_serviceType);

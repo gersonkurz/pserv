@@ -919,6 +919,23 @@ namespace pserv
                 {
                     spdlog::debug("Auto-refreshing {}", m_pCurrentController->GetControllerName());
                     m_pCurrentController->Refresh();
+
+                    // Clean up selection: remove objects no longer in container
+                    const auto& container = m_pCurrentController->GetDataObjects();
+                    auto it = m_dispatchContext.m_selectedObjects.begin();
+                    while (it != m_dispatchContext.m_selectedObjects.end())
+                    {
+                        auto* obj = *it;
+                        if (!container.GetByStableId<DataObject>(obj->GetStableID()))
+                        {
+                            obj->Release(REFCOUNT_DEBUG_ARGS);
+                            it = m_dispatchContext.m_selectedObjects.erase(it);
+                        }
+                        else
+                        {
+                            ++it;
+                        }
+                    }
                 }
                 m_lastAutoRefreshTime = now;
             }

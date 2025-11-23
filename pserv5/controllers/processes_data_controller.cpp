@@ -36,7 +36,6 @@ namespace pserv
     void ProcessesDataController::Refresh()
     {
         spdlog::info("Refreshing processes...");
-        Clear();
 
         // Query current user name (always, in case of user switch)
         m_currentUserName.clear();
@@ -53,6 +52,8 @@ namespace pserv
 
         try
         {
+            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
+            // update-in-place for existing objects and removes stale ones
             m_objects.StartRefresh();
             ProcessManager::EnumerateProcesses(&m_objects);
             m_objects.FinishRefresh();

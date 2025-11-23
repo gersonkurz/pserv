@@ -20,10 +20,10 @@ namespace pserv
     {
         spdlog::info("Refreshing environment variables...");
 
-        Clear();
-
         try
         {
+            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
+            // update-in-place for existing objects and removes stale ones
             m_objects.StartRefresh();
             EnvironmentVariableManager::EnumerateEnvironmentVariables(&m_objects);
             m_objects.FinishRefresh();

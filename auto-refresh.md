@@ -15,8 +15,8 @@ Implement periodic auto-refresh of data controllers while preserving selection, 
 | STEP 2: Add SupportsAutoRefresh | ✅ COMPLETED | "Add SupportsAutoRefresh to DataController - STEP 2 of auto-refresh" |
 | STEP 3: Add Configuration | ✅ COMPLETED | "Add AutoRefresh configuration structure - STEP 3 of auto-refresh" |
 | STEP 4: Add Timer Infrastructure | ✅ COMPLETED | "Add timer infrastructure for auto-refresh - STEP 4 of auto-refresh" |
-| STEP 5: Implement Actual Refresh | 🔄 AWAITING VERIFICATION | Code implemented, needs testing |
-| STEP 6: Selection Cleanup | ⏳ PENDING | - |
+| STEP 5: Implement Actual Refresh | ✅ COMPLETED | "Implement actual refresh - STEP 5 of auto-refresh" |
+| STEP 6: Selection Cleanup | ✅ COMPLETED | Fixed update-in-place + cleanup logic |
 | STEP 7: Pause During Edits | ⏳ PENDING | - |
 | STEP 8: Status Bar Indicator | ⏳ PENDING | - |
 | STEP 9: Menu Toggle | ⏳ PENDING | - |
@@ -24,7 +24,7 @@ Implement periodic auto-refresh of data controllers while preserving selection, 
 | STEP 11: Interval Submenu | ⏳ PENDING | - |
 | STEP 12: Scroll Preservation | ⏳ PENDING | - |
 
-**RESUME POINT**: STEP 5 code is complete. User needs to compile, enable auto-refresh in config (`enabled = true`, `intervalMs = 2000`), and verify services update every 2 seconds. Once verified, commit and proceed to STEP 6.
+**RESUME POINT**: STEP 6 completed. Fixed critical bug where all controllers were calling Clear() before refresh, breaking update-in-place. Now selections persist correctly during auto-refresh. Ready for STEP 7.
 
 ---
 

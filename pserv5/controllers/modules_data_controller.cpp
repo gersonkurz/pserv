@@ -24,10 +24,11 @@ namespace pserv
     void ModulesDataController::Refresh()
     {
         spdlog::info("Refreshing modules...");
-        Clear();
 
         // Enumerate all processes to get their modules. Actually, this is more tricky than it seems, because
-        // m_objects creates BOTH modules AND processes. 
+        // m_objects creates BOTH modules AND processes.
+        // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
+        // update-in-place for existing objects and removes stale ones
         DataObjectContainer processes;
         ProcessManager::EnumerateProcesses(&processes);
         m_objects.StartRefresh();

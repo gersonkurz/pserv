@@ -28,8 +28,9 @@ namespace pserv
     void UninstallerDataController::Refresh()
     {
         spdlog::info("Refreshing installed programs...");
-        Clear();
 
+        // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
+        // update-in-place for existing objects and removes stale ones
         m_objects.StartRefresh();
         UninstallerManager::EnumerateInstalledPrograms(&m_objects);
         m_objects.FinishRefresh();

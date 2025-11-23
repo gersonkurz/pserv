@@ -22,10 +22,10 @@ namespace pserv
     {
         spdlog::info("Refreshing startup programs...");
 
-        Clear();
-
         try
         {
+            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
+            // update-in-place for existing objects and removes stale ones
             m_objects.StartRefresh();
             StartupProgramManager::EnumerateStartupPrograms(&m_objects);
             m_objects.FinishRefresh();
