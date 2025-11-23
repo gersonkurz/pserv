@@ -73,6 +73,9 @@ namespace pserv
             return true; // Default: most views support auto-refresh
         }
 
+        // Check if properties dialog has unsaved edits (pause auto-refresh during edits)
+        bool HasPropertiesDialogWithEdits() const;
+        
         void RenderPropertiesDialog();
 
         // Generic sort implementation using column metadata and GetTypedProperty()

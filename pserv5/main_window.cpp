@@ -1919,9 +1919,12 @@ namespace pserv
         if (settings.pauseDuringActions.get() && m_dispatchContext.m_pAsyncOp != nullptr)
             return false;
 
-        // TODO STEP 7: Pause if properties dialog has pending edits
-        // if (settings.pauseDuringEdits.get() && m_pCurrentController->HasPropertiesDialogWithEdits())
-        //     return false;
+        // Pause if properties dialog has pending edits
+        if (settings.pauseDuringEdits.get() && m_pCurrentController->HasPropertiesDialogWithEdits())
+        {
+            spdlog::debug("Auto-refresh paused: properties dialog has pending edits");
+            return false;
+        }
 
         return true;
     }

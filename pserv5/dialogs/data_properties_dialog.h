@@ -40,6 +40,12 @@ namespace pserv
             return m_bOpen;
         }
 
+        // Check if there are unsaved edits
+        bool HasPendingEdits() const
+        {
+            return !m_editBuffers.empty();
+        }
+
         // Render the dialog (call every frame)
         // Returns true if changes were applied
         bool Render();

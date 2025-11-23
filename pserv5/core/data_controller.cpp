@@ -40,6 +40,11 @@ namespace pserv
         ColumnDataType dataType = m_columns[columnIndex].DataType;
         m_objects.Sort(columnIndex, ascending, dataType);
     }
+    
+    bool DataController::HasPropertiesDialogWithEdits() const
+    {
+        return m_pPropertiesDialog && m_pPropertiesDialog->HasPendingEdits();
+    }
 
     void DataController::RenderPropertiesDialog()
     {

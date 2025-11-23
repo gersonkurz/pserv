@@ -17,14 +17,14 @@ Implement periodic auto-refresh of data controllers while preserving selection, 
 | STEP 4: Add Timer Infrastructure | ✅ COMPLETED | "Add timer infrastructure for auto-refresh - STEP 4 of auto-refresh" |
 | STEP 5: Implement Actual Refresh | ✅ COMPLETED | "Implement actual refresh - STEP 5 of auto-refresh" |
 | STEP 6: Selection Cleanup | ✅ COMPLETED | Fixed update-in-place + cleanup logic |
-| STEP 7: Pause During Edits | ⏳ PENDING | - |
+| STEP 7: Pause During Edits | 🔄 AWAITING VERIFICATION | Code implemented, needs testing |
 | STEP 8: Status Bar Indicator | ⏳ PENDING | - |
 | STEP 9: Menu Toggle | ⏳ PENDING | - |
 | STEP 10: Keyboard Shortcut | ⏳ PENDING | - |
 | STEP 11: Interval Submenu | ⏳ PENDING | - |
 | STEP 12: Scroll Preservation | ⏳ PENDING | - |
 
-**RESUME POINT**: STEP 6 completed. Fixed critical bug where all controllers were calling Clear() before refresh, breaking update-in-place. Now selections persist correctly during auto-refresh. Ready for STEP 7.
+**RESUME POINT**: STEP 7 code implemented. Auto-refresh now pauses when properties dialog has unsaved edits. User needs to compile and test: open properties dialog, make an edit without applying, verify auto-refresh pauses (check logs), then apply/cancel edit and verify auto-refresh resumes.
 
 ---
 
