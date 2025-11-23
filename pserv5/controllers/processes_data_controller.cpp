@@ -33,7 +33,7 @@ namespace pserv
     {
     }
 
-    void ProcessesDataController::Refresh()
+    void ProcessesDataController::Refresh(bool isAutoRefresh)
     {
         spdlog::info("Refreshing processes...");
 

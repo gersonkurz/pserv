@@ -16,7 +16,7 @@ namespace pserv
     {
     }
 
-    void EnvironmentVariablesDataController::Refresh()
+    void EnvironmentVariablesDataController::Refresh(bool isAutoRefresh)
     {
         spdlog::info("Refreshing environment variables...");
 

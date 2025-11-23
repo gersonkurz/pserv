@@ -21,7 +21,7 @@ namespace pserv
     {
     }
 
-    void NetworkConnectionsDataController::Refresh()
+    void NetworkConnectionsDataController::Refresh(bool isAutoRefresh)
     {
         spdlog::info("Refreshing network connections...");
 

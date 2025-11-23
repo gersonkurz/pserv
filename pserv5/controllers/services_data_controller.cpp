@@ -34,9 +34,10 @@ namespace pserv
     {
     }
 
-    void ServicesDataController::Refresh()
+    void ServicesDataController::Refresh(bool isAutoRefresh)
     {
-        spdlog::info("Refreshing services...");
+        if (!isAutoRefresh)
+            spdlog::info("Refreshing services...");
 
         try
         {
@@ -45,10 +46,11 @@ namespace pserv
             // update-in-place for existing objects and removes stale ones
             ServiceManager sm;
             m_objects.StartRefresh();
-            sm.EnumerateServices(&m_objects, m_serviceType);
+            sm.EnumerateServices(&m_objects, m_serviceType, isAutoRefresh);
             m_objects.FinishRefresh();
 
-            spdlog::info("Successfully refreshed {} services", m_objects.GetSize());
+            if (!isAutoRefresh)
+                spdlog::info("Successfully refreshed {} services", m_objects.GetSize());
 
             // Re-apply last sort order if any
             if (m_lastSortColumn >= 0)

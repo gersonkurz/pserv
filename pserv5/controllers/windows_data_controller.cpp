@@ -25,7 +25,7 @@ namespace pserv
     {
     }
 
-    void WindowsDataController::Refresh()
+    void WindowsDataController::Refresh(bool isAutoRefresh)
     {
         spdlog::info("Refreshing windows...");
 

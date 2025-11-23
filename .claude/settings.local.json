@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(refreshed...\" logs during auto-refresh\n- ServiceManager: Suppress \"Enumerated X services\" log during auto-refresh\n- ServiceManager: Track QueryServiceConfig2W errors per service and only\n  log each error once (prevents spam for services with missing MUI files)\n- MainWindow: Pass true for isAutoRefresh when triggered by timer\n\nResult: Auto-refresh now only logs one debug line instead of 3+ info\nlines, and repeated QueryServiceConfig2W errors are suppressed.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

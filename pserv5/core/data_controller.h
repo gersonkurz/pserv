@@ -55,7 +55,7 @@ namespace pserv
         virtual ~DataController();
 
         // Core abstract methods
-        virtual void Refresh() = 0;
+        virtual void Refresh(bool isAutoRefresh = false) = 0;
 
         const DataObjectContainer &GetDataObjects() const
         {

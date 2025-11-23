@@ -18,7 +18,7 @@ namespace pserv
     {
     }
 
-    void StartupProgramsDataController::Refresh()
+    void StartupProgramsDataController::Refresh(bool isAutoRefresh)
     {
         spdlog::info("Refreshing startup programs...");
 

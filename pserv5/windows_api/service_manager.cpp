@@ -10,6 +10,9 @@ namespace pserv
 
     namespace
     {
+        // Track services that have logged QueryServiceConfig2W errors to avoid repeated logging
+        std::unordered_set<std::string> g_servicesWithLoggedErrors;
+
         std::string GetServiceStateString(DWORD state)
         {
             switch (state)
@@ -47,7 +50,7 @@ namespace pserv
         }
     }
 
-    void ServiceManager::EnumerateServices(DataObjectContainer *doc, DWORD serviceType)
+    void ServiceManager::EnumerateServices(DataObjectContainer *doc, DWORD serviceType, bool isAutoRefresh)
     {
         if (!m_hScManager)
         {
@@ -171,7 +174,13 @@ namespace pserv
 
                 if (!result && error != ERROR_INSUFFICIENT_BUFFER)
                 {
-                    LogWin32Error("QueryServiceConfig2W", "size query for '{}'", utils::WideToUtf8(pServices[i].lpServiceName));
+                    const auto serviceName = utils::WideToUtf8(pServices[i].lpServiceName);
+                    // Only log error once per service, or always if not auto-refresh
+                    if (!isAutoRefresh || g_servicesWithLoggedErrors.find(serviceName) == g_servicesWithLoggedErrors.end())
+                    {
+                        LogWin32Error("QueryServiceConfig2W", "size query for '{}'", serviceName);
+                        g_servicesWithLoggedErrors.insert(serviceName);
+                    }
                 }
                 else if (error == ERROR_INSUFFICIENT_BUFFER)
                 {
@@ -195,7 +204,8 @@ namespace pserv
             }
         }
 
-        spdlog::info("Enumerated {} services", doc->GetSize());
+        if (!isAutoRefresh)
+            spdlog::info("Enumerated {} services", doc->GetSize());
     }
 
     bool ServiceManager::StartServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback)

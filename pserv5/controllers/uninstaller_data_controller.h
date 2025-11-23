@@ -10,7 +10,7 @@ namespace pserv
         UninstallerDataController();
 
     private:
-        void Refresh() override;
+        void Refresh(bool isAutoRefresh = false) override;
         VisualState GetVisualState(const DataObject *dataObject) const override; // No special states for now
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
     };

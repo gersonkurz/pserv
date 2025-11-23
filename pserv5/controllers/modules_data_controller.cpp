@@ -21,7 +21,7 @@ namespace pserv
     {
     }
 
-    void ModulesDataController::Refresh()
+    void ModulesDataController::Refresh(bool isAutoRefresh)
     {
         spdlog::info("Refreshing modules...");
 

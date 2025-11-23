@@ -13,7 +13,7 @@ namespace pserv
     private:
         ~StartupProgramsDataController() override = default;
 
-        void Refresh() override;
+        void Refresh(bool isAutoRefresh = false) override;
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
         VisualState GetVisualState(const DataObject *dataObject) const override;
     };

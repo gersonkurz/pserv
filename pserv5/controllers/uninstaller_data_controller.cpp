@@ -25,7 +25,7 @@ namespace pserv
     {
     }
 
-    void UninstallerDataController::Refresh()
+    void UninstallerDataController::Refresh(bool isAutoRefresh)
     {
         spdlog::info("Refreshing installed programs...");
 

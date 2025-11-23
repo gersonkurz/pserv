@@ -20,7 +20,7 @@ namespace pserv
     {
     }
 
-    void ScheduledTasksDataController::Refresh()
+    void ScheduledTasksDataController::Refresh(bool isAutoRefresh)
     {
         spdlog::info("Refreshing scheduled tasks...");
 

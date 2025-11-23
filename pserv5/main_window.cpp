@@ -926,7 +926,7 @@ namespace pserv
                 if (m_pCurrentController)
                 {
                     spdlog::debug("Auto-refreshing {}", m_pCurrentController->GetControllerName());
-                    m_pCurrentController->Refresh();
+                    m_pCurrentController->Refresh(true);
 
                     // Clean up selection: remove objects no longer in container
                     const auto& container = m_pCurrentController->GetDataObjects();
