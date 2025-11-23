@@ -835,6 +835,14 @@ namespace pserv
             }
         }
 
+        // Ctrl+R to toggle auto-refresh
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_R))
+        {
+            config::theSettings.autoRefresh.enabled.set(!config::theSettings.autoRefresh.enabled.get());
+            config::theSettings.save(*m_pConfigBackend);
+            spdlog::info("Auto-refresh {}", config::theSettings.autoRefresh.enabled.get() ? "enabled" : "disabled");
+        }
+
         // Create tab bar with placeholder tabs
         if (ImGui::BeginTabBar("MainTabBar", ImGuiTabBarFlags_None))
         {

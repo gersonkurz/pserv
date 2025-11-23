@@ -19,12 +19,12 @@ Implement periodic auto-refresh of data controllers while preserving selection, 
 | STEP 6: Selection Cleanup | ✅ COMPLETED | Fixed update-in-place + cleanup logic |
 | STEP 7: Pause During Edits | ✅ COMPLETED | "Add pause during property edits - STEP 7 of auto-refresh" |
 | STEP 8: Status Bar Indicator | ✅ COMPLETED | "Add status bar indicator - STEP 8 of auto-refresh" |
-| STEP 9: Menu Toggle | 🔄 AWAITING VERIFICATION | Code implemented, needs testing |
-| STEP 10: Keyboard Shortcut | ⏳ PENDING | - |
+| STEP 9: Menu Toggle | ✅ COMPLETED | "Add menu toggle - STEP 9 of auto-refresh" |
+| STEP 10: Keyboard Shortcut | 🔄 AWAITING VERIFICATION | Code implemented, needs testing |
 | STEP 11: Interval Submenu | ⏳ PENDING | - |
 | STEP 12: Scroll Preservation | ⏳ PENDING | - |
 
-**RESUME POINT**: STEP 9 code implemented. View menu has "Auto-Refresh" item with Ctrl+R shortcut hint. User needs to compile and test: toggle via menu, verify setting persists across restarts, verify status bar updates.
+**RESUME POINT**: STEP 10 code implemented. Ctrl+R toggles auto-refresh with log message. User needs to compile and test: press Ctrl+R, verify toggle works, verify menu checkmark updates, verify status bar updates.
 
 ---
 
