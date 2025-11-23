@@ -14,11 +14,18 @@ int main(int argc, char *argv[])
 
     console::write_line(CONSOLE_FOREGROUND_GREEN "*** pservc 5.0.0 ***" CONSOLE_STANDARD);
     DataControllerLibrary dataControllerLibrary;
-    argparse::ArgumentParser program{"pservc"};
+    // Disable exit_on_default_arguments to prevent std::exit() on --help/--version
+    // This allows destructors to run properly and prevents memory leak reports
+    argparse::ArgumentParser program{"pservc", "5.0.0", argparse::default_arguments::all, false};
+
+    // Storage for subparsers - must outlive the program ArgumentParser
+    // argparse stores references, so these must remain alive
+    // Using unique_ptr because ArgumentParser has deleted copy/move constructors
+    std::vector<std::unique_ptr<argparse::ArgumentParser>> subparsers;
 
     for (const auto controller : dataControllerLibrary.GetDataControllers())
     {
-        controller->RegisterArguments(program);
+        controller->RegisterArguments(program, subparsers);
     }
     try
     {

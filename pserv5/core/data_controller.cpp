@@ -32,7 +32,7 @@ namespace pserv
     }
 #endif
 #ifdef PSERV_CONSOLE_BUILD
-    void DataController::RegisterArguments(argparse::ArgumentParser &program) const
+    void DataController::RegisterArguments(argparse::ArgumentParser &program, std::vector<std::unique_ptr<argparse::ArgumentParser>> &subparsers) const
     {
         // Create a subcommand for this controller
         std::string cmd_name(GetControllerName());
@@ -40,8 +40,13 @@ namespace pserv
         std::transform(cmd_name.begin(), cmd_name.end(), cmd_name.begin(), ::tolower);
         std::replace(cmd_name.begin(), cmd_name.end(), ' ', '-');
 
-        // Create subparser for this controller
-        argparse::ArgumentParser cmd(cmd_name);
+        // Create subparser for this controller and store in persistent vector
+        // argparse stores references, so the ArgumentParser must outlive the main program parser
+        // Using unique_ptr because ArgumentParser has deleted copy/move constructors
+        // Disable exit_on_default_arguments to prevent std::exit() on --help, allowing proper cleanup
+        subparsers.push_back(std::make_unique<argparse::ArgumentParser>(
+            cmd_name, "5.0.0", argparse::default_arguments::help, false));
+        auto &cmd = *subparsers.back();
         cmd.add_description("Manage " + std::string(GetItemName()) + "s");
 
         // Add common output format option
