@@ -37,6 +37,7 @@ namespace pserv
                 {
                 }
                 TypedValue<std::string> logLevel{this, "LogLevel", "debug"};
+                TypedValue<std::string> logFilePath{this, "LogFilePath", ""}; // Empty = use default (AppData)
             } logging{this};
 
             struct WindowSettings : public Section

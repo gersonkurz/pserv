@@ -3,6 +3,31 @@
 
 namespace pserv::utils
 {
+    std::filesystem::path GetAppDataPath()
+    {
+        // Get LOCALAPPDATA path
+        PWSTR localAppDataPath = nullptr;
+        HRESULT hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &localAppDataPath);
+        if (FAILED(hr))
+        {
+            throw std::runtime_error("Failed to get LocalAppData path");
+        }
+
+        std::wstring wpath(localAppDataPath);
+        CoTaskMemFree(localAppDataPath);
+
+        // Convert to UTF-8 and append pserv5 folder
+        std::string appDataPath = utils::WideToUtf8(wpath);
+        std::filesystem::path path = std::filesystem::path(appDataPath) / "pserv5";
+
+        // Create directory if it doesn't exist
+        if (!std::filesystem::exists(path))
+        {
+            std::filesystem::create_directories(path);
+        }
+
+        return path;
+    }
 
     void NdjsonFormatter::format(const spdlog::details::log_msg &msg, spdlog::memory_buf_t &dest)
     {
@@ -56,7 +81,7 @@ namespace pserv::utils
 
     std::shared_ptr<spdlog::logger> InitializeLogging()
     {
-        // Console sink with default pattern
+        // Initialize with console and debug output only (before config is loaded)
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         console_sink->set_level(spdlog::level::debug);
 
@@ -64,19 +89,29 @@ namespace pserv::utils
         auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
         msvc_sink->set_level(spdlog::level::debug);
 
-        // File sink with NDJSON format - force rotation on startup, keep 10 backups
-        // Using 10MB max size per file (will rotate on startup regardless)
-        auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("pserv5.log", 1024 * 1024 * 10, 10);
-        file_sink->set_level(spdlog::level::debug);
-        file_sink->set_formatter(std::make_unique<NdjsonFormatter>());
+        std::vector<spdlog::sink_ptr> sinks{console_sink, msvc_sink};
+        auto logger = std::make_shared<spdlog::logger>("pserv5", sinks.begin(), sinks.end());
+        logger->set_level(spdlog::level::debug);
+        spdlog::set_default_logger(logger);
+
+        return logger;
+    }
+
+    void ReconfigureLoggingWithFile(const std::string& logFilePath)
+    {
+        // Get existing logger
+        auto logger = spdlog::default_logger();
 
         // Force rotation on startup to create new log file
-        // This happens by opening and immediately rotating if file exists
-        std::filesystem::path log_path("pserv5.log");
+        std::filesystem::path log_path(logFilePath);
         if (std::filesystem::exists(log_path) && std::filesystem::file_size(log_path) > 0)
         {
-            // Delete oldest log if it exists (pserv5.10.log)
-            std::filesystem::path oldest = "pserv5.10.log";
+            std::filesystem::path log_dir = log_path.parent_path();
+            std::string log_stem = log_path.stem().string();
+            std::string log_ext = log_path.extension().string();
+
+            // Delete oldest log if it exists
+            std::filesystem::path oldest = log_dir / (log_stem + ".10" + log_ext);
             if (std::filesystem::exists(oldest))
             {
                 std::filesystem::remove(oldest);
@@ -85,8 +120,8 @@ namespace pserv::utils
             // Shift all backup logs up (9 -> 10, 8 -> 9, etc.)
             for (int i = 9; i >= 1; --i)
             {
-                std::filesystem::path old_path = std::format("pserv5.{}.log", i);
-                std::filesystem::path new_path = std::format("pserv5.{}.log", i + 1);
+                std::filesystem::path old_path = log_dir / std::format("{}.{}{}", log_stem, i, log_ext);
+                std::filesystem::path new_path = log_dir / std::format("{}.{}{}", log_stem, i + 1, log_ext);
                 if (std::filesystem::exists(old_path))
                 {
                     std::filesystem::rename(old_path, new_path);
@@ -94,14 +129,15 @@ namespace pserv::utils
             }
 
             // Move current log to .1
-            std::filesystem::rename(log_path, "pserv5.1.log");
+            std::filesystem::rename(log_path, log_dir / (log_stem + ".1" + log_ext));
         }
 
-        std::vector<spdlog::sink_ptr> sinks{console_sink, msvc_sink, file_sink};
-        auto logger = std::make_shared<spdlog::logger>("pserv5", sinks.begin(), sinks.end());
-        logger->set_level(spdlog::level::debug);
-        spdlog::set_default_logger(logger);
+        // Add file sink with NDJSON format - 10MB max size, keep 10 backups
+        auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logFilePath, 1024 * 1024 * 10, 10);
+        file_sink->set_level(spdlog::level::debug);
+        file_sink->set_formatter(std::make_unique<NdjsonFormatter>());
 
-        return logger;
+        // Add file sink to existing logger
+        logger->sinks().push_back(file_sink);
     }
 } // namespace pserv::utils

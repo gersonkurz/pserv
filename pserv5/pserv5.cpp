@@ -27,21 +27,33 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // Step 1: Initialize logging with default settings
+    // Step 1: Initialize logging with console/debug output only
     auto logger = pserv::utils::InitializeLogging();
     logger->info("pserv5 starting up");
 
-    // Step 2: Load configuration
-    std::filesystem::path configPath = "pserv5.toml";
-    logger->info("Loading configuration from: {}", std::filesystem::absolute(configPath).string());
+    // Step 2: Get AppData path and determine config/log paths
+    std::filesystem::path appDataPath = pserv::utils::GetAppDataPath();
+    std::filesystem::path configPath = appDataPath / "pserv5.toml";
+    logger->info("AppData path: {}", appDataPath.string());
+    logger->info("Loading configuration from: {}", configPath.string());
 
+    // Step 3: Load configuration
     pserv::config::TomlBackend backend{configPath.string()};
     pserv::config::theSettings.load(backend);
-
-    // Step 2.5: Log what was loaded for active tab
     logger->info("Config loaded - activeView value: '{}'", pserv::config::theSettings.application.activeView.get());
 
-    // Step 3: Apply logging configuration from loaded settings
+    // Step 4: Configure file logging
+    std::string logFilePath = pserv::config::theSettings.logging.logFilePath.get();
+    if (logFilePath.empty())
+    {
+        // Default: AppData/pserv5/pserv5.log
+        logFilePath = (appDataPath / "pserv5.log").string();
+        pserv::config::theSettings.logging.logFilePath.set(logFilePath);
+    }
+    logger->info("Log file path: {}", logFilePath);
+    pserv::utils::ReconfigureLoggingWithFile(logFilePath);
+
+    // Step 5: Apply log level from config
     std::string logLevel = pserv::config::theSettings.logging.logLevel.get();
     logger->set_level(spdlog::level::from_str(logLevel));
     logger->info("Log level set to: {}", logLevel);
@@ -63,7 +75,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
     // Save configuration on exit
     pserv::config::theSettings.save(backend);
-    logger->info("Configuration saved to: {}", std::filesystem::absolute(configPath).string());
+    logger->info("Configuration saved to: {}", configPath.string());
 
     logger->info("pserv5 shutting down");
     return result;
