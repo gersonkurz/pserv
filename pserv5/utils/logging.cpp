@@ -1,5 +1,8 @@
 #include "precomp.h"
 #include <utils/logging.h>
+#include "Knownfolders.h"
+#include <utils/string_utils.h>
+#include <Shlobj.h>
 
 namespace pserv::utils
 {
