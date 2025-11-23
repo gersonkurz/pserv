@@ -88,11 +88,15 @@ namespace pserv
         // Auto-refresh state
         std::chrono::steady_clock::time_point m_lastAutoRefreshTime;
 
+        // Remote machine connection dialog state
+        bool m_bShowRemoteMachineDialog{false};
+
         // Helper methods
         bool ShouldAutoRefresh() const;
         void SaveWindowState();
         void SaveCurrentTableState(bool force = false);
         void RenderProgressDialog();
+        void RenderRemoteMachineDialog();
         void RenderTitleBar();
         void RenderMenuBar();
         bool IsWindowMaximized() const;

@@ -8,10 +8,18 @@ namespace pserv
     {
     private:
         wil::unique_schandle m_hScManager;
+        std::string m_machineName; // Empty = local machine, otherwise remote machine name
 
     public:
-        ServiceManager();
+        ServiceManager(const std::string& machineName = "");
         ~ServiceManager() = default;
+
+        // Get current machine name (empty string means local machine)
+        const std::string& GetMachineName() const { return m_machineName; }
+
+        // Test if connection to the machine is valid
+        // Returns true if SCM handle was successfully opened, false otherwise
+        bool IsConnected() const { return m_hScManager != nullptr; }
 
         // Enumerate all services on the local machine
         // Returns raw pointers - caller is responsible for cleanup

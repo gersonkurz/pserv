@@ -11,6 +11,8 @@
 #include <utils/win32_error.h>
 #include <core/data_controller.h>
 #include <core/data_object_container.h>
+#include <controllers/services_data_controller.h>
+#include <windows_api/service_manager.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -648,6 +650,16 @@ namespace pserv
 
         // Find the controller that matches the saved active tab
         const auto &controllers = m_Controllers.GetDataControllers();
+
+        // Load saved service machine name from config (if any)
+        auto* servicesController = static_cast<ServicesDataController*>(controllers[0]);
+        std::string savedMachine = config::theSettings.application.serviceMachineName.get();
+        if (!savedMachine.empty())
+        {
+            spdlog::info("Restoring services machine name from config: {}", savedMachine);
+            servicesController->SetMachineName(savedMachine);
+        }
+
         for (auto *controller : controllers)
         {
             if (controller->GetControllerName() == m_activeTab)
@@ -694,6 +706,80 @@ namespace pserv
             {
                 m_dispatchContext.m_pAsyncOp->RequestCancel();
                 spdlog::info("User requested cancellation");
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+
+    void MainWindow::RenderRemoteMachineDialog()
+    {
+        if (m_bShowRemoteMachineDialog)
+        {
+            ImGui::OpenPopup("Connect to Remote Machine");
+            m_bShowRemoteMachineDialog = false; // Only open once
+        }
+
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+        if (ImGui::BeginPopupModal("Connect to Remote Machine", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            static char machineNameBuffer[256] = "";
+            static std::string errorMessage = "";
+
+            ImGui::Text("Enter the name or IP address of the remote machine:");
+            ImGui::SetNextItemWidth(300.0f);
+
+            bool enterPressed = ImGui::InputText("##RemoteMachine", machineNameBuffer, sizeof(machineNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+
+            // Show error message if connection failed
+            if (!errorMessage.empty())
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f)); // Red text
+                ImGui::TextWrapped("%s", errorMessage.c_str());
+                ImGui::PopStyleColor();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::Button("Connect", ImVec2(120, 0)) || enterPressed)
+            {
+                if (strlen(machineNameBuffer) > 0)
+                {
+                    // Test the connection first
+                    ServiceManager testConnection(machineNameBuffer);
+                    if (!testConnection.IsConnected())
+                    {
+                        errorMessage = std::format("Failed to connect to '{}'. Please check the machine name/IP and ensure the Remote Registry service is running on the target machine.", machineNameBuffer);
+                        spdlog::error("Failed to connect to remote machine: {}", machineNameBuffer);
+                    }
+                    else
+                    {
+                        // Connection successful
+                        errorMessage.clear();
+
+                        // Get the services controller
+                        auto* servicesController = static_cast<ServicesDataController*>(
+                            m_Controllers.GetDataControllers()[0]);
+
+                        config::theSettings.application.serviceMachineName.set(machineNameBuffer);
+                        servicesController->SetMachineName(machineNameBuffer);
+                        config::theSettings.save(*m_pConfigBackend);
+
+                        // Switch to Services view
+                        m_pendingTabSwitch = SERVICES_DATA_CONTROLLER_NAME;
+
+                        spdlog::info("Successfully connected to remote machine: {}", machineNameBuffer);
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
+            {
+                errorMessage.clear();
+                ImGui::CloseCurrentPopup();
             }
 
             ImGui::EndPopup();
@@ -823,13 +909,28 @@ namespace pserv
                 ImGuiKey_1, ImGuiKey_2, ImGuiKey_3, ImGuiKey_4, ImGuiKey_5,
                 ImGuiKey_6, ImGuiKey_7, ImGuiKey_8, ImGuiKey_9, ImGuiKey_0};
 
+            // Check if we're in remote mode
+            std::string currentMachine = config::theSettings.application.serviceMachineName.get();
+            bool isRemote = !currentMachine.empty();
+
             for (size_t i = 0; i < std::min(controllers.size(), (size_t)10); i++)
             {
                 if (ImGui::IsKeyPressed(numberKeys[i]))
                 {
                     const std::string tabName = controllers[i]->GetControllerName();
-                    spdlog::debug("Keyboard shortcut: Ctrl+{} pressed, switching to '{}'", i + 1, tabName);
-                    m_pendingTabSwitch = tabName;
+
+                    // In remote mode, only Services and Devices are supported
+                    bool enabled = !isRemote || (tabName == SERVICES_DATA_CONTROLLER_NAME || tabName == DEVICES_DATA_CONTROLLER_NAME);
+
+                    if (enabled)
+                    {
+                        spdlog::debug("Keyboard shortcut: Ctrl+{} pressed, switching to '{}'", i + 1, tabName);
+                        m_pendingTabSwitch = tabName;
+                    }
+                    else
+                    {
+                        spdlog::debug("Keyboard shortcut: Ctrl+{} ignored, '{}' not supported in remote mode", i + 1, tabName);
+                    }
                     break;
                 }
             }
@@ -848,6 +949,10 @@ namespace pserv
         {
             static bool firstFrame = true;
 
+            // Check if we're in remote mode
+            std::string currentMachine = config::theSettings.application.serviceMachineName.get();
+            bool isRemote = !currentMachine.empty();
+
             for (const auto controller : m_Controllers.GetDataControllers())
             {
                 const std::string thisTabName = controller->GetControllerName();
@@ -856,6 +961,9 @@ namespace pserv
                     // if we don't have an active tab yet, set it to the first controller
                     m_activeTab = thisTabName;
                 }
+
+                // In remote mode, only Services and Devices are supported
+                bool tabEnabled = !isRemote || (thisTabName == SERVICES_DATA_CONTROLLER_NAME || thisTabName == DEVICES_DATA_CONTROLLER_NAME);
 
                 // Set flags for tab selection
                 ImGuiTabItemFlags flags = ImGuiTabItemFlags_None;
@@ -869,6 +977,12 @@ namespace pserv
                     spdlog::debug("Applying pending tab switch to '{}' via ImGuiTabItemFlags_SetSelected", thisTabName);
                     flags |= ImGuiTabItemFlags_SetSelected;
                     m_pendingTabSwitch.clear();
+                }
+
+                // Disable unsupported tabs in remote mode
+                if (!tabEnabled)
+                {
+                    ImGui::BeginDisabled();
                 }
 
                 if (ImGui::BeginTabItem(thisTabName.c_str(), nullptr, flags))
@@ -906,6 +1020,12 @@ namespace pserv
                     RenderDataController(controller);
 
                     ImGui::EndTabItem();
+                }
+
+                // End disabled state for unsupported tabs
+                if (!tabEnabled)
+                {
+                    ImGui::EndDisabled();
                 }
             }
 
@@ -951,6 +1071,9 @@ namespace pserv
 
         // Render progress dialog if active
         RenderProgressDialog();
+
+        // Render remote machine dialog if active
+        RenderRemoteMachineDialog();
 
         if (m_pCurrentController)
         {
@@ -1510,6 +1633,20 @@ namespace pserv
             }
         }
 
+        // Connection target indicator
+        std::string currentMachine = config::theSettings.application.serviceMachineName.get();
+        ImGui::SameLine();
+        ImGui::TextDisabled("|");
+        ImGui::SameLine();
+        if (currentMachine.empty())
+        {
+            ImGui::Text("Connection: local");
+        }
+        else
+        {
+            ImGui::Text("Connection: remote (%s)", currentMachine.c_str());
+        }
+
         ImGui::EndGroup();
     }
 
@@ -1772,6 +1909,28 @@ namespace pserv
 
                 ImGui::Separator();
 
+                // Get the services controller
+                auto* servicesController = static_cast<ServicesDataController*>(
+                    m_Controllers.GetDataControllers()[0]); // Services is first in the list
+
+                std::string currentMachine = config::theSettings.application.serviceMachineName.get();
+                bool isLocal = currentMachine.empty();
+
+                if (ImGui::MenuItem("Connect to Local Machine", nullptr, isLocal))
+                {
+                    config::theSettings.application.serviceMachineName.set("");
+                    servicesController->SetMachineName("");
+                    config::theSettings.save(*m_pConfigBackend);
+                    static_cast<DataController*>(servicesController)->Refresh();
+                }
+
+                if (ImGui::MenuItem("Connect to Remote Machine...", nullptr, !isLocal))
+                {
+                    m_bShowRemoteMachineDialog = true;
+                }
+
+                ImGui::Separator();
+
                 if (ImGui::MenuItem("Exit", "Alt+F4"))
                 {
                     DestroyWindow(m_hWnd);
@@ -1783,6 +1942,9 @@ namespace pserv
             // View menu
             if (ImGui::BeginMenu("View"))
             {
+                // Check if we're in remote mode
+                std::string currentMachine = config::theSettings.application.serviceMachineName.get();
+                bool isRemote = !currentMachine.empty();
 
                 int shortcutIndex = 1;
                 for (const auto controller : m_Controllers.GetDataControllers())
@@ -1790,15 +1952,30 @@ namespace pserv
                     const std::string tabName = controller->GetControllerName();
                     bool selected = (m_activeTab == tabName);
                     const auto shortcut = std::format("Ctrl+{}", shortcutIndex++);
-                    if (ImGui::MenuItem(tabName.c_str(), shortcut.c_str(), selected))
+
+                    // In remote mode, only Services and Devices are supported
+                    bool enabled = !isRemote || (tabName == SERVICES_DATA_CONTROLLER_NAME || tabName == DEVICES_DATA_CONTROLLER_NAME);
+
+                    if (!enabled)
+                    {
+                        ImGui::BeginDisabled();
+                    }
+
+                    if (ImGui::MenuItem(tabName.c_str(), shortcut.c_str(), selected, enabled))
                     {
                         // Request tab switch on next frame
                         spdlog::debug("View menu: requesting tab switch to '{}'", tabName);
                         m_pendingTabSwitch = tabName;
                     }
+
+                    if (!enabled)
+                    {
+                        ImGui::EndDisabled();
+                    }
                 }
 
                 ImGui::Separator();
+
                 if (ImGui::BeginMenu("Auto-Refresh"))
                 {
                     bool enabled = config::theSettings.autoRefresh.enabled.get();

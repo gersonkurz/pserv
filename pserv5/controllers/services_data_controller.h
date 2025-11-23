@@ -8,6 +8,7 @@ namespace pserv
     {
     private:
         const DWORD m_serviceType{SERVICE_WIN32 | SERVICE_DRIVER}; // Default: all services
+        std::string m_machineName; // Empty = local machine
 
         // Edit buffer for property transactions
         struct EditBuffer
@@ -23,6 +24,10 @@ namespace pserv
 
     public:
         ServicesDataController(DWORD serviceType = SERVICE_WIN32, const char *viewName = nullptr, const char *itemName = nullptr);
+
+        // Set remote machine name (empty = local machine)
+        void SetMachineName(const std::string& machineName);
+        const std::string& GetMachineName() const { return m_machineName; }
 
     private:
         // DataController interface

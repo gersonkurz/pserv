@@ -62,6 +62,7 @@ namespace pserv
                 TypedValue<std::string> activeView{this, "ActiveView", "Services"};
                 TypedValue<int32_t> fontSizeScaled{this, "FontSize", 1600}; // Font size * 100 (16.0f -> 1600)
                 TypedValue<std::string> theme{this, "Theme", "Dark"};       // Dark, Light, or Classic
+                TypedValue<std::string> serviceMachineName{this, "ServiceMachineName", ""}; // Empty = local machine
             } application{this};
 
             struct AutoRefreshSettings : public Section

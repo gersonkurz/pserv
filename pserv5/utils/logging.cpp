@@ -13,15 +13,15 @@ namespace pserv::utils
         HRESULT hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &localAppDataPath);
         if (FAILED(hr))
         {
-            throw std::runtime_error("Failed to get LocalAppData path");
+            return {};
         }
 
-        std::wstring wpath(localAppDataPath);
+        const std::wstring wpath{localAppDataPath};
         CoTaskMemFree(localAppDataPath);
 
         // Convert to UTF-8 and append pserv5 folder
-        std::string appDataPath = utils::WideToUtf8(wpath);
-        std::filesystem::path path = std::filesystem::path(appDataPath) / "pserv5";
+        const std::string appDataPath = utils::WideToUtf8(wpath);
+        const std::filesystem::path path = std::filesystem::path(appDataPath) / "pserv5";
 
         // Create directory if it doesn't exist
         if (!std::filesystem::exists(path))

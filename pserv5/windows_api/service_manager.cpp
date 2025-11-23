@@ -37,15 +37,23 @@ namespace pserv
         }
     } // namespace
 
-    ServiceManager::ServiceManager()
+    ServiceManager::ServiceManager(const std::string& machineName)
+        : m_machineName(machineName)
     {
-        m_hScManager.reset(OpenSCManagerW(nullptr, // local machine
-            nullptr,                               // default database
+        std::wstring wMachineName;
+        if (!m_machineName.empty())
+        {
+            wMachineName = utils::Utf8ToWide(m_machineName);
+        }
+
+        m_hScManager.reset(OpenSCManagerW(
+            m_machineName.empty() ? nullptr : wMachineName.c_str(), // machine name
+            nullptr,                                                // default database
             SC_MANAGER_ENUMERATE_SERVICE));
 
         if (!m_hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine '{}'", m_machineName.empty() ? "local" : m_machineName);
             // Don't throw - keep object usable but methods will return empty data
         }
     }

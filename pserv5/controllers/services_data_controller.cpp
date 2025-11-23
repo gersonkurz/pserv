@@ -34,17 +34,23 @@ namespace pserv
     {
     }
 
+    void ServicesDataController::SetMachineName(const std::string& machineName)
+    {
+        m_machineName = machineName;
+        spdlog::info("Services view will connect to machine: {}", m_machineName.empty() ? "local" : m_machineName);
+    }
+
     void ServicesDataController::Refresh(bool isAutoRefresh)
     {
         if (!isAutoRefresh)
-            spdlog::info("Refreshing services...");
+            spdlog::info("Refreshing services from machine '{}'...", m_machineName.empty() ? "local" : m_machineName);
 
         try
         {
             // Enumerate services with the configured service type filter
             // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
             // update-in-place for existing objects and removes stale ones
-            ServiceManager sm;
+            ServiceManager sm(m_machineName);
             m_objects.StartRefresh();
             sm.EnumerateServices(&m_objects, m_serviceType, isAutoRefresh);
             m_objects.FinishRefresh();
