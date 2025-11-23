@@ -5,7 +5,7 @@
 #include <Shlobj.h>
 
 namespace pserv::utils
-{
+{   
 #ifdef PSERV_CONSOLE_BUILD
     void CopyToClipboard(const std::string &utf8_text)
     {
@@ -134,15 +134,11 @@ namespace pserv::utils
 
     std::shared_ptr<spdlog::logger> InitializeLogging()
     {
-        // Initialize with console and debug output only (before config is loaded)
-        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        console_sink->set_level(spdlog::level::debug);
-
         // MSVC OutputDebugString sink for Visual Studio debugger
         auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
         msvc_sink->set_level(spdlog::level::debug);
 
-        std::vector<spdlog::sink_ptr> sinks{console_sink, msvc_sink};
+        std::vector<spdlog::sink_ptr> sinks{msvc_sink};
         auto logger = std::make_shared<spdlog::logger>("pserv5", sinks.begin(), sinks.end());
         logger->set_level(spdlog::level::debug);
         spdlog::set_default_logger(logger);

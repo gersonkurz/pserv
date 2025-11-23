@@ -2,11 +2,17 @@
 #include <core/data_controller.h>
 #include <core/data_controller_library.h>
 #include <argparse/argparse.hpp>
+#include <pservc/console.h>
+#include <utils/logging.h>
+#include <utils/base_app.h>
 
 using namespace pserv;
 
 int main(int argc, char *argv[])
 {
+    utils::BaseApp baseApp;
+
+    console::write_line(CONSOLE_FOREGROUND_GREEN "*** pservc 5.0.0 ***" CONSOLE_STANDARD);
     DataControllerLibrary dataControllerLibrary;
     argparse::ArgumentParser program{"pservc"};
 

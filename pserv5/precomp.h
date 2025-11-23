@@ -49,6 +49,10 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/msvc_sink.h>
 
+// fmt (bundled with spdlog)
+// #include <spdlog/fmt/fmt.h>
+// #include <spdlog/fmt/bundled/color.h>
+
 #include <wrl/client.h>
 
 #ifndef PSERV_CONSOLE_BUILD
