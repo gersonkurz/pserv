@@ -18,13 +18,13 @@ Implement periodic auto-refresh of data controllers while preserving selection, 
 | STEP 5: Implement Actual Refresh | ✅ COMPLETED | "Implement actual refresh - STEP 5 of auto-refresh" |
 | STEP 6: Selection Cleanup | ✅ COMPLETED | Fixed update-in-place + cleanup logic |
 | STEP 7: Pause During Edits | ✅ COMPLETED | "Add pause during property edits - STEP 7 of auto-refresh" |
-| STEP 8: Status Bar Indicator | 🔄 AWAITING VERIFICATION | Code implemented, needs testing |
-| STEP 9: Menu Toggle | ⏳ PENDING | - |
+| STEP 8: Status Bar Indicator | ✅ COMPLETED | "Add status bar indicator - STEP 8 of auto-refresh" |
+| STEP 9: Menu Toggle | 🔄 AWAITING VERIFICATION | Code implemented, needs testing |
 | STEP 10: Keyboard Shortcut | ⏳ PENDING | - |
 | STEP 11: Interval Submenu | ⏳ PENDING | - |
 | STEP 12: Scroll Preservation | ⏳ PENDING | - |
 
-**RESUME POINT**: STEP 8 code implemented. Status bar shows "Auto-refresh: Xms" when enabled, and "(not supported for this view)" for Windows/Modules. User needs to compile and test: enable auto-refresh, verify indicator appears, switch to Windows view, verify "not supported" message, disable auto-refresh, verify indicator disappears.
+**RESUME POINT**: STEP 9 code implemented. View menu has "Auto-Refresh" item with Ctrl+R shortcut hint. User needs to compile and test: toggle via menu, verify setting persists across restarts, verify status bar updates.
 
 ---
 

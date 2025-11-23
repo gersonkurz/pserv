@@ -1795,6 +1795,14 @@ namespace pserv
                     }
                 }
 
+                ImGui::Separator();
+                bool autoRefreshEnabled = config::theSettings.autoRefresh.enabled.get();
+                if (ImGui::MenuItem("Auto-Refresh", "Ctrl+R", &autoRefreshEnabled))
+                {
+                    config::theSettings.autoRefresh.enabled.set(autoRefreshEnabled);
+                    config::theSettings.save(*m_pConfigBackend);
+                }
+
                 ImGui::EndMenu();
             }
 
