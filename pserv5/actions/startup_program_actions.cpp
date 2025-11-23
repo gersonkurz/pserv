@@ -170,7 +170,7 @@ namespace pserv
                     return;
 
                 const auto *program = GetStartupProgramInfo(ctx.m_selectedObjects[0]);
-                ImGui::SetClipboardText(program->GetCommand().c_str());
+                utils::CopyToClipboard(program->GetCommand().c_str());
                 spdlog::info("Copied startup program command to clipboard: {}", program->GetName());
             }
         };
@@ -194,7 +194,7 @@ namespace pserv
                     return;
 
                 const auto *program = GetStartupProgramInfo(ctx.m_selectedObjects[0]);
-                ImGui::SetClipboardText(program->GetName().c_str());
+                utils::CopyToClipboard(program->GetName().c_str());
                 spdlog::info("Copied startup program name to clipboard: {}", program->GetName());
             }
         };

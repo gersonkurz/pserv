@@ -83,7 +83,7 @@ namespace pserv
                 if (m_bCopyToClipboard)
                 {
                     // Copy to clipboard
-                    ImGui::SetClipboardText(exportedData.c_str());
+                    utils::CopyToClipboard(exportedData.c_str());
                     spdlog::info("Copied {} object(s) as {} to clipboard", ctx.m_selectedObjects.size(), exporter->GetFormatName());
                 }
                 else
@@ -96,7 +96,12 @@ namespace pserv
                         {L"All Files", L"*.*"}};
 
                     std::wstring filePath;
+#ifdef PSERV_CONSOLE_BUILD
+                    filePath = L"temp.txt"; // In console build, use a temp file (no dialogs)
+                    if (true)
+#else
                     if (utils::SaveFileDialog(ctx.m_hWnd, L"Export Data", defaultFileName, filters, 0, filePath))
+#endif
                     {
                         // Write to file
                         try
@@ -214,8 +219,9 @@ namespace pserv
         }
 
         actions.push_back(&theDataActionSeparator);
+#ifndef PSERV_CONSOLE_BUILD
         actions.push_back(&theDataPropertiesAction);
-
+#endif
         spdlog::debug("AddCommonExportActions: Created {} common actions", actions.size());
     }
 

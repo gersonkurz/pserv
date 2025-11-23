@@ -37,20 +37,26 @@ namespace pserv
         CopyAsTxt = -1003
     };
 
+#ifndef PSERV_CONSOLE_BUILD
     class DataPropertiesDialog;
+#endif
 
     class DataController
     {
     public:
         DataController(std::string_view controllerName, std::string itemName, std::vector<DataObjectColumn> &&columns)
-            : m_controllerName{std::move(controllerName)},
-              m_itemName{std::move(itemName)},
-              m_columns{std::move(columns)},
-              m_pPropertiesDialog{nullptr}
+            : m_controllerName{std::move(controllerName)}
+            , m_itemName{std::move(itemName)}
+            , m_columns{std::move(columns)}
+#ifndef PSERV_CONSOLE_BUILD
+            , m_pPropertiesDialog{nullptr}
+#endif
         {
         }
 
+#ifndef PSERV_CONSOLE_BUILD
         void ShowPropertiesDialog(DataActionDispatchContext &ctx);
+#endif
 
         virtual ~DataController();
 
@@ -73,10 +79,12 @@ namespace pserv
             return true; // Default: most views support auto-refresh
         }
 
+#ifndef PSERV_CONSOLE_BUILD
         // Check if properties dialog has unsaved edits (pause auto-refresh during edits)
         bool HasPropertiesDialogWithEdits() const;
         
         void RenderPropertiesDialog();
+#endif
 
         // Generic sort implementation using column metadata and GetTypedProperty()
         void Sort(int columnIndex, bool ascending);
@@ -140,8 +148,9 @@ namespace pserv
         bool m_bLoaded{false};
         bool m_bNeedsRefresh{false};
         bool m_lastSortAscending{true};
-
+#ifndef PSERV_CONSOLE_BUILD
     private:
         DataPropertiesDialog *m_pPropertiesDialog{nullptr};
+#endif
     };
 } // namespace pserv

@@ -1,4 +1,6 @@
 #include "precomp.h"
+
+#ifndef PSERV_CONSOLE_BUILD
 #include <core/data_action.h>
 #include <core/data_controller.h>
 #include <core/data_object.h>
@@ -548,3 +550,4 @@ namespace pserv
     }
 
 } // namespace pserv
+#endif

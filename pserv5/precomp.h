@@ -1,5 +1,11 @@
 #pragma once
 
+#ifdef _CONSOLE
+#define PSERV_CONSOLE_BUILD
+#else
+#undef PSERV_CONSOLE_BUILD
+#endif
+
 // Windows headers
 //#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -43,20 +49,25 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/msvc_sink.h>
 
-#include <d3d11.h>
 #include <wrl/client.h>
+
+#ifndef PSERV_CONSOLE_BUILD
+#include <d3d11.h>
 #include <dxgi.h>
+#endif
 #include <winreg.h>
 #include <tlhelp32.h>
 #include <sddl.h>
 #include <psapi.h>
 
+#ifndef PSERV_CONSOLE_BUILD
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
 #include <imgui_internal.h>
 #include <shellapi.h>
 #include <ShObjIdl.h>
+#endif
 
 #include <wil/resource.h>
 #include <wil/com.h>

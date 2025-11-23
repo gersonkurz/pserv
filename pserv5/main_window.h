@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef PSERV_CONSOLE_BUILD
 #include <core/data_controller_library.h>
 #include <core/data_action_dispatch_context.h>
 
@@ -103,3 +104,4 @@ namespace pserv
     };
 
 } // namespace pserv
+#endif

@@ -203,7 +203,7 @@ namespace pserv
                     return;
 
                 const auto *task = GetTaskInfo(ctx.m_selectedObjects[0]);
-                ImGui::SetClipboardText(task->GetName().c_str());
+                utils::CopyToClipboard(task->GetName().c_str());
                 spdlog::info("Copied task name to clipboard: {}", task->GetName());
             }
         };
@@ -227,7 +227,7 @@ namespace pserv
                     return;
 
                 const auto *task = GetTaskInfo(ctx.m_selectedObjects[0]);
-                ImGui::SetClipboardText(task->GetPath().c_str());
+                utils::CopyToClipboard(task->GetPath().c_str());
                 spdlog::info("Copied task path to clipboard: {}", task->GetPath());
             }
         };

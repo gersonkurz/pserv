@@ -1,4 +1,5 @@
 #include "precomp.h"
+#ifndef PSERV_CONSOLE_BUILD
 #include "Resource.h"
 #include <actions/common_actions.h>
 #include <config/settings.h>
@@ -2160,3 +2161,5 @@ namespace pserv
     }
 
 } // namespace pserv
+
+#endif // PSERV_CONSOLE_BUILD

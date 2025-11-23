@@ -11,14 +11,17 @@ namespace pserv
 {
     DataController::~DataController()
     {
+#ifndef PSERV_CONSOLE_BUILD
         if (m_pPropertiesDialog)
         {
             m_pPropertiesDialog->Close();
             m_pPropertiesDialog = nullptr;
         }
+#endif
         Clear();
     }
 
+#ifndef PSERV_CONSOLE_BUILD
     void DataController::ShowPropertiesDialog(DataActionDispatchContext &ctx)
     {
         if (!ctx.m_selectedObjects.empty())
@@ -27,6 +30,7 @@ namespace pserv
             m_pPropertiesDialog->Open();
         }
     }
+#endif
 
     void DataController::Sort(int columnIndex, bool ascending)
     {
@@ -41,6 +45,8 @@ namespace pserv
         m_objects.Sort(columnIndex, ascending, dataType);
     }
     
+#ifndef PSERV_CONSOLE_BUILD
+
     bool DataController::HasPropertiesDialogWithEdits() const
     {
         return m_pPropertiesDialog && m_pPropertiesDialog->HasPendingEdits();
@@ -67,7 +73,8 @@ namespace pserv
             }
         }
     }
-    
+#endif
+
     void DataController::Clear()
     {
         m_objects.Clear();

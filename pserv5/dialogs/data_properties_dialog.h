@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef PSERV_CONSOLE_BUILD
 namespace pserv
 {
 
@@ -72,3 +73,5 @@ namespace pserv
     };
 
 } // namespace pserv
+
+#endif

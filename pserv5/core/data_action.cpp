@@ -7,6 +7,7 @@ namespace pserv
 {
 
     DataActionSeparator theDataActionSeparator;
+#ifndef PSERV_CONSOLE_BUILD
     DataPropertiesAction theDataPropertiesAction;
 
     void DataPropertiesAction::Execute(DataActionDispatchContext &ctx) const
@@ -16,4 +17,6 @@ namespace pserv
             ctx.m_pController->ShowPropertiesDialog(ctx);
         }
     }
+#endif
+
 } // namespace pserv

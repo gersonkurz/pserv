@@ -40,4 +40,13 @@ namespace pserv::utils
         return utils::ToLower(key).find(lowerFilter) != std::string::npos;
     }
 
+    #ifdef PSERV_CONSOLE_BUILD
+    void CopyToClipboard(const std::string &text);
+    #else
+    inline void CopyToClipboard(const std::string& text)
+    {
+        ImGui::SetClipboardText(text.c_str());
+    }
+    #endif
+
 } // namespace pserv::utils

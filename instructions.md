@@ -237,6 +237,7 @@ theSettings.save();  // Persist to disk
    - Perform a security review via AI
    - Remove 32-bit build from pserv5/pservc
    - Instead, add ARM64 build for Parallels Desktop use on Macbook Pro M4
+   - Add proper Win32 version resources
 
 ## Historical Context
 

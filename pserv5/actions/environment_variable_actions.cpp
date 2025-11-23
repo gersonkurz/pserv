@@ -42,7 +42,7 @@ namespace pserv
                     return;
 
                 const auto *envVar = GetEnvVarInfo(ctx.m_selectedObjects[0]);
-                ImGui::SetClipboardText(envVar->GetValue().c_str());
+                utils::CopyToClipboard(envVar->GetValue().c_str());
                 spdlog::info("Copied environment variable value to clipboard: {}", envVar->GetName());
             }
         };
@@ -66,7 +66,7 @@ namespace pserv
                     return;
 
                 const auto *envVar = GetEnvVarInfo(ctx.m_selectedObjects[0]);
-                ImGui::SetClipboardText(envVar->GetName().c_str());
+                utils::CopyToClipboard(envVar->GetName().c_str());
                 spdlog::info("Copied environment variable name to clipboard: {}", envVar->GetName());
             }
         };

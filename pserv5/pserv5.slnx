@@ -4,4 +4,5 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="pserv5.vcxproj" Id="9ba2fb3d-3366-4576-b0ee-c2ffbddacd98" />
+  <Project Path="pservc/pservc.vcxproj" Id="fff6295f-5877-4b5b-a65e-5d32080ff0da" />
 </Solution>

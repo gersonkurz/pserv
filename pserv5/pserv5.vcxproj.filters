@@ -217,6 +217,57 @@
     <ClInclude Include="core\data_action_dispatch_context.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="controllers\environment_variables_data_controller.h">
+      <Filter>controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="controllers\network_connections_data_controller.h">
+      <Filter>controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="controllers\startup_programs_data_controller.h">
+      <Filter>controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="windows_api\environment_variable_manager.h">
+      <Filter>windows_api</Filter>
+    </ClInclude>
+    <ClInclude Include="windows_api\network_connection_manager.h">
+      <Filter>windows_api</Filter>
+    </ClInclude>
+    <ClInclude Include="windows_api\scheduled_task_manager.h">
+      <Filter>windows_api</Filter>
+    </ClInclude>
+    <ClInclude Include="windows_api\startup_program_manager.h">
+      <Filter>windows_api</Filter>
+    </ClInclude>
+    <ClInclude Include="models\network_connection_info.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="models\environment_variable_info.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="models\scheduled_task_info.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="models\startup_program_info.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\startup_program_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\scheduled_task_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\network_connection_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="actions\environment_variable_actions.h">
+      <Filter>actions</Filter>
+    </ClInclude>
+    <ClInclude Include="controllers\scheduled_tasks_data_controller.h">
+      <Filter>controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="core\data_object_container.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="controllers\services_data_controller.cpp">
@@ -348,6 +399,57 @@
     <ClCompile Include="core\data_action_dispatch_context.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="controllers\environment_variables_data_controller.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\network_connections_data_controller.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\startup_programs_data_controller.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="windows_api\environment_variable_manager.cpp">
+      <Filter>windows_api</Filter>
+    </ClCompile>
+    <ClCompile Include="windows_api\network_connection_manager.cpp">
+      <Filter>windows_api</Filter>
+    </ClCompile>
+    <ClCompile Include="windows_api\scheduled_task_manager.cpp">
+      <Filter>windows_api</Filter>
+    </ClCompile>
+    <ClCompile Include="windows_api\startup_program_manager.cpp">
+      <Filter>windows_api</Filter>
+    </ClCompile>
+    <ClCompile Include="models\network_connection_info.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="models\environment_variable_info.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="models\scheduled_task_info.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="models\startup_program_info.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="actions\startup_program_actions.cpp">
+      <Filter>actions</Filter>
+    </ClCompile>
+    <ClCompile Include="actions\scheduled_task_actions.cpp">
+      <Filter>actions</Filter>
+    </ClCompile>
+    <ClCompile Include="actions\network_connection_actions.cpp">
+      <Filter>actions</Filter>
+    </ClCompile>
+    <ClCompile Include="actions\environment_variable_actions.cpp">
+      <Filter>actions</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\scheduled_tasks_data_controller.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="core\data_object_container.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="pserv5.rc">
@@ -364,5 +466,9 @@
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="pserv5.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\claude.md" />
+    <None Include="..\instructions.md" />
   </ItemGroup>
 </Project>

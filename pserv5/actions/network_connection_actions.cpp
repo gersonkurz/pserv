@@ -42,7 +42,7 @@ namespace pserv
 
                 const auto *conn = GetConnectionInfo(ctx.m_selectedObjects[0]);
                 std::string endpoint = conn->GetLocalEndpoint();
-                ImGui::SetClipboardText(endpoint.c_str());
+                utils::CopyToClipboard(endpoint.c_str());
                 spdlog::info("Copied local endpoint to clipboard: {}", endpoint);
             }
         };
@@ -70,7 +70,7 @@ namespace pserv
 
                 const auto *conn = GetConnectionInfo(ctx.m_selectedObjects[0]);
                 std::string endpoint = conn->GetRemoteEndpoint();
-                ImGui::SetClipboardText(endpoint.c_str());
+                utils::CopyToClipboard(endpoint.c_str());
                 spdlog::info("Copied remote endpoint to clipboard: {}", endpoint);
             }
         };
@@ -94,7 +94,7 @@ namespace pserv
                     return;
 
                 const auto *conn = GetConnectionInfo(ctx.m_selectedObjects[0]);
-                ImGui::SetClipboardText(conn->GetProcessName().c_str());
+                utils::CopyToClipboard(conn->GetProcessName().c_str());
                 spdlog::info("Copied process name to clipboard: {}", conn->GetProcessName());
             }
         };

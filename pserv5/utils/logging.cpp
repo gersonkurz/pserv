@@ -6,6 +6,56 @@
 
 namespace pserv::utils
 {
+#ifdef PSERV_CONSOLE_BUILD
+    void CopyToClipboard(const std::string &utf8_text)
+    {
+        std::wstring text = Utf8ToWide(utf8_text);
+        // Clipboard operations must be serialized by OpenClipboard/CloseClipboard.
+        if (!OpenClipboard(nullptr))
+            throw std::runtime_error("OpenClipboard failed");
+
+        // Ensure CloseClipboard is called on all exits.
+        struct ClipboardCloser
+        {
+            ~ClipboardCloser()
+            {
+                CloseClipboard();
+            }
+        } closer;
+
+        if (!EmptyClipboard())
+            throw std::runtime_error("EmptyClipboard failed");
+
+        // Allocate a global memory object for the text.
+        const size_t bytes = (text.size() + 1) * sizeof(wchar_t);
+
+        HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, bytes);
+        if (!hMem)
+            throw std::runtime_error("GlobalAlloc failed");
+
+        // Lock the handle and copy the text to the buffer.
+        void *ptr = GlobalLock(hMem);
+        if (!ptr)
+        {
+            GlobalFree(hMem);
+            throw std::runtime_error("GlobalLock failed");
+        }
+
+        memcpy(ptr, text.c_str(), bytes);
+        GlobalUnlock(hMem);
+
+        // Place the handle on the clipboard.
+        // After SetClipboardData succeeds, the system owns hMem.
+        if (!SetClipboardData(CF_UNICODETEXT, hMem))
+        {
+            GlobalFree(hMem); // only free if SetClipboardData failed
+            throw std::runtime_error("SetClipboardData failed");
+        }
+
+        // Do NOT free hMem here; ownership transferred to clipboard.
+    }
+#endif
+
     std::filesystem::path GetAppDataPath()
     {
         // Get LOCALAPPDATA path

@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{fff6295f-5877-4b5b-a65e-5d32080ff0da}</ProjectGuid>
+    <RootNamespace>pservc</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);$(SolutionDir)..\argparse;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);$(SolutionDir)..\argparse;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);$(SolutionDir)..\argparse;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);$(SolutionDir)..\argparse;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\actions\common_actions.cpp" />
+    <ClCompile Include="..\actions\environment_variable_actions.cpp" />
+    <ClCompile Include="..\actions\module_actions.cpp" />
+    <ClCompile Include="..\actions\network_connection_actions.cpp" />
+    <ClCompile Include="..\actions\process_actions.cpp" />
+    <ClCompile Include="..\actions\scheduled_task_actions.cpp" />
+    <ClCompile Include="..\actions\service_actions.cpp" />
+    <ClCompile Include="..\actions\startup_program_actions.cpp" />
+    <ClCompile Include="..\actions\uninstaller_actions.cpp" />
+    <ClCompile Include="..\actions\window_actions.cpp" />
+    <ClCompile Include="..\controllers\environment_variables_data_controller.cpp" />
+    <ClCompile Include="..\controllers\modules_data_controller.cpp" />
+    <ClCompile Include="..\controllers\network_connections_data_controller.cpp" />
+    <ClCompile Include="..\controllers\processes_data_controller.cpp" />
+    <ClCompile Include="..\controllers\scheduled_tasks_data_controller.cpp" />
+    <ClCompile Include="..\controllers\services_data_controller.cpp" />
+    <ClCompile Include="..\controllers\startup_programs_data_controller.cpp" />
+    <ClCompile Include="..\controllers\uninstaller_data_controller.cpp" />
+    <ClCompile Include="..\controllers\windows_data_controller.cpp" />
+    <ClCompile Include="..\core\async_operation.cpp" />
+    <ClCompile Include="..\core\data_action.cpp" />
+    <ClCompile Include="..\core\data_action_dispatch_context.cpp" />
+    <ClCompile Include="..\core\data_controller.cpp" />
+    <ClCompile Include="..\core\data_controller_library.cpp" />
+    <ClCompile Include="..\core\data_object_container.cpp" />
+    <ClCompile Include="..\core\exporters\exporter_registry.cpp" />
+    <ClCompile Include="..\core\exporters\json_exporter.cpp" />
+    <ClCompile Include="..\core\exporters\plaintext_exporter.cpp" />
+    <ClCompile Include="..\models\environment_variable_info.cpp" />
+    <ClCompile Include="..\models\installed_program_info.cpp" />
+    <ClCompile Include="..\models\module_info.cpp" />
+    <ClCompile Include="..\models\network_connection_info.cpp" />
+    <ClCompile Include="..\models\process_info.cpp" />
+    <ClCompile Include="..\models\scheduled_task_info.cpp" />
+    <ClCompile Include="..\models\service_info.cpp" />
+    <ClCompile Include="..\models\startup_program_info.cpp" />
+    <ClCompile Include="..\models\window_info.cpp" />
+    <ClCompile Include="..\precomp.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\utils\logging.cpp" />
+    <ClCompile Include="..\windows_api\environment_variable_manager.cpp" />
+    <ClCompile Include="..\windows_api\module_manager.cpp" />
+    <ClCompile Include="..\windows_api\network_connection_manager.cpp" />
+    <ClCompile Include="..\windows_api\process_manager.cpp" />
+    <ClCompile Include="..\windows_api\scheduled_task_manager.cpp" />
+    <ClCompile Include="..\windows_api\service_manager.cpp" />
+    <ClCompile Include="..\windows_api\startup_program_manager.cpp" />
+    <ClCompile Include="..\windows_api\uninstaller_manager.cpp" />
+    <ClCompile Include="..\windows_api\window_manager.cpp" />
+    <ClCompile Include="pservc.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\actions\common_actions.h" />
+    <ClInclude Include="..\actions\environment_variable_actions.h" />
+    <ClInclude Include="..\actions\module_actions.h" />
+    <ClInclude Include="..\actions\network_connection_actions.h" />
+    <ClInclude Include="..\actions\process_actions.h" />
+    <ClInclude Include="..\actions\scheduled_task_actions.h" />
+    <ClInclude Include="..\actions\service_actions.h" />
+    <ClInclude Include="..\actions\startup_program_actions.h" />
+    <ClInclude Include="..\actions\uninstaller_actions.h" />
+    <ClInclude Include="..\actions\window_actions.h" />
+    <ClInclude Include="..\controllers\devices_data_controller.h" />
+    <ClInclude Include="..\controllers\environment_variables_data_controller.h" />
+    <ClInclude Include="..\controllers\modules_data_controller.h" />
+    <ClInclude Include="..\controllers\network_connections_data_controller.h" />
+    <ClInclude Include="..\controllers\processes_data_controller.h" />
+    <ClInclude Include="..\controllers\scheduled_tasks_data_controller.h" />
+    <ClInclude Include="..\controllers\services_data_controller.h" />
+    <ClInclude Include="..\controllers\startup_programs_data_controller.h" />
+    <ClInclude Include="..\controllers\uninstaller_data_controller.h" />
+    <ClInclude Include="..\controllers\windows_data_controller.h" />
+    <ClInclude Include="..\core\async_operation.h" />
+    <ClInclude Include="..\core\data_action.h" />
+    <ClInclude Include="..\core\data_action_dispatch_context.h" />
+    <ClInclude Include="..\core\data_controller.h" />
+    <ClInclude Include="..\core\data_controller_library.h" />
+    <ClInclude Include="..\core\data_object.h" />
+    <ClInclude Include="..\core\data_object_column.h" />
+    <ClInclude Include="..\core\data_object_container.h" />
+    <ClInclude Include="..\core\exporters\exporter_interface.h" />
+    <ClInclude Include="..\core\exporters\exporter_registry.h" />
+    <ClInclude Include="..\core\exporters\json_exporter.h" />
+    <ClInclude Include="..\core\exporters\plaintext_exporter.h" />
+    <ClInclude Include="..\core\refcount_interface.h" />
+    <ClInclude Include="..\models\environment_variable_info.h" />
+    <ClInclude Include="..\models\installed_program_info.h" />
+    <ClInclude Include="..\models\module_info.h" />
+    <ClInclude Include="..\models\network_connection_info.h" />
+    <ClInclude Include="..\models\process_info.h" />
+    <ClInclude Include="..\models\scheduled_task_info.h" />
+    <ClInclude Include="..\models\service_info.h" />
+    <ClInclude Include="..\models\startup_program_info.h" />
+    <ClInclude Include="..\models\window_info.h" />
+    <ClInclude Include="..\precomp.h" />
+    <ClInclude Include="..\utils\file_dialogs.h" />
+    <ClInclude Include="..\utils\format_utils.h" />
+    <ClInclude Include="..\utils\logging.h" />
+    <ClInclude Include="..\utils\string_utils.h" />
+    <ClInclude Include="..\utils\win32_error.h" />
+    <ClInclude Include="..\windows_api\environment_variable_manager.h" />
+    <ClInclude Include="..\windows_api\module_manager.h" />
+    <ClInclude Include="..\windows_api\network_connection_manager.h" />
+    <ClInclude Include="..\windows_api\process_manager.h" />
+    <ClInclude Include="..\windows_api\scheduled_task_manager.h" />
+    <ClInclude Include="..\windows_api\service_manager.h" />
+    <ClInclude Include="..\windows_api\startup_program_manager.h" />
+    <ClInclude Include="..\windows_api\uninstaller_manager.h" />
+    <ClInclude Include="..\windows_api\window_manager.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

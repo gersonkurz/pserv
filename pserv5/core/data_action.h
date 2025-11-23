@@ -6,6 +6,7 @@ namespace pserv
     class DataController;
     class DataActionDispatchContext;
 
+
     // Defines where an action should be visible in the UI
     enum class ActionVisibility
     {
@@ -13,6 +14,7 @@ namespace pserv
         PropertiesDialog = 1 << 1, // Show as button in properties dialog
         Both = ContextMenu | PropertiesDialog
     };
+
 
     // Abstract base class for all data actions
     // Actions are self-contained objects that know how to execute themselves
@@ -84,7 +86,7 @@ namespace pserv
         {
         }
     };
-
+#ifndef PSERV_CONSOLE_BUILD
     // ============================================================================
     // Properties Dialog Action
     // ============================================================================
@@ -104,8 +106,11 @@ namespace pserv
 
         void Execute(DataActionDispatchContext &ctx) const override;
     };
+#endif
 
     extern DataActionSeparator theDataActionSeparator;
+#ifndef PSERV_CONSOLE_BUILD
     extern DataPropertiesAction theDataPropertiesAction;
+#endif
 
 } // namespace pserv
