@@ -34,7 +34,32 @@ namespace pserv
 #ifdef PSERV_CONSOLE_BUILD
     void DataController::RegisterArguments(argparse::ArgumentParser &program) const
     {
-        program.add_argument(GetControllerName());
+        // Create a subcommand for this controller
+        std::string cmd_name(GetControllerName());
+        // Convert to lowercase and replace spaces with hyphens for command names
+        std::transform(cmd_name.begin(), cmd_name.end(), cmd_name.begin(), ::tolower);
+        std::replace(cmd_name.begin(), cmd_name.end(), ' ', '-');
+
+        argparse::ArgumentParser &cmd = program.add_subparser(cmd_name, std::string(GetControllerName()) + " management");
+
+        // Add common "list" subcommand
+        cmd.add_description("List all " + std::string(GetItemName()) + "s");
+
+        // Add common output format option
+        cmd.add_argument("--format")
+            .help("Output format: table, json, csv")
+            .default_value(std::string("table"))
+            .choices("table", "json", "csv");
+
+        // Add filter option
+        cmd.add_argument("--filter")
+            .help("Filter results by text (case-insensitive substring match)")
+            .default_value(std::string(""));
+
+        // Add sort option
+        cmd.add_argument("--sort")
+            .help("Sort by column name")
+            .default_value(std::string(""));
     }
 #endif
 

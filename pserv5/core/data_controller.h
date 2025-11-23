@@ -68,7 +68,7 @@ namespace pserv
         virtual void Refresh(bool isAutoRefresh = false) = 0;
 
 #ifdef PSERV_CONSOLE_BUILD
-        void RegisterArguments(argparse::ArgumentParser &program) const;
+        virtual void RegisterArguments(argparse::ArgumentParser &program) const;
 #endif
 
         const DataObjectContainer &GetDataObjects() const
