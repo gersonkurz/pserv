@@ -75,7 +75,14 @@ namespace pserv::utils
         std::filesystem::path log_path("pserv5.log");
         if (std::filesystem::exists(log_path) && std::filesystem::file_size(log_path) > 0)
         {
-            // Rename current log to .1, shift others up
+            // Delete oldest log if it exists (pserv5.10.log)
+            std::filesystem::path oldest = "pserv5.10.log";
+            if (std::filesystem::exists(oldest))
+            {
+                std::filesystem::remove(oldest);
+            }
+
+            // Shift all backup logs up (9 -> 10, 8 -> 9, etc.)
             for (int i = 9; i >= 1; --i)
             {
                 std::filesystem::path old_path = std::format("pserv5.{}.log", i);
@@ -85,6 +92,8 @@ namespace pserv::utils
                     std::filesystem::rename(old_path, new_path);
                 }
             }
+
+            // Move current log to .1
             std::filesystem::rename(log_path, "pserv5.1.log");
         }
 
