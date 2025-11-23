@@ -1804,11 +1804,27 @@ namespace pserv
                 }
 
                 ImGui::Separator();
-                bool autoRefreshEnabled = config::theSettings.autoRefresh.enabled.get();
-                if (ImGui::MenuItem("Auto-Refresh", "Ctrl+R", &autoRefreshEnabled))
+                if (ImGui::BeginMenu("Auto-Refresh"))
                 {
-                    config::theSettings.autoRefresh.enabled.set(autoRefreshEnabled);
-                    config::theSettings.save(*m_pConfigBackend);
+                    bool enabled = config::theSettings.autoRefresh.enabled.get();
+                    if (ImGui::MenuItem("Enabled", "Ctrl+R", &enabled))
+                    {
+                        config::theSettings.autoRefresh.enabled.set(enabled);
+                        config::theSettings.save(*m_pConfigBackend);
+                    }
+                    ImGui::Separator();
+                    uint32_t intervals[] = {1000, 2000, 5000, 10000};
+                    const char* labels[] = {"Every 1 second", "Every 2 seconds", "Every 5 seconds", "Every 10 seconds"};
+                    for (int i = 0; i < 4; i++)
+                    {
+                        bool selected = config::theSettings.autoRefresh.intervalMs.get() == intervals[i];
+                        if (ImGui::MenuItem(labels[i], nullptr, selected))
+                        {
+                            config::theSettings.autoRefresh.intervalMs.set(intervals[i]);
+                            config::theSettings.save(*m_pConfigBackend);
+                        }
+                    }
+                    ImGui::EndMenu();
                 }
 
                 ImGui::EndMenu();
