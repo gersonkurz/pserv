@@ -209,6 +209,7 @@
     <ClCompile Include="..\windows_api\uninstaller_manager.cpp" />
     <ClCompile Include="..\windows_api\window_manager.cpp" />
     <ClCompile Include="console.cpp" />
+    <ClCompile Include="console_table.cpp" />
     <ClCompile Include="pservc.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -277,6 +278,7 @@
     <ClInclude Include="..\windows_api\uninstaller_manager.h" />
     <ClInclude Include="..\windows_api\window_manager.h" />
     <ClInclude Include="console.h" />
+    <ClInclude Include="console_table.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
