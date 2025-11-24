@@ -53,6 +53,13 @@ namespace pserv
         return CreateScheduledTaskActions(task->GetState(), task->IsEnabled());
     }
 
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> ScheduledTasksDataController::GetAllActions() const
+    {
+        return CreateAllScheduledTaskActions();
+    }
+#endif
+
     VisualState ScheduledTasksDataController::GetVisualState(const DataObject *dataObject) const
     {
         if (!dataObject)

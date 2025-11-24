@@ -337,7 +337,7 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - ✅ **Modules** - COMPLETE (1 action: open containing folder - GUI only)
 - ✅ **Uninstaller** - COMPLETE (1 action: uninstall program - launches external uninstaller)
 - ✅ **Startup Programs** - COMPLETE (7 actions: enable/disable, delete, copy x2, open location x2)
-- ⏭️ **Scheduled Tasks** - Has scheduled_task_actions.cpp
+- ✅ **Scheduled Tasks** - COMPLETE (7 actions: run/enable/disable, delete, copy x2, edit config)
 - ⏭️ **Network Connections** - Has network_connection_actions.cpp
 - ⏭️ **Environment Variables** - Has environment_variable_actions.cpp
 
@@ -376,12 +376,12 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - Added: GetAllActions() override in StartupProgramsDataController
 - Console handling: Enable/Disable/Delete work in console, Copy/Open actions throw error (require GUI/clipboard)
 - 7 actions total: Enable, Disable, Delete (destructive), Copy Command, Copy Name, Open File Location, Open in Registry
-- Read: startup_program_actions.cpp to see available actions
-- Add: CreateAllStartupProgramActions() function
-- Override: GetAllActions() in StartupProgramsDataController
-- Test: `pservc startup-programs`
 
-**Step 7.7: Add Scheduled Tasks actions support**
+**Step 7.7: Add Scheduled Tasks actions support** ✅ COMPLETE
+- Added: CreateAllScheduledTaskActions() function in scheduled_task_actions.cpp
+- Added: GetAllActions() override in ScheduledTasksDataController
+- Console handling: Run/Enable/Disable/Delete work in console, Copy/Edit actions throw error (require GUI/clipboard)
+- 7 actions total: Run Now, Enable, Disable, Delete (destructive), Copy Name, Copy Path, Edit Configuration
 - Read: scheduled_task_actions.cpp to see available actions
 - Add: CreateAllScheduledTaskActions() function
 - Override: GetAllActions() in ScheduledTasksDataController
