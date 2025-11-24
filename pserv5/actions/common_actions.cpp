@@ -36,6 +36,19 @@ namespace pserv
                 return true;
             }
 
+#ifdef PSERV_CONSOLE_BUILD
+            void RegisterArguments(argparse::ArgumentParser &cmd) const override
+            {
+                if (!m_bCopyToClipboard)
+                {
+                    // Export to file actions need --output parameter
+                    cmd.add_argument("--output")
+                        .help("Output file path")
+                        .required();
+                }
+            }
+#endif
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
                 if (ctx.m_selectedObjects.empty())
@@ -82,56 +95,83 @@ namespace pserv
 
                 if (m_bCopyToClipboard)
                 {
+#ifdef PSERV_CONSOLE_BUILD
+                    // Console doesn't support clipboard
+                    spdlog::error("Clipboard operations not supported in console build");
+                    throw std::runtime_error("Clipboard operations not supported in console build");
+#else
                     // Copy to clipboard
                     utils::CopyToClipboard(exportedData.c_str());
                     spdlog::info("Copied {} object(s) as {} to clipboard", ctx.m_selectedObjects.size(), exporter->GetFormatName());
+#endif
                 }
                 else
                 {
                     // Export to file
+                    std::wstring filePath;
+#ifdef PSERV_CONSOLE_BUILD
+                    // Get filename from --output argument
+                    if (ctx.m_pActionParser)
+                    {
+                        try
+                        {
+                            std::string outputPath = ctx.m_pActionParser->get<std::string>("--output");
+                            filePath = utils::Utf8ToWide(outputPath);
+                        }
+                        catch (const std::exception &e)
+                        {
+                            spdlog::error("Failed to get --output argument: {}", e.what());
+                            throw std::runtime_error("--output argument required for export");
+                        }
+                    }
+                    else
+                    {
+                        throw std::runtime_error("No action parser available for --output argument");
+                    }
+#else
                     std::wstring defaultFileName = utils::Utf8ToWide(std::format("export_{}", ctx.m_pController->GetControllerName()));
 
                     std::vector<utils::FileTypeFilter> filters{{std::format(L"{} Files", utils::Utf8ToWide(exporter->GetFormatName())),
                                                                    std::format(L"*{}", utils::Utf8ToWide(exporter->GetFileExtension()))},
                         {L"All Files", L"*.*"}};
 
-                    std::wstring filePath;
-#ifdef PSERV_CONSOLE_BUILD
-                    filePath = L"temp.txt"; // In console build, use a temp file (no dialogs)
-                    if (true)
-#else
-                    if (utils::SaveFileDialog(ctx.m_hWnd, L"Export Data", defaultFileName, filters, 0, filePath))
-#endif
+                    if (!utils::SaveFileDialog(ctx.m_hWnd, L"Export Data", defaultFileName, filters, 0, filePath))
                     {
-                        // Write to file
-                        try
+                        return; // User cancelled
+                    }
+#endif
+
+                    // Write to file
+                    try
+                    {
+                        std::ofstream outFile{filePath, std::ios::binary};
+                        if (!outFile)
                         {
-                            std::ofstream outFile{filePath, std::ios::binary};
-                            if (!outFile)
-                            {
-                                spdlog::error("Failed to open file for writing");
-                                return;
-                            }
-
-                            outFile.write(exportedData.c_str(), exportedData.size());
-                            outFile.close();
-
-                            if (outFile.fail())
-                            {
-                                spdlog::error("Failed to write data to file");
-                                return;
-                            }
-
-                            spdlog::info("Exported {} object(s) as {} to file: {}",
-                                ctx.m_selectedObjects.size(),
-                                exporter->GetFormatName(),
-                                utils::WideToUtf8(filePath));
+                            spdlog::error("Failed to open file for writing");
+                            throw std::runtime_error("Failed to open file for writing");
                         }
-                        catch (const std::exception &e)
+
+                        outFile.write(exportedData.c_str(), exportedData.size());
+                        outFile.close();
+
+                        if (outFile.fail())
                         {
-                            spdlog::error("File write failed: {}", e.what());
-                            MessageBoxA(ctx.m_hWnd, std::format("Failed to write file: {}", e.what()).c_str(), "Error", MB_OK | MB_ICONERROR);
+                            spdlog::error("Failed to write data to file");
+                            throw std::runtime_error("Failed to write data to file");
                         }
+
+                        spdlog::info("Exported {} object(s) as {} to file: {}",
+                            ctx.m_selectedObjects.size(),
+                            exporter->GetFormatName(),
+                            utils::WideToUtf8(filePath));
+                    }
+                    catch (const std::exception &e)
+                    {
+                        spdlog::error("File write failed: {}", e.what());
+#ifndef PSERV_CONSOLE_BUILD
+                        MessageBoxA(ctx.m_hWnd, std::format("Failed to write file: {}", e.what()).c_str(), "Error", MB_OK | MB_ICONERROR);
+#endif
+                        throw; // Re-throw for console error handling
                     }
                 }
             }
