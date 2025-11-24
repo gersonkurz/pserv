@@ -4,11 +4,71 @@
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
+#include <utils/string_utils.h>
 
 namespace pserv
 {
     namespace console
     {
+        // Calculate the visual length of a string, excluding escape sequences
+        // Uses proper Unicode conversion and handles surrogate pairs
+        static size_t GetVisualLength(const std::string &str)
+        {
+            if (str.empty())
+                return 0;
+
+            // Step 1: Strip escape sequences
+            std::string stripped;
+            stripped.reserve(str.length());
+
+            for (size_t i = 0; i < str.length(); ++i)
+            {
+                if (str[i] == '\x1b' && i + 1 < str.length())
+                {
+                    // Custom console escape sequence: skip both bytes
+                    i++; // Skip the next byte
+                }
+                else if (str[i] == '\x1b')
+                {
+                    // Lone \x1b at end
+                }
+                else
+                {
+                    stripped += str[i];
+                }
+            }
+
+            // Step 2: Convert to UTF-16 and count actual characters (handling surrogate pairs)
+            std::wstring wide = utils::Utf8ToWide(stripped);
+            size_t visualLen = 0;
+
+            for (size_t i = 0; i < wide.length(); ++i)
+            {
+                wchar_t c = wide[i];
+
+                // Check if this is a high surrogate (0xD800-0xDBFF)
+                if (c >= 0xD800 && c <= 0xDBFF && i + 1 < wide.length())
+                {
+                    wchar_t next = wide[i + 1];
+                    // Check if next is a low surrogate (0xDC00-0xDFFF)
+                    if (next >= 0xDC00 && next <= 0xDFFF)
+                    {
+                        // This is a surrogate pair - one visual character
+                        visualLen++;
+                        i++; // Skip the low surrogate
+                        continue;
+                    }
+                }
+
+                // Regular character (including unpaired surrogates, though those shouldn't happen)
+                visualLen++;
+            }
+
+            spdlog::debug("GetVisualLength: str.length()={}, stripped.length()={}, wide.length()={}, visualLen={}",
+                          str.length(), stripped.length(), wide.length(), visualLen);
+            return visualLen;
+        }
+
         ConsoleTable::ConsoleTable(const DataController *controller, OutputFormat format)
             : m_controller(controller), m_columns(controller->GetColumns()), m_format(format)
         {
@@ -50,7 +110,7 @@ namespace pserv
             m_columnWidths.clear();
             m_columnWidths.reserve(m_columns.size());
 
-            // Start with header widths
+            // Start with header widths (headers don't have color codes)
             for (const auto &col : m_columns)
             {
                 m_columnWidths.push_back(col.DisplayName.length());
@@ -63,7 +123,8 @@ namespace pserv
                 for (size_t i = 0; i < m_columns.size(); ++i)
                 {
                     std::string value = obj->GetProperty(static_cast<int>(i));
-                    m_columnWidths[i] = std::max(m_columnWidths[i], value.length());
+                    // Use visual length to exclude ANSI codes
+                    m_columnWidths[i] = std::max(m_columnWidths[i], GetVisualLength(value));
                 }
 
                 // Stop sampling after 100 rows
@@ -85,7 +146,10 @@ namespace pserv
             {
                 if (i > 0)
                     write("  ");
-                write(FormatCell(m_columns[i].DisplayName, m_columnWidths[i], m_columns[i].GetAlignment()));
+                std::string formatted = FormatCell(m_columns[i].DisplayName, m_columnWidths[i], m_columns[i].GetAlignment());
+                spdlog::debug("RenderHeader col[{}]: name='{}', width={}, formatted.length()={}",
+                              i, m_columns[i].DisplayName, m_columnWidths[i], formatted.length());
+                write(formatted);
             }
             write_line(CONSOLE_STANDARD);
         }
@@ -106,30 +170,140 @@ namespace pserv
             VisualState state = m_controller->GetVisualState(obj);
             const char *colorCode = GetColorForState(state);
 
-            write(colorCode);
+            // Build the entire line first to measure it
+            std::string line;
+            line += colorCode;
             for (size_t i = 0; i < m_columns.size(); ++i)
             {
                 if (i > 0)
-                    write("  ");
+                    line += "  ";
                 std::string value = obj->GetProperty(static_cast<int>(i));
-                write(FormatCell(value, m_columnWidths[i], m_columns[i].GetAlignment()));
+                std::string formatted = FormatCell(value, m_columnWidths[i], m_columns[i].GetAlignment());
+                spdlog::debug("RenderRow col[{}]: value='{}', width={}, formatted.length()={}, formatted[0-10]='{}'",
+                              i, value.substr(0, 20), m_columnWidths[i], formatted.length(),
+                              formatted.substr(0, std::min<size_t>(10, formatted.length())));
+                line += formatted;
             }
-            write_line(CONSOLE_STANDARD);
+            line += CONSOLE_STANDARD;
+
+            // Log the total line length
+            size_t visualLineLen = GetVisualLength(line);
+            spdlog::debug("RenderRow complete: line.length()={}, visualLength={}", line.length(), visualLineLen);
+
+            write_line(line);
         }
 
         std::string ConsoleTable::FormatCell(const std::string &value, size_t width, ColumnAlignment alignment) const
         {
-            // Truncate if too long
-            std::string displayValue = value;
-            if (displayValue.length() > width)
+            // Strip newlines and carriage returns (replace with space)
+            std::string cleanedValue = value;
+            for (char &c : cleanedValue)
             {
-                displayValue = displayValue.substr(0, width - 3) + "...";
+                if (c == '\n' || c == '\r')
+                {
+                    c = ' ';
+                }
             }
 
-            // Pad to width
-            if (displayValue.length() < width)
+            // Calculate visual length (excluding ANSI codes)
+            size_t visualLen = GetVisualLength(cleanedValue);
+
+            spdlog::debug("FormatCell: value.length()={}, visualLen={}, width={}", cleanedValue.length(), visualLen, width);
+
+            // Truncate if too long (need to be careful with escape codes)
+            std::string displayValue = cleanedValue;
+            if (visualLen > width)
             {
-                size_t padding = width - displayValue.length();
+                spdlog::debug("  Need to truncate: visualLen({}) > width({})", visualLen, width);
+
+                // Find where to cut based on visual length (UTF-8 aware)
+                size_t targetLen = width - 3; // Reserve 3 for "..."
+                size_t actualLen = 0;
+                size_t cutPos = 0;
+
+                for (size_t i = 0; i < cleanedValue.length(); ++i)
+                {
+                    unsigned char c = static_cast<unsigned char>(cleanedValue[i]);
+
+                    if (c == '\x1b' && i + 1 < cleanedValue.length())
+                    {
+                        // Custom console escape sequence: skip both bytes
+                        spdlog::debug("    [{}] Skip escape sequence", i);
+                        i++; // Skip the next byte
+                    }
+                    else if (c == '\x1b')
+                    {
+                        // Lone \x1b at end
+                        spdlog::debug("    [{}] Lone escape at end", i);
+                    }
+                    else if ((c & 0x80) == 0)
+                    {
+                        // ASCII character
+                        if (actualLen >= targetLen)
+                        {
+                            cutPos = i;
+                            spdlog::debug("    [{}] Cut position found, actualLen={}, targetLen={}", i, actualLen, targetLen);
+                            break;
+                        }
+                        actualLen++;
+                    }
+                    else if ((c & 0xE0) == 0xC0)
+                    {
+                        // 2-byte UTF-8 character
+                        if (actualLen >= targetLen)
+                        {
+                            cutPos = i;
+                            spdlog::debug("    [{}] Cut position found (2-byte UTF-8), actualLen={}, targetLen={}", i, actualLen, targetLen);
+                            break;
+                        }
+                        actualLen++;
+                        i++; // Skip continuation byte
+                    }
+                    else if ((c & 0xF0) == 0xE0)
+                    {
+                        // 3-byte UTF-8 character
+                        if (actualLen >= targetLen)
+                        {
+                            cutPos = i;
+                            spdlog::debug("    [{}] Cut position found (3-byte UTF-8), actualLen={}, targetLen={}", i, actualLen, targetLen);
+                            break;
+                        }
+                        actualLen++;
+                        i += 2; // Skip continuation bytes
+                    }
+                    else if ((c & 0xF8) == 0xF0)
+                    {
+                        // 4-byte UTF-8 character
+                        if (actualLen >= targetLen)
+                        {
+                            cutPos = i;
+                            spdlog::debug("    [{}] Cut position found (4-byte UTF-8), actualLen={}, targetLen={}", i, actualLen, targetLen);
+                            break;
+                        }
+                        actualLen++;
+                        i += 3; // Skip continuation bytes
+                    }
+                    else
+                    {
+                        // Continuation byte or invalid - just skip
+                    }
+                }
+                if (cutPos > 0)
+                {
+                    displayValue = cleanedValue.substr(0, cutPos) + "...";
+                    // Recalculate visual length after truncation and adding "..."
+                    size_t oldVisualLen = visualLen;
+                    visualLen = GetVisualLength(displayValue);
+                    spdlog::debug("  After truncation: cutPos={}, displayValue.length()={}, oldVisualLen={}, newVisualLen={}",
+                                  cutPos, displayValue.length(), oldVisualLen, visualLen);
+                }
+            }
+
+            // Pad to width (using visual length)
+            if (visualLen < width)
+            {
+                size_t padding = width - visualLen;
+                spdlog::debug("  Padding: adding {} spaces (alignment={})", padding, alignment == ColumnAlignment::Right ? "Right" : "Left");
                 if (alignment == ColumnAlignment::Right)
                 {
                     displayValue = std::string(padding, ' ') + displayValue;

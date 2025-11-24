@@ -2,6 +2,7 @@
 #include <core/refcount_interface.h>
 #include <core/data_object.h>
 #include <core/data_object_container.h>
+#include <utils/string_utils.h>
 
 
 namespace pserv
@@ -68,8 +69,29 @@ namespace pserv
                     strB = b->GetProperty(columnIndex);
                 }
 
-                int cmp = strA.compare(strB);
-                return ascending ? (cmp < 0) : (cmp > 0);
+                // Case-insensitive comparison using Windows CompareStringEx
+                // This handles Unicode properly and is locale-aware
+                // Convert UTF-8 strings to wide strings first
+                std::wstring wideA = utils::Utf8ToWide(strA);
+                std::wstring wideB = utils::Utf8ToWide(strB);
+
+                int cmp = CompareStringEx(
+                    LOCALE_NAME_USER_DEFAULT,
+                    LINGUISTIC_IGNORECASE,
+                    wideA.c_str(), static_cast<int>(wideA.length()),
+                    wideB.c_str(), static_cast<int>(wideB.length()),
+                    nullptr, nullptr, 0);
+
+                // CompareStringEx returns: 1 (less), 2 (equal), 3 (greater), or 0 (error)
+                if (cmp == 0)
+                {
+                    // Error case - fall back to simple comparison
+                    cmp = strA.compare(strB);
+                    return ascending ? (cmp < 0) : (cmp > 0);
+                }
+
+                // Convert CompareStringEx result (1/2/3) to comparison result
+                return ascending ? (cmp == 1) : (cmp == 3);
             });
     }
 
