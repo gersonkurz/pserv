@@ -322,7 +322,83 @@ Use console.h macros for coloring:
 - Unicode/UTF-8 handling with surrogate pairs
 - Case-insensitive locale-aware sorting
 
-**Next Session**:
-- Phase 6: Polish and Documentation
-- Add more controllers (Processes, Devices, etc.)
-- Performance optimization if needed
+**Next Steps**:
+See "Phase 7: Additional Controller Support" below for detailed plan.
+
+## Phase 7: Additional Controller Support
+**Goal**: Add GetAllActions() support for all remaining controllers
+**Status**: NOT STARTED
+
+### Controller Support Status:
+- ✅ **Services** - COMPLETE (Phase 4)
+- ⏭️ **Devices** - Inherits from Services, should work automatically
+- ⏭️ **Processes** - Has process_actions.cpp
+- ⏭️ **Windows** - Has window_actions.cpp
+- ⏭️ **Modules** - Has module_actions.cpp
+- ⏭️ **Uninstaller** - Has uninstaller_actions.cpp
+- ⏭️ **Startup Programs** - Has startup_program_actions.cpp
+- ⏭️ **Scheduled Tasks** - Has scheduled_task_actions.cpp
+- ⏭️ **Network Connections** - Has network_connection_actions.cpp
+- ⏭️ **Environment Variables** - Has environment_variable_actions.cpp
+
+### Implementation Plan:
+
+**Step 7.1: Verify Devices controller** (TRIVIAL - inherits from Services)
+- Test: `pservc devices` - should list devices
+- Test: `pservc devices start <name>` - should work (inherited actions)
+- Verify: DevicesDataController inherits GetAllActions() from ServicesDataController
+- If works: mark complete, no code changes needed
+
+**Step 7.2: Add Process actions support**
+- Read: process_actions.cpp to see available actions
+- Add: CreateAllProcessActions() function (similar to CreateAllServiceActions)
+- Override: GetAllActions() in ProcessesDataController
+- Test: `pservc processes`, `pservc processes terminate <pid>`
+
+**Step 7.3: Add Windows actions support**
+- Read: window_actions.cpp to see available actions
+- Add: CreateAllWindowActions() function
+- Override: GetAllActions() in WindowsDataController
+- Test: `pservc windows`, `pservc windows close <title>`
+
+**Step 7.4: Add Modules actions support**
+- Read: module_actions.cpp to see available actions
+- Add: CreateAllModuleActions() function
+- Override: GetAllActions() in ModulesDataController
+- Test: `pservc modules`
+
+**Step 7.5: Add Uninstaller actions support**
+- Read: uninstaller_actions.cpp to see available actions
+- Add: CreateAllUninstallerActions() function
+- Override: GetAllActions() in UninstallerDataController
+- Test: `pservc uninstaller`, `pservc uninstaller uninstall <name> --force`
+
+**Step 7.6: Add Startup Programs actions support**
+- Read: startup_program_actions.cpp to see available actions
+- Add: CreateAllStartupProgramActions() function
+- Override: GetAllActions() in StartupProgramsDataController
+- Test: `pservc startup-programs`
+
+**Step 7.7: Add Scheduled Tasks actions support**
+- Read: scheduled_task_actions.cpp to see available actions
+- Add: CreateAllScheduledTaskActions() function
+- Override: GetAllActions() in ScheduledTasksDataController
+- Test: `pservc scheduled-tasks`
+
+**Step 7.8: Add Network Connections actions support**
+- Read: network_connection_actions.cpp to see available actions
+- Add: CreateAllNetworkConnectionActions() function (if any actions exist)
+- Override: GetAllActions() in NetworkConnectionsDataController
+- Test: `pservc network-connections`
+
+**Step 7.9: Add Environment Variables actions support**
+- Read: environment_variable_actions.cpp to see available actions
+- Add: CreateAllEnvironmentVariableActions() function
+- Override: GetAllActions() in EnvironmentVariablesDataController
+- Test: `pservc environment-variables`
+
+**Step 7.10: Final verification**
+- Test all 10 controllers with `pservc <controller> --help`
+- Verify action epilog shows available actions
+- Test at least one action per controller
+- Update pservc-plan.md with completion status
