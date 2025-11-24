@@ -31,9 +31,9 @@ namespace pserv
                 logger->info("pserv5 starting up");
 
                 // Step 2: Get AppData path and determine config/log paths
-                std::filesystem::path appDataPath = utils::GetAppDataPath();
-                m_configPath = appDataPath / "pserv5.toml";
-                logger->info("AppData path: {}", appDataPath.string());
+                m_appDataPath = utils::GetAppDataPath();
+                m_configPath = m_appDataPath / "pserv5.toml";
+                logger->info("AppData path: {}", m_appDataPath.string());
                 logger->info("Loading configuration from: {}", m_configPath.string());
 
                 // Step 3: Load configuration
@@ -46,7 +46,7 @@ namespace pserv
                 if (logFilePath.empty())
                 {
                     // Default: AppData/pserv5/pserv5.log
-                    logFilePath = (appDataPath / "pserv5.log").string();
+                    logFilePath = (m_appDataPath / "pserv5.log").string();
                     config::theSettings.logging.logFilePath.set(logFilePath);
                 }
                 logger->info("Log file path: {}", logFilePath);
@@ -64,6 +64,7 @@ namespace pserv
             }
 
             config::TomlBackend *m_pBackend = nullptr;
+            std::filesystem::path m_appDataPath;
             std::filesystem::path m_configPath;
         };
     } // namespace utils

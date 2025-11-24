@@ -347,6 +347,12 @@ namespace pserv
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
 
+        // Set ImGui ini file path to AppData folder (m_imguiIniPath must remain valid)
+        if (!m_imguiIniPath.empty())
+        {
+            io.IniFilename = m_imguiIniPath.c_str();
+        }
+
         // Setup Dear ImGui style - apply saved theme from config
         std::string savedTheme = config::theSettings.application.theme.get();
         if (savedTheme == "Light")

@@ -26,6 +26,10 @@ namespace pserv
         {
             m_pConfigBackend = pBackend;
         }
+        void SetAppDataPath(const std::filesystem::path &appDataPath)
+        {
+            m_imguiIniPath = (appDataPath / "imgui.ini").string();
+        }
 
         // Internal methods (used by Render())
         void RenderSplashFrame();
@@ -60,6 +64,7 @@ namespace pserv
         HWND m_hWnd{nullptr};
         HINSTANCE m_hInstance{nullptr};
         config::ConfigBackend *m_pConfigBackend{nullptr};
+        std::string m_imguiIniPath;
 
         // DirectX 11 resources
         Microsoft::WRL::ComPtr<ID3D11Device> m_pDevice;

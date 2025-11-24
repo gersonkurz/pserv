@@ -8,8 +8,8 @@ XPStyle on
 
 
 Name "pserv5 ${CURRENT_VERSION}" 
-OutFile "pserv5-${CURRENT_VERSION}-setup-x64.exe"
-InstallDir "$PROGRAMFILES64\pserv5"
+OutFile "pserv5-${CURRENT_VERSION}-setup-x86.exe"
+InstallDir "$PROGRAMFILES\pserv5"
 InstallDirRegKey HKLM SOFTWARE\p-nand-q.com\pserv5 "Install_Dir"
 
 !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
@@ -51,9 +51,8 @@ RequestExecutionLevel admin
   VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" ${CURRENT_VERSION}
 
 Section  "-pserv5 (required)"
-    SetRegView 64
     SetOutPath $INSTDIR
-    File /R ..\pserv5\bin\x64\Release\*
+    File /R ..\pserv5\bin\Win32\Release\*
 
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\pserv5" "DisplayName" "pserv5 (Remove only)"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\pserv5" "UninstallString" '"$INSTDIR\uninstall.exe"'
@@ -78,7 +77,6 @@ Section "Register Shell Extension"
 SectionEnd
 
 Section "Uninstall"
-    SetRegView 64
 	Delete $INSTDIR\uninstall.exe
     Delete "$DESKTOP\pserv5.lnk"
     RMDir /r "$SMPROGRAMS\pserv5"

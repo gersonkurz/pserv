@@ -191,15 +191,6 @@ theSettings.save();  // Persist to disk
 
 ## Pre-Release Gap Analysis
 
-### Critical Issues
-1. **Window Handle Missing in Properties Dialog** (`data_properties_dialog.cpp:436`)
-   - `ctx.m_hWnd = nullptr` - prevents proper dialog parenting
-   - Actions from properties dialog may show orphaned dialogs
-
-2. **Debug Log File Deletion** (`utils/logging.cpp:59`)
-   - `std::remove("pserv5.log")` executes on every startup
-   - Prevents post-crash diagnostics
-
 ### Incomplete Features
 1. **Add Environment Variable** (`environment_variable_actions.cpp:158`)
    - Shows "Not Yet Implemented" placeholder
@@ -216,19 +207,21 @@ theSettings.save();  // Persist to disk
 
 ### TODO
 
-1) **Minor Bugfixing**
-   - Prevent generation of imgui.ini if we can help it. If we cannot, then move it to the %APPDATA% folder for us.
+#### User Documentation
 
-2) **Github Presentation**
-   - Prepare the github webpage, add readme and license references, and optionally check out the possibility for uploading binaries.
-   - Verify: MIT License is good for our use of third-party libraries
+Add a user guide to understand the functionality, specifically now that also `pservc.exe` is available.
 
-3) **Code cleanup**
-   - Systematically document all classes / methods, ideally in a system that can be exported (e.g. doxgen or modern alternatives)
-   - Perform a security review via AI
-   - Remove 32-bit build from pserv5/pservc
-   - Instead, add ARM64 build for Parallels Desktop use on Macbook Pro M4
-   - Add proper Win32 version resources
+#### Code Documentation
+Systematically document all classes / methods, ideally in a system that can be exported (e.g. doxgen or modern alternatives)
+
+#### Security Review
+Perform a security review via AI
+
+#### ARM64 build
+Add ARM64 build for Parallels Desktop use on Macbook Pro M4
+
+#### Add proper Win32 version resources
+Exactly. We have a .rc file, but it doesn't contain a lot of meaningful data.
 
 ## Historical Context
 

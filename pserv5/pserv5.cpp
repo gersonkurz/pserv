@@ -24,6 +24,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     // Initialize main window
     MainWindow mainWindow;
     mainWindow.SetConfigBackend(baseApp.m_pBackend);
+    mainWindow.SetAppDataPath(baseApp.m_appDataPath);
     if (!mainWindow.Initialize(hInstance))
     {
         spdlog::error("Failed to initialize main window");
