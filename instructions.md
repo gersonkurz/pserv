@@ -216,23 +216,14 @@ theSettings.save();  // Persist to disk
 
 ### TODO
 
-2) **Console Variant**
-   - Create a console project pservc that is in the same solution as pserv5, but without using ImGui. 
-   - If built with _CONSOLE, exclude all ImGui / UI specifics from the build
-   - Instead, use ../argparse (a git submodule from https://github.com/jamolnng/argparse.git) and populate it with actions / commands for all controllers and THEIR commands. 
-   - Ideally, the full pserv5 UI functionality that is non-GUI related (such as "property dialogs", "font resizing", "column width", "auto-refresh" and so on) is made available on the console as well.
-
-3) **Minor Bugfixing**
+1) **Minor Bugfixing**
    - Prevent generation of imgui.ini if we can help it. If we cannot, then move it to the %APPDATA% folder for us.
 
-4) **Github Presentation**
+2) **Github Presentation**
    - Prepare the github webpage, add readme and license references, and optionally check out the possibility for uploading binaries.
    - Verify: MIT License is good for our use of third-party libraries
 
-5) **Switch to fmt::format**
-   - So that we can support color output on the console.
-
-6) **Code cleanup**
+3) **Code cleanup**
    - Systematically document all classes / methods, ideally in a system that can be exported (e.g. doxgen or modern alternatives)
    - Perform a security review via AI
    - Remove 32-bit build from pserv5/pservc
