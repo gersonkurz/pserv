@@ -81,6 +81,16 @@ namespace pserv
         // Action system - new object-based interface
         virtual std::vector<const DataAction *> GetActions(const DataObject *dataObject) const = 0;
 
+#ifdef PSERV_CONSOLE_BUILD
+        // Console: Get all possible actions for command registration (ignores object state/availability)
+        // Override in derived controllers to return complete action set
+        // Default: returns empty vector (no actions)
+        virtual std::vector<const DataAction *> GetAllActions() const
+        {
+            return {};
+        }
+#endif
+
         // Auto-refresh support - controllers decide if they support periodic refresh
         virtual bool SupportsAutoRefresh() const
         {
