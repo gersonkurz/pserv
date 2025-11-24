@@ -12,8 +12,9 @@ namespace pserv
     ServicesDataController::ServicesDataController(DWORD serviceType, const char *viewName, const char *itemName)
         : DataController{viewName ? viewName : SERVICES_DATA_CONTROLLER_NAME,
               itemName ? itemName : "Service",
-              {{"Display Name", "DisplayName", ColumnDataType::String, true, ColumnEditType::Text},
+              {
                   {"Name", "Name", ColumnDataType::String},
+                  {"Display Name", "DisplayName", ColumnDataType::String, true, ColumnEditType::Text},
                   {"Status", "Status", ColumnDataType::String},
                   {"Start Type", "StartType", ColumnDataType::String, true, ColumnEditType::Combo},
                   {"Process ID", "ProcessId", ColumnDataType::UnsignedInteger},
@@ -80,6 +81,13 @@ namespace pserv
         const auto controlsAccepted = service->GetControlsAccepted();
         return CreateServiceActions(currentState, controlsAccepted);
     }
+
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> ServicesDataController::GetAllActions() const
+    {
+        return CreateAllServiceActions();
+    }
+#endif
 
     VisualState ServicesDataController::GetVisualState(const DataObject *dataObject) const
     {

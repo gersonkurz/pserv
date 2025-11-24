@@ -762,7 +762,7 @@ namespace pserv
     } // anonymous namespace
 
     // ============================================================================
-    // Factory Function
+    // Factory Functions
     // ============================================================================
 
     std::vector<const DataAction *> CreateServiceActions(DWORD currentState, DWORD controlsAccepted)
@@ -816,5 +816,29 @@ namespace pserv
         actions.push_back(&theServiceDeleteRegistryKeyAction);
         return actions;
     }
+
+#ifdef PSERV_CONSOLE_BUILD
+    // Console: Return ALL possible actions regardless of state (for command registration)
+    std::vector<const DataAction *> CreateAllServiceActions()
+    {
+        return {
+            &theServiceStartAction,
+            &theServiceStopAction,
+            &theServiceRestartAction,
+            &theServicePauseAction,
+            &theServiceResumeAction,
+            &theDataActionSeparator,
+            &theServiceSetStartupAutomaticAction,
+            &theServiceSetStartupManualAction,
+            &theServiceSetStartupDisabledAction,
+            &theDataActionSeparator,
+            &theServiceOpenInRegistryEditorAction,
+            &theServiceOpenInExplorerAction,
+            &theServiceOpenTerminalHereAction,
+            &theDataActionSeparator,
+            &theServiceUninstallAction,
+            &theServiceDeleteRegistryKeyAction};
+    }
+#endif
 
 } // namespace pserv

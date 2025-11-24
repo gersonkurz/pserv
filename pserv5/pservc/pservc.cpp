@@ -1,6 +1,8 @@
 #include "precomp.h"
 #include <core/data_controller.h>
 #include <core/data_controller_library.h>
+#include <core/data_action.h>
+#include <core/data_action_dispatch_context.h>
 #include <argparse/argparse.hpp>
 #include <pservc/console.h>
 #include <pservc/console_table.h>
@@ -40,12 +42,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // If --help or --version was provided on main program, just exit
-    if (program.get<bool>("--help") || program.get<bool>("--version"))
-    {
-        console::write(program.help().str());
-        return 0;
-    }
+    // Note: argparse handles --help and --version automatically
+    // We disabled exit_on_default_arguments to allow cleanup, but argparse still prints help/version
+    // So we just need to check if they were requested and exit gracefully
 
     // Find which subcommand was used
     DataController *selectedController = nullptr;
@@ -68,20 +67,159 @@ int main(int argc, char *argv[])
         subparserIndex++;
     }
 
-    // If no subcommand was provided, show help
+    // If no subcommand was provided, argparse will have printed help already
     if (!selectedController || !selectedSubparser)
     {
-        console::write(program.help().str());
         return 0;
     }
 
     // Check if --help was requested on the subcommand
-    if (selectedSubparser->get<bool>("--help"))
+    try
     {
-        console::write(selectedSubparser->help().str());
-        return 0;
+        if (selectedSubparser->get<bool>("--help"))
+        {
+            // Argparse already printed help, just exit
+            return 0;
+        }
+    }
+    catch (const std::exception &)
+    {
+        // --help not found in parser
     }
 
+    // Check if an action subcommand was used
+    std::vector<const DataAction *> allActions = selectedController->GetAllActions();
+    const DataAction *selectedAction = nullptr;
+    argparse::ArgumentParser *selectedActionParser = nullptr;
+
+    for (const DataAction *action : allActions)
+    {
+        if (action->IsSeparator())
+            continue;
+
+        std::string action_name = utils::ToLower(action->GetName());
+        std::replace(action_name.begin(), action_name.end(), ' ', '-');
+
+        if (selectedSubparser->is_subcommand_used(action_name))
+        {
+            selectedAction = action;
+            // Get the action parser from the subparser
+            try
+            {
+                selectedActionParser = &selectedSubparser->at<argparse::ArgumentParser>(action_name);
+            }
+            catch (const std::exception &)
+            {
+                // Action subparser not found
+            }
+            break;
+        }
+    }
+
+    // If action was selected, dispatch to action execution
+    if (selectedAction && selectedActionParser)
+    {
+        // Argparse will have printed help for action if --help was used
+
+        // Load data
+        console::write_line("Loading data...");
+        selectedController->Refresh(false);
+
+        // Get target names from positional arguments
+        std::vector<std::string> targetNames;
+        try
+        {
+            targetNames = selectedActionParser->get<std::vector<std::string>>("targets");
+        }
+        catch (const std::exception &)
+        {
+            // No targets provided
+        }
+
+        if (targetNames.empty())
+        {
+            console::write_line(CONSOLE_FOREGROUND_RED "Error: No target objects specified" CONSOLE_STANDARD);
+            return 1;
+        }
+
+        // Find matching objects by first column (Name) - exact match, case-insensitive
+        std::vector<DataObject *> selectedObjects;
+        const auto &allObjects = selectedController->GetDataObjects();
+        for (const std::string &targetName : targetNames)
+        {
+            std::string lowerTargetName = utils::ToLower(targetName);
+            bool found = false;
+
+            for (DataObject *obj : allObjects)
+            {
+                std::string objName = obj->GetProperty(0); // First column
+                if (utils::ToLower(objName) == lowerTargetName)
+                {
+                    selectedObjects.push_back(obj);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                console::write_line(CONSOLE_FOREGROUND_RED "Error: Target '" + targetName + "' not found" CONSOLE_STANDARD);
+                return 1;
+            }
+        }
+
+        // Check --force for destructive actions
+        if (selectedAction->IsDestructive())
+        {
+            bool force = false;
+            try
+            {
+                force = selectedActionParser->get<bool>("--force");
+            }
+            catch (const std::exception &)
+            {
+            }
+
+            if (!force)
+            {
+                console::write_line(CONSOLE_FOREGROUND_RED "Error: This is a destructive action. Use --force to confirm" CONSOLE_STANDARD);
+                return 1;
+            }
+        }
+
+        // Create dispatch context
+        DataActionDispatchContext ctx;
+        ctx.m_selectedObjects = selectedObjects;
+        ctx.m_pController = selectedController;
+        ctx.m_pActionParser = selectedActionParser;
+        ctx.m_hWnd = nullptr;
+        ctx.m_pAsyncOp = nullptr;
+
+        // Execute action
+        std::string actionName = selectedAction->GetName();
+        size_t targetCount = selectedObjects.size();
+        console::write_line(std::format("Executing action '{}' on {} target(s)...", actionName, targetCount));
+        try
+        {
+            selectedAction->Execute(ctx);
+
+            // If action needs refresh, do it
+            if (ctx.m_bNeedsRefresh)
+            {
+                selectedController->Refresh(false);
+            }
+
+            console::write_line(CONSOLE_FOREGROUND_GREEN "Action completed successfully" CONSOLE_STANDARD);
+            return 0;
+        }
+        catch (const std::exception &err)
+        {
+            console::write_line(CONSOLE_FOREGROUND_RED "Error executing action: " + std::string(err.what()) + CONSOLE_STANDARD);
+            return 1;
+        }
+    }
+
+    // No action selected - render list
     // Get the format argument from the subcommand parser (default to table)
     console::OutputFormat format = console::OutputFormat::Table;
     try
