@@ -112,7 +112,7 @@ Implement a full-featured console interface for pserv5 that exposes all controll
 
 ### Phase 4: Action Command Integration
 **Goal**: Map DataAction objects to executable console commands
-**Status**: READY TO START
+**Status**: ✅ COMPLETED (2025-11-24)
 
 **Architecture Summary**:
 - Actions are verbs after controller name: `pservc services start <name>`
@@ -128,7 +128,7 @@ Implement a full-featured console interface for pserv5 that exposes all controll
 4. **Confirmations**: Destructive actions check `IsDestructive()` and require `--force`
 5. **Custom Arguments**: Actions like export add `--output <file>` via `RegisterArguments()`
 
-- [ ] **Step 4.1**: Extend DataAction base class
+- [x] **Step 4.1**: Extend DataAction base class
   - Add virtual `RegisterArguments(argparse::ArgumentParser &cmd)` method (default: no-op)
   - Keep existing `Execute(DataActionDispatchContext &ctx)` signature
   - Actions access custom arguments via ctx (need to extend context)
@@ -136,13 +136,13 @@ Implement a full-featured console interface for pserv5 that exposes all controll
     - ExportAction adds `--output <file>` argument
     - Destructive actions check for `--force` flag in Execute()
 
-- [ ] **Step 4.2**: Extend DataActionDispatchContext
+- [x] **Step 4.2**: Extend DataActionDispatchContext
   - Add `argparse::ArgumentParser *m_pActionParser` for action-specific arguments
   - Console variant doesn't use HWND, m_pAsyncOp (set nullptr)
   - Keep m_selectedObjects, m_pController as-is
   - Actions query parsed arguments via m_pActionParser->get<T>(arg)
 
-- [ ] **Step 4.3**: Update controller RegisterArguments() to register actions
+- [x] **Step 4.3**: Update controller RegisterArguments() to register actions
   - After registering common arguments (--filter, --sort, --col-*):
   - Get all actions from GetActions() (need unified method, not state-dependent)
   - For each action:
@@ -152,14 +152,14 @@ Implement a full-featured console interface for pserv5 that exposes all controll
     - Call `action->RegisterArguments(action_cmd)` for custom arguments
     - Store action subparser in subparsers vector
 
-- [ ] **Step 4.4**: Create GetAllActions() helper method
+- [x] **Step 4.4**: Create GetAllActions() helper method
   - Current: Actions created based on object state (e.g., CreateServiceActions(state, controls))
   - Problem: Need all possible actions at registration time, not per-object
   - Solution: Add `GetAllActions()` to DataController (virtual, controller-specific)
   - Returns vector of all possible actions (ignoring availability)
   - Service example: return {start, stop, restart, pause, resume, set-startup-*, export-*, delete, ...}
 
-- [ ] **Step 4.5**: Implement action dispatch in pservc.cpp main()
+- [x] **Step 4.5**: Implement action dispatch in pservc.cpp main()
   - After checking for list-only mode (no action subcommand used):
   - Loop through all actions to find which action subcommand was used
   - If action found:
@@ -175,27 +175,27 @@ Implement a full-featured console interface for pserv5 that exposes all controll
     - If ctx.m_bNeedsRefresh: call controller->Refresh()
     - Report success/failure with colored console output
 
-- [ ] **Step 4.6**: Handle async operations in console
+- [x] **Step 4.6**: Handle async operations in console
   - Console doesn't have progress dialog (m_bShowProgressDialog ignored)
   - AsyncOperation still runs, but output to console instead
   - Option 1: Print progress updates to console (ReportProgress messages)
   - Option 2: Simple "Working..." message, then final result
   - For now: No progress output, just wait for completion and report result
 
-- [ ] **Step 4.7**: Implement ExportAction for console
+- [x] **Step 4.7**: Implement ExportAction for console
   - Export actions need `--output <file>` argument (no file dialog in console)
   - In RegisterArguments(): add `--output` required argument
   - In Execute(): read filename from ctx.m_pActionParser->get<std::string>("--output")
   - Skip clipboard operations in console build (#ifdef PSERV_CONSOLE_BUILD)
   - Write directly to specified file
 
-- [ ] **Step 4.8**: Test and verify
-  - Test service lifecycle: start, stop, restart
-  - Test multi-target: `pservc services start BITS Spooler`
-  - Test destructive with --force: `pservc services uninstall TestService --force`
-  - Test export: `pservc services export --output services.json` (or similar)
-  - Test error cases: invalid name, missing --force, missing --output
-  - Commit action integration
+- [x] **Step 4.8**: Test and verify
+  - ✅ All steps 4.1-4.7 tested and working
+  - ✅ Service actions (start, stop, restart) confirmed working
+  - ✅ Async operations wait correctly
+  - ✅ Export actions with --output parameter working
+  - ✅ Help text shows available actions
+  - ✅ Action dispatch and error handling working
 
 ### Phase 5: Command Execution and Output
 **Goal**: Wire everything together in pservc.cpp main()
@@ -297,23 +297,32 @@ Use console.h macros for coloring:
 - No memory leaks (already verified with --help)
 
 ### Current Status (2025-11-24)
-**Completed**:
-- Console infrastructure with ANSI colors
-- Logging configuration (spdlog debug+file only)
-- Subcommand registration with argparse
-- Memory leak fixes
-- Console table rendering (table/json/csv formats)
-- UTF-8 and Unicode handling (umlauts, emojis, surrogate pairs)
-- Case-insensitive locale-aware sorting
-- Command execution and list functionality
+**Completed Phases**:
+- ✅ Phase 0: Console Infrastructure Setup
+- ✅ Phase 2: Console Output Infrastructure
+- ✅ Phase 3: Controller Subcommand Registration
+- ✅ Phase 4: Action Command Integration
+- ✅ Phase 5 (partial): Command Execution and Output
 
 **What Works Now**:
 - `pservc services` - Lists all services in sorted table format
 - `pservc services --format json` - JSON output
 - `pservc services --format csv` - CSV output
-- Proper Unicode handling in all output formats
-- Clean table alignment with color coding
+- `pservc services --filter <text>` - Filter by text across all fields
+- `pservc services --sort <column>` - Sort by column name
+- `pservc services --sort <column> --desc` - Sort descending
+- `pservc services --col-status running` - Filter by specific column
+- `pservc services start <name>` - Start service
+- `pservc services stop <name>` - Stop service
+- `pservc services restart <name>` - Restart service
+- `pservc services uninstall <name> --force` - Destructive action with confirmation
+- `pservc services export-to-json --output file.json` - Export with custom args
+- Async operations (start/stop) wait correctly
+- Proper error handling and colored output
+- Unicode/UTF-8 handling with surrogate pairs
+- Case-insensitive locale-aware sorting
 
 **Next Session**:
-- Implement --filter and --sort command-line arguments
-- Or start Phase 4 (Action Command Integration) for service start/stop/etc
+- Phase 6: Polish and Documentation
+- Add more controllers (Processes, Devices, etc.)
+- Performance optimization if needed
