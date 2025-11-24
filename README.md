@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.jpg" alt="pserv logo" width="128"/>
+  <img src="logo.jpg" alt="pserv logo" width="1024"/>
 </p>
 
 # pserv
