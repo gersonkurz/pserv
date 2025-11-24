@@ -1,2 +1,2 @@
-makensis setup-x64.nsi
+makensis setup-x86.nsi
 pause
