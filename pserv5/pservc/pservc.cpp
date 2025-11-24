@@ -9,6 +9,7 @@
 #include <utils/logging.h>
 #include <utils/base_app.h>
 #include <utils/string_utils.h>
+#include <core/async_operation.h>
 
 using namespace pserv;
 
@@ -202,6 +203,17 @@ int main(int argc, char *argv[])
         try
         {
             selectedAction->Execute(ctx);
+
+            // If action created an async operation, wait for it
+            if (ctx.m_pAsyncOp)
+            {
+                console::write_line("Working...");
+                ctx.m_pAsyncOp->Wait();
+
+                // Clean up async operation
+                delete ctx.m_pAsyncOp;
+                ctx.m_pAsyncOp = nullptr;
+            }
 
             // If action needs refresh, do it
             if (ctx.m_bNeedsRefresh)
