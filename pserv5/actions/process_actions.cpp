@@ -42,6 +42,11 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+#ifdef PSERV_CONSOLE_BUILD
+                // Console: Not supported (requires GUI)
+                spdlog::error("'Open File Location' is not supported in console build");
+                throw std::runtime_error("This action requires GUI and is not available in console mode");
+#else
                 for (const auto *obj : ctx.m_selectedObjects)
                 {
                     const auto *proc = GetProcessInfo(obj);
@@ -58,6 +63,7 @@ namespace pserv
                         }
                     }
                 }
+#endif
             }
         };
 
@@ -136,12 +142,31 @@ namespace pserv
             void Execute(DataActionDispatchContext &ctx) const override
             {
                 std::vector<DWORD> pids;
-                std::string confirmMsg = "Are you sure you want to terminate the following processes?\n\n";
 
                 for (const auto *obj : ctx.m_selectedObjects)
                 {
                     const auto *proc = GetProcessInfo(obj);
                     pids.push_back(proc->GetPid());
+                }
+
+#ifdef PSERV_CONSOLE_BUILD
+                // Console: --force flag already checked by pservc.cpp
+                // Terminate processes synchronously
+                size_t success = 0;
+                for (DWORD pid : pids)
+                {
+                    if (ProcessManager::TerminateProcessById(pid))
+                    {
+                        success++;
+                    }
+                }
+                spdlog::info("Terminated {}/{} processes", success, pids.size());
+#else
+                // GUI: Show confirmation dialog
+                std::string confirmMsg = "Are you sure you want to terminate the following processes?\n\n";
+                for (const auto *obj : ctx.m_selectedObjects)
+                {
+                    const auto *proc = GetProcessInfo(obj);
                     confirmMsg += std::format("{} (PID: {})\n", proc->GetName(), proc->GetPid());
                     if (pids.size() >= 10)
                     {
@@ -181,6 +206,7 @@ namespace pserv
                             return true;
                         });
                 }
+#endif
             }
         };
 
@@ -212,5 +238,23 @@ namespace pserv
             &theDataActionSeparator,
             &theProcessTerminateAction};
     }
+
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> CreateAllProcessActions()
+    {
+        // Console: Return all actions regardless of process state
+        return {
+            &theProcessOpenLocationAction,
+            &theDataActionSeparator,
+            &theSetRealtimePriorityAction,
+            &theSetHighPriorityAction,
+            &theSetAboveNormalPriorityAction,
+            &theSetNormalPriorityAction,
+            &theSetBelowNormalPriorityAction,
+            &theSetLowPriorityAction,
+            &theDataActionSeparator,
+            &theProcessTerminateAction};
+    }
+#endif
 
 } // namespace pserv

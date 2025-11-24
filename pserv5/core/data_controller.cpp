@@ -85,7 +85,6 @@ namespace pserv
 
         // Register action subcommands
         std::vector<const DataAction *> actions = GetAllActions();
-        std::string actionsList;
 
         for (const DataAction *action : actions)
         {
@@ -97,18 +96,20 @@ namespace pserv
             std::string action_name = utils::ToLower(action->GetName());
             std::replace(action_name.begin(), action_name.end(), ' ', '-');
 
-            // Add to actions list for help text
-            if (!actionsList.empty())
-                actionsList += ", ";
-            actionsList += action_name;
-
             spdlog::debug("RegisterArguments: Adding action subcommand '{}'", action_name);
 
             // Create action subparser
             subparsers.push_back(std::make_unique<argparse::ArgumentParser>(
                 action_name, "5.0.0", argparse::default_arguments::help, false));
             auto &action_cmd = *subparsers.back();
-            action_cmd.add_description(action->GetName());
+
+            // Add description with warning for destructive actions
+            std::string description = action->GetName();
+            if (action->IsDestructive())
+            {
+                description += " (DESTRUCTIVE - requires --force)";
+            }
+            action_cmd.add_description(description);
 
             // Add positional argument(s) for target name(s)
             action_cmd.add_argument("targets")
@@ -129,12 +130,6 @@ namespace pserv
 
             // Add action subcommand to controller subcommand
             cmd.add_subparser(action_cmd);
-        }
-
-        // Add epilog listing available actions
-        if (!actionsList.empty())
-        {
-            cmd.add_epilog("Available actions: " + actionsList + "\nUse 'pservc " + cmd_name + " <action> --help' for action-specific help");
         }
 
         // Add the subparser to the main program

@@ -74,18 +74,15 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    // Check if --help was requested on the subcommand
-    try
+    // Check if --help was requested by examining argv directly
+    // (can't query argparse because --help is a default argument that's consumed during parsing)
+    for (int i = 1; i < argc; ++i)
     {
-        if (selectedSubparser->get<bool>("--help"))
+        if (std::strcmp(argv[i], "--help") == 0 || std::strcmp(argv[i], "-h") == 0)
         {
             // Argparse already printed help, just exit
             return 0;
         }
-    }
-    catch (const std::exception &)
-    {
-        // --help not found in parser
     }
 
     // Check if an action subcommand was used
