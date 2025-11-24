@@ -1,5 +1,12 @@
 #pragma once
 
+#ifdef PSERV_CONSOLE_BUILD
+namespace argparse
+{
+    class ArgumentParser;
+}
+#endif
+
 namespace pserv
 {
     class DataController;
@@ -18,5 +25,8 @@ namespace pserv
         DataController *m_pController{nullptr};      // Owning data controller
         bool m_bShowProgressDialog{false};
         bool m_bNeedsRefresh{false};
+#ifdef PSERV_CONSOLE_BUILD
+        argparse::ArgumentParser *m_pActionParser{nullptr}; // Console: action-specific argument parser
+#endif
     };
 } // namespace pserv
