@@ -98,19 +98,29 @@ int main(int argc, char *argv[])
         std::string action_name = utils::ToLower(action->GetName());
         std::replace(action_name.begin(), action_name.end(), ' ', '-');
 
-        if (selectedSubparser->is_subcommand_used(action_name))
+        // Check if this action subcommand was used
+        // Wrap in try-catch because is_subcommand_used() throws std::out_of_range if subcommand doesn't exist
+        try
         {
-            selectedAction = action;
-            // Get the action parser from the subparser
-            try
+            if (selectedSubparser->is_subcommand_used(action_name))
             {
-                selectedActionParser = &selectedSubparser->at<argparse::ArgumentParser>(action_name);
+                selectedAction = action;
+                // Get the action parser from the subparser
+                try
+                {
+                    selectedActionParser = &selectedSubparser->at<argparse::ArgumentParser>(action_name);
+                }
+                catch (const std::exception &)
+                {
+                    // Action subparser not found
+                }
+                break;
             }
-            catch (const std::exception &)
-            {
-                // Action subparser not found
-            }
-            break;
+        }
+        catch (const std::out_of_range &)
+        {
+            // Subcommand not registered - skip it
+            continue;
         }
     }
 

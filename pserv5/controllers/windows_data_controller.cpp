@@ -42,6 +42,13 @@ namespace pserv
         return CreateWindowActions();
     }
 
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> WindowsDataController::GetAllActions() const
+    {
+        return CreateAllWindowActions();
+    }
+#endif
+
     VisualState WindowsDataController::GetVisualState(const DataObject *dataObject) const
     {
         if (!dataObject)

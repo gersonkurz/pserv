@@ -257,4 +257,21 @@ namespace pserv
         };
     }
 
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> CreateAllWindowActions()
+    {
+        // Console: Return all actions regardless of window state
+        return {
+            &theWindowShowAction,
+            &theWindowHideAction,
+            &theWindowMinimizeAction,
+            &theWindowMaximizeAction,
+            &theWindowRestoreAction,
+            &theDataActionSeparator,
+            &theWindowBringToFrontAction,
+            &theWindowCloseAction,
+        };
+    }
+#endif
+
 } // namespace pserv
