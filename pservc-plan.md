@@ -327,14 +327,14 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 
 ## Phase 7: Additional Controller Support
 **Goal**: Add GetAllActions() support for all remaining controllers
-**Status**: NOT STARTED
+**Status**: IN PROGRESS
 
 ### Controller Support Status:
 - ✅ **Services** - COMPLETE (Phase 4)
-- ⏭️ **Devices** - Inherits from Services, should work automatically
-- ⏭️ **Processes** - Has process_actions.cpp
-- ⏭️ **Windows** - Has window_actions.cpp
-- ⏭️ **Modules** - Has module_actions.cpp
+- ✅ **Devices** - COMPLETE (inherits from Services, no changes needed)
+- ✅ **Processes** - COMPLETE (8 actions: terminate, set priority x6, open location)
+- ✅ **Windows** - COMPLETE (7 actions: show/hide/minimize/maximize/restore, bring to front, close)
+- ✅ **Modules** - COMPLETE (1 action: open containing folder - GUI only)
 - ⏭️ **Uninstaller** - Has uninstaller_actions.cpp
 - ⏭️ **Startup Programs** - Has startup_program_actions.cpp
 - ⏭️ **Scheduled Tasks** - Has scheduled_task_actions.cpp
@@ -343,29 +343,27 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 
 ### Implementation Plan:
 
-**Step 7.1: Verify Devices controller** (TRIVIAL - inherits from Services)
-- Test: `pservc devices` - should list devices
-- Test: `pservc devices start <name>` - should work (inherited actions)
-- Verify: DevicesDataController inherits GetAllActions() from ServicesDataController
-- If works: mark complete, no code changes needed
+**Step 7.1: Verify Devices controller** ✅ COMPLETE
+- Verified: DevicesDataController inherits GetAllActions() from ServicesDataController
+- No code changes needed
 
-**Step 7.2: Add Process actions support**
-- Read: process_actions.cpp to see available actions
-- Add: CreateAllProcessActions() function (similar to CreateAllServiceActions)
-- Override: GetAllActions() in ProcessesDataController
-- Test: `pservc processes`, `pservc processes terminate <pid>`
+**Step 7.2: Add Process actions support** ✅ COMPLETE
+- Added: CreateAllProcessActions() function in process_actions.cpp
+- Added: GetAllActions() override in ProcessesDataController
+- Console handling: ProcessTerminateAction uses --force, ProcessOpenLocationAction throws error (GUI only)
+- Fixed: Help output now shows destructive actions with "(DESTRUCTIVE - requires --force)" label
+- Fixed: Removed duplicate action list in epilog (argparse already shows in Subcommands section)
 
-**Step 7.3: Add Windows actions support**
-- Read: window_actions.cpp to see available actions
-- Add: CreateAllWindowActions() function
-- Override: GetAllActions() in WindowsDataController
-- Test: `pservc windows`, `pservc windows close <title>`
+**Step 7.3: Add Windows actions support** ✅ COMPLETE
+- Added: CreateAllWindowActions() function in window_actions.cpp
+- Added: GetAllActions() override in WindowsDataController
+- Fixed: Wrapped is_subcommand_used() in try-catch to prevent std::out_of_range crash
+- All 7 window actions are console-compatible (work with HWND)
 
-**Step 7.4: Add Modules actions support**
-- Read: module_actions.cpp to see available actions
-- Add: CreateAllModuleActions() function
-- Override: GetAllActions() in ModulesDataController
-- Test: `pservc modules`
+**Step 7.4: Add Modules actions support** ✅ COMPLETE
+- Added: CreateAllModuleActions() function in module_actions.cpp
+- Added: GetAllActions() override in ModulesDataController
+- Console handling: ModuleOpenContainingFolderAction throws error (requires GUI/ShellExecuteA)
 
 **Step 7.5: Add Uninstaller actions support**
 - Read: uninstaller_actions.cpp to see available actions

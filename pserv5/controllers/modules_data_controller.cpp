@@ -47,6 +47,13 @@ namespace pserv
         return CreateModuleActions();
     }
 
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> ModulesDataController::GetAllActions() const
+    {
+        return CreateAllModuleActions();
+    }
+#endif
+
     VisualState ModulesDataController::GetVisualState(const DataObject *dataObject) const
     {
         // Modules don't have complex visual states like services or processes, so always normal.

@@ -38,6 +38,11 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+#ifdef PSERV_CONSOLE_BUILD
+                // Console: Not supported (requires GUI)
+                spdlog::error("'Open Containing Folder' is not supported in console build");
+                throw std::runtime_error("This action requires GUI and is not available in console mode");
+#else
                 for (const auto *obj : ctx.m_selectedObjects)
                 {
                     const auto *module = GetModuleInfo(obj);
@@ -61,6 +66,7 @@ namespace pserv
                         spdlog::warn("Module path is empty, cannot open containing folder: {}", module->GetName());
                     }
                 }
+#endif
             }
         };
 
@@ -76,5 +82,13 @@ namespace pserv
     {
         return {&theModuleOpenContainingFolderAction};
     }
+
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> CreateAllModuleActions()
+    {
+        // Console: Return all actions regardless of module state
+        return {&theModuleOpenContainingFolderAction};
+    }
+#endif
 
 } // namespace pserv
