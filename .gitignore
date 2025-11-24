@@ -11,6 +11,8 @@
 *.o
 *.obj
 
+.claude/settings.local.json
+
 # Precompiled Headers
 *.gch
 *.pch
