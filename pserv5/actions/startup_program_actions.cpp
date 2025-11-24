@@ -116,12 +116,18 @@ namespace pserv
             void Execute(DataActionDispatchContext &ctx) const override
             {
                 std::vector<StartupProgramInfo *> programs;
-                std::string confirmMsg = "Are you sure you want to delete the following startup programs?\n\n";
 
                 for (auto *obj : ctx.m_selectedObjects)
                 {
                     auto *program = GetStartupProgramInfo(obj);
                     programs.push_back(program);
+                }
+
+#ifndef PSERV_CONSOLE_BUILD
+                // GUI: Show confirmation dialog
+                std::string confirmMsg = "Are you sure you want to delete the following startup programs?\n\n";
+                for (auto *program : programs)
+                {
                     confirmMsg += std::format("{} ({})\n", program->GetName(), program->GetLocation());
                     if (programs.size() >= 10)
                     {
@@ -130,20 +136,24 @@ namespace pserv
                     }
                 }
 
-                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Deletion", MB_YESNO | MB_ICONWARNING) == IDYES)
+                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Deletion", MB_YESNO | MB_ICONWARNING) != IDYES)
                 {
-                    int success = 0;
-                    for (auto *program : programs)
-                    {
-                        if (StartupProgramManager::DeleteStartupProgram(program))
-                        {
-                            success++;
-                        }
-                    }
-                    spdlog::info("Deleted {}/{} startup programs", success, programs.size());
-
-                    // TODO: Trigger refresh
+                    return;
                 }
+#endif
+                // Console: --force flag already checked by pservc.cpp
+
+                int success = 0;
+                for (auto *program : programs)
+                {
+                    if (StartupProgramManager::DeleteStartupProgram(program))
+                    {
+                        success++;
+                    }
+                }
+                spdlog::info("Deleted {}/{} startup programs", success, programs.size());
+
+                // TODO: Trigger refresh
             }
         };
 
@@ -166,12 +176,18 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+#ifdef PSERV_CONSOLE_BUILD
+                // Console: Not supported (requires clipboard)
+                spdlog::error("'Copy Command' is not supported in console build");
+                throw std::runtime_error("This action requires clipboard and is not available in console mode");
+#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
                 const auto *program = GetStartupProgramInfo(ctx.m_selectedObjects[0]);
                 utils::CopyToClipboard(program->GetCommand().c_str());
                 spdlog::info("Copied startup program command to clipboard: {}", program->GetName());
+#endif
             }
         };
 
@@ -190,12 +206,18 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+#ifdef PSERV_CONSOLE_BUILD
+                // Console: Not supported (requires clipboard)
+                spdlog::error("'Copy Name' is not supported in console build");
+                throw std::runtime_error("This action requires clipboard and is not available in console mode");
+#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
                 const auto *program = GetStartupProgramInfo(ctx.m_selectedObjects[0]);
                 utils::CopyToClipboard(program->GetName().c_str());
                 spdlog::info("Copied startup program name to clipboard: {}", program->GetName());
+#endif
             }
         };
 
@@ -219,6 +241,11 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+#ifdef PSERV_CONSOLE_BUILD
+                // Console: Not supported (requires GUI)
+                spdlog::error("'Open File Location' is not supported in console build");
+                throw std::runtime_error("This action requires GUI and is not available in console mode");
+#else
                 for (const auto *obj : ctx.m_selectedObjects)
                 {
                     const auto *program = GetStartupProgramInfo(obj);
@@ -233,6 +260,7 @@ namespace pserv
                         }
                     }
                 }
+#endif
             }
         };
 
@@ -252,6 +280,11 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+#ifdef PSERV_CONSOLE_BUILD
+                // Console: Not supported (requires GUI)
+                spdlog::error("'Open in Registry Editor' is not supported in console build");
+                throw std::runtime_error("This action requires GUI and is not available in console mode");
+#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
@@ -295,6 +328,7 @@ namespace pserv
                 {
                     LogWin32Error("ShellExecuteW", "opening regedit.exe");
                 }
+#endif
             }
         };
 
@@ -355,5 +389,23 @@ namespace pserv
 
         return actions;
     }
+
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> CreateAllStartupProgramActions()
+    {
+        // Console: Return all actions regardless of program type/state
+        return {
+            &theEnableAction,
+            &theDisableAction,
+            &theDataActionSeparator,
+            &theCopyCommandAction,
+            &theCopyNameAction,
+            &theDataActionSeparator,
+            &theOpenLocationAction,
+            &theOpenInRegistryAction,
+            &theDataActionSeparator,
+            &theDeleteAction};
+    }
+#endif
 
 } // namespace pserv

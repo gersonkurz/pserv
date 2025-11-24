@@ -51,6 +51,13 @@ namespace pserv
         return CreateStartupProgramActions(program->GetType(), program->IsEnabled());
     }
 
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> StartupProgramsDataController::GetAllActions() const
+    {
+        return CreateAllStartupProgramActions();
+    }
+#endif
+
     VisualState StartupProgramsDataController::GetVisualState(const DataObject *dataObject) const
     {
         if (!dataObject)

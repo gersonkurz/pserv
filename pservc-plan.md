@@ -336,7 +336,7 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - ✅ **Windows** - COMPLETE (7 actions: show/hide/minimize/maximize/restore, bring to front, close)
 - ✅ **Modules** - COMPLETE (1 action: open containing folder - GUI only)
 - ✅ **Uninstaller** - COMPLETE (1 action: uninstall program - launches external uninstaller)
-- ⏭️ **Startup Programs** - Has startup_program_actions.cpp
+- ✅ **Startup Programs** - COMPLETE (7 actions: enable/disable, delete, copy x2, open location x2)
 - ⏭️ **Scheduled Tasks** - Has scheduled_task_actions.cpp
 - ⏭️ **Network Connections** - Has network_connection_actions.cpp
 - ⏭️ **Environment Variables** - Has environment_variable_actions.cpp
@@ -370,10 +370,12 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - Added: GetAllActions() override in UninstallerDataController
 - Console handling: UninstallProgramAction uses --force flag, launches external uninstaller via ShellExecuteW
 - Fixed: Simplified conditional compilation structure for console/GUI builds
-- Override: GetAllActions() in UninstallerDataController
-- Test: `pservc uninstaller`, `pservc uninstaller uninstall <name> --force`
 
-**Step 7.6: Add Startup Programs actions support**
+**Step 7.6: Add Startup Programs actions support** ✅ COMPLETE
+- Added: CreateAllStartupProgramActions() function in startup_program_actions.cpp
+- Added: GetAllActions() override in StartupProgramsDataController
+- Console handling: Enable/Disable/Delete work in console, Copy/Open actions throw error (require GUI/clipboard)
+- 7 actions total: Enable, Disable, Delete (destructive), Copy Command, Copy Name, Open File Location, Open in Registry
 - Read: startup_program_actions.cpp to see available actions
 - Add: CreateAllStartupProgramActions() function
 - Override: GetAllActions() in StartupProgramsDataController
