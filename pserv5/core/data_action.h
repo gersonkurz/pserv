@@ -1,5 +1,12 @@
 #pragma once
 
+#ifdef PSERV_CONSOLE_BUILD
+namespace argparse
+{
+    class ArgumentParser;
+}
+#endif
+
 namespace pserv
 {
     class DataObject;
@@ -54,6 +61,16 @@ namespace pserv
 
         // Execution
         virtual void Execute(DataActionDispatchContext &context) const = 0;
+
+#ifdef PSERV_CONSOLE_BUILD
+        // Console argument registration
+        // Override this to register custom command-line arguments for this action
+        // Example: export actions add --output <file> parameter
+        virtual void RegisterArguments(argparse::ArgumentParser &cmd) const
+        {
+            // Default: no custom arguments
+        }
+#endif
 
         // UI hints
         virtual bool IsDestructive() const
