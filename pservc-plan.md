@@ -5,82 +5,88 @@ Implement a full-featured console interface for pserv5 that exposes all controll
 
 ## Architecture
 - **Command Structure**: Controller as subcommand (e.g., `pservc services list`, `pservc processes terminate 1234`)
-- **Output Format**: Colored terminal output using fmt library
+- **Output Format**: Custom console.h/cpp with ANSI escape sequences (std::format compatible)
 - **Actions**: Map DataAction objects to subcommands with arguments
 
-## Tasks
+## Completed Tasks
 
-### Phase 1: Switch to fmt::format (TODO #5)
-**Goal**: Replace all `std::format` with `fmt::format` to enable colored console output
+### ✅ Phase 0: Console Infrastructure Setup
+**Completed**: 2025-11-23
+- ✅ Added console.h/cpp with ANSI color support and UTF-8 handling
+- ✅ Created BaseApp for unified logging/config initialization
+- ✅ Fixed spdlog to use debug+file only (no console output)
+- ✅ Fixed config logger static initialization issue (section.cpp)
+- ✅ Verified std::format works with custom console system - NO need for fmt switch
 
-- [ ] **Step 1.1**: Add fmt library integration
-  - Check if spdlog's bundled fmt is accessible
-  - If not, add fmt as a submodule or use spdlog's bundled version
-  - Update precomp.h to include fmt headers
+**Note**: Phase 1 (fmt::format switch) is OBSOLETE - std::format works fine with our console system.
 
-- [ ] **Step 1.2**: Replace std::format calls (51 occurrences across 20 files)
-  - Replace `std::format` → `fmt::format`
-  - Replace `std::format_to` → `fmt::format_to` (if any)
-  - Test compilation after each file or group of files
+### ✅ Phase 3: Controller Subcommand Registration (COMPLETED)
+**Completed**: 2025-11-23
 
-- [ ] **Step 1.3**: Verify and commit
-  - Build both pserv5 (GUI) and pservc (console)
-  - Ensure no regressions
-  - Commit changes
+- ✅ **Step 3.1**: Design subcommand structure
+  - Each controller registers as subcommand (e.g., "services", "processes")
+  - Common arguments: `--format`, `--filter`, `--sort`
+  - Controller names converted to lowercase-hyphenated (e.g., "network-connections")
+
+- ✅ **Step 3.2**: Implement base RegisterArguments() pattern
+  - Made `DataController::RegisterArguments()` virtual
+  - Added common arguments (format, filter, sort)
+  - Base implementation in data_controller.cpp
+
+- ✅ **Step 3.3**: Fixed argparse lifetime issues
+  - argparse stores reference_wrapper, needs persistent storage
+  - Created vector<unique_ptr<ArgumentParser>> in main()
+  - Pass subparsers vector to RegisterArguments() for storage
+
+- ✅ **Step 3.4**: Fixed memory leaks on --help
+  - argparse calls std::exit(0) on --help by default
+  - Set exit_on_default_arguments=false for main parser and all subcommands
+  - Allows proper destructor cleanup
+
+- ✅ **Step 3.5**: Verify and commit
+  - ✅ `pservc --help` shows all controller subcommands
+  - ✅ `pservc services --help` shows common options
+  - ✅ No memory leaks on --help
+  - ✅ Committed: "Implement controller subcommand registration for pservc"
+
+**Files Modified**:
+- `pservc/pservc.cpp`: Added subparsers storage, disabled exit on help
+- `core/data_controller.h`: Added RegisterArguments() with subparsers parameter
+- `core/data_controller.cpp`: Implemented base RegisterArguments()
+
+## Remaining Tasks
 
 ### Phase 2: Console Output Infrastructure
 **Goal**: Create formatters to display data objects in the terminal
 
-- [ ] **Step 2.1**: Create console output utilities
-  - `console_formatter.h/cpp`: Base formatting utilities
-  - Color scheme definitions (using fmt colors)
-  - Table rendering for data objects
+- [ ] **Step 2.1**: Create console table renderer
+  - `console_table.h/cpp`: Table rendering for DataObject collections
+  - Use console.h color macros for formatting
+  - Handle column widths, alignment based on DataObjectColumn metadata
   - Support for filtering/sorting display
 
 - [ ] **Step 2.2**: Implement DataObject console rendering
   - Method to render DataObject as table row
-  - Method to render collection as formatted table
-  - Handle column widths, alignment
+  - Method to render DataObjectContainer as formatted table
+  - Use GetVisualState() for row coloring (highlighted/disabled/normal)
   - Support for different output formats (table, json, plain)
 
 - [ ] **Step 2.3**: Verify and commit
-  - Test with sample data
+  - Test with sample data from a controller
   - Commit console output infrastructure
-
-### Phase 3: Controller Subcommand Registration
-**Goal**: Implement `RegisterArguments()` for each controller
-
-- [ ] **Step 3.1**: Design subcommand structure
-  - Each controller registers as subcommand (e.g., "services", "processes")
-  - Common arguments: `--format`, `--filter`, `--sort`
-  - Controller-specific arguments based on columns
-
-- [ ] **Step 3.2**: Implement base RegisterArguments() pattern
-  - Update `DataController::RegisterArguments()` to be virtual
-  - Add common arguments (format, filter, sort)
-  - Add "list" subcommand for all controllers
-
-- [ ] **Step 3.3**: Implement controller-specific arguments
-  - Services: `--type` (service type filter), `--status` (running/stopped)
-  - Processes: `--pid`, `--name`
-  - Other controllers: relevant filters
-
-- [ ] **Step 3.4**: Verify and commit
-  - Test argument parsing for each controller
-  - `pservc services --help` should show options
-  - Commit subcommand registration
 
 ### Phase 4: Action Command Integration
 **Goal**: Map DataAction objects to executable console commands
+**Status**: NOT STARTED - actions will come after basic list functionality works
 
 - [ ] **Step 4.1**: Design action command mapping
-  - Each action becomes a subcommand: `pservc services start <name>`
-  - Actions requiring input: add arguments (e.g., `--file` for export)
+  - Decide: actions as subcommands (`pservc services start <name>`) vs verbs?
+  - Actions requiring input: add arguments (e.g., `--output <file>` for export)
   - Handle multi-selection (pass multiple targets)
 
 - [ ] **Step 4.2**: Extend RegisterArguments() for actions
   - Query controller's GetActions() for available actions
-  - Register each action as subcommand
+  - Register each action as subcommand or verb
   - Add action-specific arguments based on action type
 
 - [ ] **Step 4.3**: Implement action execution
@@ -101,54 +107,59 @@ Implement a full-featured console interface for pserv5 that exposes all controll
 
 ### Phase 5: Command Execution and Output
 **Goal**: Wire everything together in pservc.cpp main()
+**Status**: NOT STARTED
 
-- [ ] **Step 5.1**: Implement command dispatch in main()
-  - Parse arguments and identify controller + action
+- [ ] **Step 5.1**: Implement basic command dispatch in main()
+  - Parse arguments and identify which subcommand was used
+  - Get corresponding controller from DataControllerLibrary
   - Call controller->Refresh() to load data
-  - Execute requested action or display list
 
-- [ ] **Step 5.2**: Implement list command
-  - Render all objects from controller
-  - Apply filters and sorting
-  - Format as table with colors
+- [ ] **Step 5.2**: Implement list functionality (default action)
+  - Render all objects from controller using console table renderer
+  - Apply filters (--filter argument) using substring match
+  - Apply sorting (--sort argument) using column name
+  - Format based on --format argument (table/json/csv)
 
-- [ ] **Step 5.3**: Implement action commands
-  - Find matching objects by name/ID
+- [ ] **Step 5.3**: Implement action commands (Phase 4 dependency)
+  - Find matching objects by name/ID from arguments
   - Create dispatch context with selections
-  - Execute action
+  - Execute action via controller
   - Display results
 
 - [ ] **Step 5.4**: Error handling and user feedback
   - Handle invalid arguments gracefully
-  - Colored error messages (red)
-  - Success messages (green)
-  - Progress indicators for long operations
+  - Colored error messages (red) using console.h
+  - Success messages (green) using console.h
+  - Progress indicators for long operations (if needed)
 
 - [ ] **Step 5.5**: Final testing and commit
-  - Test all controllers and actions
-  - Test edge cases (no results, invalid input)
-  - Update documentation
-  - Final commit
+  - Test all controllers with list command
+  - Test filtering and sorting
+  - Test different output formats
+  - Test edge cases (no results, invalid filters)
+  - Commit command execution
 
 ### Phase 6: Polish and Documentation
 **Goal**: Make pservc production-ready
+**Status**: NOT STARTED
 
 - [ ] **Step 6.1**: Add examples to help text
-  - Common use cases in `--help`
-  - README section for pservc usage
+  - Common use cases in controller `--help` output
+  - README section for pservc usage examples
 
-- [ ] **Step 6.2**: Performance optimization
+- [ ] **Step 6.2**: Performance optimization (if needed)
   - Lazy loading for large datasets
-  - Pagination for long lists
+  - Pagination for long lists (e.g., processes)
 
 - [ ] **Step 6.3**: Integration testing
   - Test pservc alongside pserv5
   - Verify both use same config/logs
-  - Test remote machine connections
+  - Test with different log levels
 
-- [ ] **Step 6.4**: Update instructions.md
-  - Mark Console Variant as complete
+- [ ] **Step 6.4**: Update documentation
+  - Update instructions.md to mark Console Variant progress
   - Document console-specific features
+  - Add pservc usage guide
 
 ## Notes
 
@@ -176,16 +187,32 @@ pservc processes list --filter chrome
 pservc devices list --enabled-only
 ```
 
-### Color Scheme (Proposed)
-- **Headers**: Cyan/Bold
-- **Running/Active**: Green
-- **Stopped/Disabled**: Gray
-- **Errors**: Red
-- **Success**: Green
-- **Warnings**: Yellow
+### Color Scheme
+Use console.h macros for coloring:
+- **Headers**: `CONSOLE_FOREGROUND_CYAN` (table headers)
+- **Running/Active/Highlighted**: `CONSOLE_FOREGROUND_GREEN` (GetVisualState() == Highlighted)
+- **Stopped/Disabled**: `CONSOLE_FOREGROUND_GRAY` (GetVisualState() == Disabled)
+- **Normal**: `CONSOLE_STANDARD` (GetVisualState() == Normal)
+- **Errors**: `CONSOLE_FOREGROUND_RED`
+- **Success**: `CONSOLE_FOREGROUND_GREEN`
+- **Warnings**: `CONSOLE_FOREGROUND_YELLOW`
 
 ### Testing Strategy
-- Test each step before moving to next
+- Test each phase before moving to next
 - Keep GUI (pserv5) working at all times
 - Verify console (pservc) compiles after each step
 - Manual testing for user-facing features
+- No memory leaks (already verified with --help)
+
+### Current Status (2025-11-23)
+**Completed**:
+- Console infrastructure with ANSI colors
+- Logging configuration (spdlog debug+file only)
+- Subcommand registration with argparse
+- Memory leak fixes
+
+**Next Session**:
+- Start Phase 2 (Console Output Infrastructure)
+- Create console_table.h/cpp for rendering DataObject collections
+- Implement table rendering with colors based on GetVisualState()
+- Test with simple controller (e.g., services)
