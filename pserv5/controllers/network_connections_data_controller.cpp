@@ -54,6 +54,13 @@ namespace pserv
         return CreateNetworkConnectionActions(connection->GetProtocol(), connection->GetState());
     }
 
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> NetworkConnectionsDataController::GetAllActions() const
+    {
+        return CreateAllNetworkConnectionActions();
+    }
+#endif
+
     VisualState NetworkConnectionsDataController::GetVisualState(const DataObject *dataObject) const
     {
         if (!dataObject)

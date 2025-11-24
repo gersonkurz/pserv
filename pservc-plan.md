@@ -338,7 +338,7 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - ✅ **Uninstaller** - COMPLETE (1 action: uninstall program - launches external uninstaller)
 - ✅ **Startup Programs** - COMPLETE (7 actions: enable/disable, delete, copy x2, open location x2)
 - ✅ **Scheduled Tasks** - COMPLETE (7 actions: run/enable/disable, delete, copy x2, edit config)
-- ⏭️ **Network Connections** - Has network_connection_actions.cpp
+- ✅ **Network Connections** - COMPLETE (4 actions: copy x3, close - all GUI-only)
 - ⏭️ **Environment Variables** - Has environment_variable_actions.cpp
 
 ### Implementation Plan:
@@ -382,12 +382,12 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - Added: GetAllActions() override in ScheduledTasksDataController
 - Console handling: Run/Enable/Disable/Delete work in console, Copy/Edit actions throw error (require GUI/clipboard)
 - 7 actions total: Run Now, Enable, Disable, Delete (destructive), Copy Name, Copy Path, Edit Configuration
-- Read: scheduled_task_actions.cpp to see available actions
-- Add: CreateAllScheduledTaskActions() function
-- Override: GetAllActions() in ScheduledTasksDataController
-- Test: `pservc scheduled-tasks`
 
-**Step 7.8: Add Network Connections actions support**
+**Step 7.8: Add Network Connections actions support** ✅ COMPLETE
+- Added: CreateAllNetworkConnectionActions() function in network_connection_actions.cpp
+- Added: GetAllActions() override in NetworkConnectionsDataController
+- Console handling: All actions throw error (require clipboard or unimplemented)
+- 4 actions total: Copy Local Endpoint, Copy Remote Endpoint, Copy Process Name, Close Connection (not implemented)
 - Read: network_connection_actions.cpp to see available actions
 - Add: CreateAllNetworkConnectionActions() function (if any actions exist)
 - Override: GetAllActions() in NetworkConnectionsDataController
