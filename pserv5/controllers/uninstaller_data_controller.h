@@ -13,6 +13,10 @@ namespace pserv
         void Refresh(bool isAutoRefresh = false) override;
         VisualState GetVisualState(const DataObject *dataObject) const override; // No special states for now
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
+
+#ifdef PSERV_CONSOLE_BUILD
+        std::vector<const DataAction *> GetAllActions() const override;
+#endif
     };
 
 } // namespace pserv

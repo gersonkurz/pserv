@@ -335,7 +335,7 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - ✅ **Processes** - COMPLETE (8 actions: terminate, set priority x6, open location)
 - ✅ **Windows** - COMPLETE (7 actions: show/hide/minimize/maximize/restore, bring to front, close)
 - ✅ **Modules** - COMPLETE (1 action: open containing folder - GUI only)
-- ⏭️ **Uninstaller** - Has uninstaller_actions.cpp
+- ✅ **Uninstaller** - COMPLETE (1 action: uninstall program - launches external uninstaller)
 - ⏭️ **Startup Programs** - Has startup_program_actions.cpp
 - ⏭️ **Scheduled Tasks** - Has scheduled_task_actions.cpp
 - ⏭️ **Network Connections** - Has network_connection_actions.cpp
@@ -365,9 +365,11 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - Added: GetAllActions() override in ModulesDataController
 - Console handling: ModuleOpenContainingFolderAction throws error (requires GUI/ShellExecuteA)
 
-**Step 7.5: Add Uninstaller actions support**
-- Read: uninstaller_actions.cpp to see available actions
-- Add: CreateAllUninstallerActions() function
+**Step 7.5: Add Uninstaller actions support** ✅ COMPLETE
+- Added: CreateAllUninstallerActions() function in uninstaller_actions.cpp
+- Added: GetAllActions() override in UninstallerDataController
+- Console handling: UninstallProgramAction uses --force flag, launches external uninstaller via ShellExecuteW
+- Fixed: Simplified conditional compilation structure for console/GUI builds
 - Override: GetAllActions() in UninstallerDataController
 - Test: `pservc uninstaller`, `pservc uninstaller uninstall <name> --force`
 

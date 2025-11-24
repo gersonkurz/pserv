@@ -58,29 +58,40 @@ namespace pserv
                 if (program->GetUninstallString().empty())
                 {
                     spdlog::warn("Cannot uninstall '{}': UninstallString is empty.", program->GetDisplayName());
+#ifndef PSERV_CONSOLE_BUILD
                     MessageBoxA(ctx.m_hWnd, "Uninstall string is empty. Cannot proceed with uninstallation.", "Uninstallation Error", MB_OK | MB_ICONERROR);
+#endif
                     return;
                 }
 
+#ifndef PSERV_CONSOLE_BUILD
+                // GUI: Show confirmation dialog
                 std::string confirmMsg =
                     std::format("Are you sure you want to uninstall '{}'?\n\nThis will launch the program's uninstaller.", program->GetDisplayName());
-                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Uninstallation", MB_YESNO | MB_ICONWARNING) == IDYES)
+                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Uninstallation", MB_YESNO | MB_ICONWARNING) != IDYES)
                 {
-                    spdlog::info("Launching uninstaller for '{}': {}", program->GetDisplayName(), program->GetUninstallString());
+                    return;
+                }
+#endif
+                // Console: --force flag already checked by pservc.cpp
 
-                    // Parse the uninstall string using Windows API for proper quote handling
-                    std::string uninstallCmd = program->GetUninstallString();
-                    std::wstring wUninstallCmd = pserv::utils::Utf8ToWide(uninstallCmd);
+                spdlog::info("Launching uninstaller for '{}': {}", program->GetDisplayName(), program->GetUninstallString());
 
-                    int argc = 0;
-                    wil::unique_hlocal_ptr<LPWSTR[]> argv(CommandLineToArgvW(wUninstallCmd.c_str(), &argc));
+                // Parse the uninstall string using Windows API for proper quote handling
+                std::string uninstallCmd = program->GetUninstallString();
+                std::wstring wUninstallCmd = pserv::utils::Utf8ToWide(uninstallCmd);
 
-                    if (!argv || argc == 0)
-                    {
-                        spdlog::error("Failed to parse uninstall command: {}", uninstallCmd);
-                        MessageBoxA(ctx.m_hWnd, "Failed to parse uninstall command.", "Uninstallation Error", MB_OK | MB_ICONERROR);
-                        return;
-                    }
+                int argc = 0;
+                wil::unique_hlocal_ptr<LPWSTR[]> argv(CommandLineToArgvW(wUninstallCmd.c_str(), &argc));
+
+                if (!argv || argc == 0)
+                {
+                    spdlog::error("Failed to parse uninstall command: {}", uninstallCmd);
+#ifndef PSERV_CONSOLE_BUILD
+                    MessageBoxA(ctx.m_hWnd, "Failed to parse uninstall command.", "Uninstallation Error", MB_OK | MB_ICONERROR);
+#endif
+                    throw std::runtime_error("Failed to parse uninstall command");
+                }
 
                     // First argument is the command, rest are arguments
                     std::wstring wCommand = argv.get()[0];
@@ -104,23 +115,29 @@ namespace pserv
                         }
                     }
 
-                    // ShellExecuteW will handle elevation if needed and is generally robust
-                    HINSTANCE result = ShellExecuteW(ctx.m_hWnd, L"open", wCommand.c_str(), wArgs.empty() ? nullptr : wArgs.c_str(), nullptr, SW_SHOWNORMAL);
-                    if (reinterpret_cast<intptr_t>(result) <= 32)
-                    {
-                        std::string errorMsg = pserv::utils::GetLastWin32ErrorMessage();
-                        spdlog::error("Failed to launch uninstaller for '{}': {}", program->GetDisplayName(), errorMsg);
-                        MessageBoxA(ctx.m_hWnd,
-                            std::format("Failed to launch uninstaller. Error: {}.", errorMsg).c_str(),
-                            "Uninstallation Error",
-                            MB_OK | MB_ICONERROR);
-                    }
-                    else
-                    {
-                        // Uninstaller launched successfully. Signal that refresh is needed.
-                        spdlog::info("Uninstaller launched for '{}'. User should refresh after uninstaller completes.", program->GetDisplayName());
-                        // Note: m_bNeedsRefresh will be set by the controller after we return
-                    }
+                // ShellExecuteW will handle elevation if needed and is generally robust
+#ifdef PSERV_CONSOLE_BUILD
+                HINSTANCE result = ShellExecuteW(nullptr, L"open", wCommand.c_str(), wArgs.empty() ? nullptr : wArgs.c_str(), nullptr, SW_SHOWNORMAL);
+#else
+                HINSTANCE result = ShellExecuteW(ctx.m_hWnd, L"open", wCommand.c_str(), wArgs.empty() ? nullptr : wArgs.c_str(), nullptr, SW_SHOWNORMAL);
+#endif
+                if (reinterpret_cast<intptr_t>(result) <= 32)
+                {
+                    std::string errorMsg = pserv::utils::GetLastWin32ErrorMessage();
+                    spdlog::error("Failed to launch uninstaller for '{}': {}", program->GetDisplayName(), errorMsg);
+#ifndef PSERV_CONSOLE_BUILD
+                    MessageBoxA(ctx.m_hWnd,
+                        std::format("Failed to launch uninstaller. Error: {}.", errorMsg).c_str(),
+                        "Uninstallation Error",
+                        MB_OK | MB_ICONERROR);
+#endif
+                    throw std::runtime_error(std::format("Failed to launch uninstaller: {}", errorMsg));
+                }
+                else
+                {
+                    // Uninstaller launched successfully. Signal that refresh is needed.
+                    spdlog::info("Uninstaller launched for '{}'. User should refresh after uninstaller completes.", program->GetDisplayName());
+                    // Note: m_bNeedsRefresh will be set by the controller after we return
                 }
             }
         };
@@ -137,5 +154,13 @@ namespace pserv
     {
         return {&theUninstallProgramAction};
     }
+
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> CreateAllUninstallerActions()
+    {
+        // Console: Return all actions regardless of program state
+        return {&theUninstallProgramAction};
+    }
+#endif
 
 } // namespace pserv
