@@ -1,6 +1,7 @@
 #include "precomp.h"
 #include <core/data_controller.h>
 #include <core/data_object.h>
+#include <core/data_action.h>
 #include <core/exporters/exporter_registry.h>
 #include <dialogs/data_properties_dialog.h>
 #include <utils/file_dialogs.h>
@@ -80,6 +81,47 @@ namespace pserv
             cmd.add_argument(argName)
                 .help(helpText)
                 .default_value(std::string(""));
+        }
+
+        // Register action subcommands
+        std::vector<const DataAction *> actions = GetAllActions();
+        for (const DataAction *action : actions)
+        {
+            // Skip separators (not real actions)
+            if (action->IsSeparator())
+                continue;
+
+            // Create action subcommand name (e.g., "services start", "services stop")
+            std::string action_name = utils::ToLower(action->GetName());
+            std::replace(action_name.begin(), action_name.end(), ' ', '-');
+
+            spdlog::debug("RegisterArguments: Adding action subcommand '{}'", action_name);
+
+            // Create action subparser
+            subparsers.push_back(std::make_unique<argparse::ArgumentParser>(
+                action_name, "5.0.0", argparse::default_arguments::help, false));
+            auto &action_cmd = *subparsers.back();
+            action_cmd.add_description(action->GetName());
+
+            // Add positional argument(s) for target name(s)
+            action_cmd.add_argument("targets")
+                .help("Target object(s) to act upon (by " + m_columns[0].DisplayName + ")")
+                .remaining();
+
+            // Add --force flag for destructive actions
+            if (action->IsDestructive())
+            {
+                action_cmd.add_argument("--force")
+                    .help("Skip confirmation prompt")
+                    .default_value(false)
+                    .implicit_value(true);
+            }
+
+            // Let action register custom arguments
+            action->RegisterArguments(action_cmd);
+
+            // Add action subcommand to controller subcommand
+            cmd.add_subparser(action_cmd);
         }
 
         // Add the subparser to the main program
