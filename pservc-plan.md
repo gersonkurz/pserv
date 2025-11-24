@@ -78,6 +78,36 @@ Implement a full-featured console interface for pserv5 that exposes all controll
 - `pservc/console_table.h`: ConsoleTable class definition with OutputFormat enum
 - `pservc/console_table.cpp`: Full implementation with table/json/csv rendering
 
+### ✅ Phase 5: Command Execution and Output (COMPLETED)
+**Completed**: 2025-11-24
+
+- ✅ **Step 5.1**: Implement basic command dispatch in main()
+  - Parse arguments and identify which subcommand was used
+  - Get corresponding controller from DataControllerLibrary
+  - Call controller->Refresh() to load data
+  - Fixed format argument parsing from subcommand (not main program)
+
+- ✅ **Step 5.2**: Implement list functionality (default action)
+  - Render all objects from controller using console table renderer
+  - Format based on --format argument (table/json/csv) - all working
+  - Default sort by first column ascending for predictable output
+  - Fixed UTF-8 character width calculation (German umlauts, emojis)
+  - Handle UTF-16 surrogate pairs for extended Unicode
+  - Strip newlines from cell content to prevent table breakage
+  - Case-insensitive, locale-aware sorting with CompareStringEx
+
+- ✅ **Step 5.4**: Error handling and user feedback
+  - Handle invalid arguments gracefully
+  - Colored error messages (red) using console.h
+  - Success messages (green) using console.h
+
+**Files Modified**:
+- `pservc/pservc.cpp`: Command dispatch, format parsing, default sorting
+- `pservc/console_table.cpp`: UTF-8 width calculation, newline stripping, rendering
+- `core/data_object_container.cpp`: Case-insensitive Unicode-aware sorting
+
+**Note**: Steps 5.3 (filter/sort arguments) and action commands moved to Phase 4
+
 ## Remaining Tasks
 
 ### Phase 4: Action Command Integration
@@ -216,9 +246,17 @@ Use console.h macros for coloring:
 - Subcommand registration with argparse
 - Memory leak fixes
 - Console table rendering (table/json/csv formats)
+- UTF-8 and Unicode handling (umlauts, emojis, surrogate pairs)
+- Case-insensitive locale-aware sorting
+- Command execution and list functionality
+
+**What Works Now**:
+- `pservc services` - Lists all services in sorted table format
+- `pservc services --format json` - JSON output
+- `pservc services --format csv` - CSV output
+- Proper Unicode handling in all output formats
+- Clean table alignment with color coding
 
 **Next Session**:
-- Start Phase 5 (Command Execution and Output)
-- Implement basic command dispatch in main()
-- Wire up ConsoleTable to render controller data
-- Test with services controller
+- Implement --filter and --sort command-line arguments
+- Or start Phase 4 (Action Command Integration) for service start/stop/etc

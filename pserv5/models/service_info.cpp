@@ -45,6 +45,10 @@ namespace pserv
             return true;
         if (utils::ToLower(m_user).find(filter) != std::string::npos)
             return true;
+        if (utils::ToLower(GetStatusString()).find(filter) != std::string::npos)
+            return true;
+        if (utils::ToLower(GetStartTypeString()).find(filter) != std::string::npos)
+            return true;
 
         return false;
     }

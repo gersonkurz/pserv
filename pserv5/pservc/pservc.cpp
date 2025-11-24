@@ -6,6 +6,7 @@
 #include <pservc/console_table.h>
 #include <utils/logging.h>
 #include <utils/base_app.h>
+#include <utils/string_utils.h>
 
 using namespace pserv;
 
@@ -39,7 +40,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // If --help or --version was provided, just exit
+    // If --help or --version was provided on main program, just exit
     if (program.get<bool>("--help") || program.get<bool>("--version"))
     {
         console::write(program.help().str());
@@ -74,6 +75,13 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    // Check if --help was requested on the subcommand
+    if (selectedSubparser->get<bool>("--help"))
+    {
+        console::write(selectedSubparser->help().str());
+        return 0;
+    }
+
     // Get the format argument from the subcommand parser (default to table)
     console::OutputFormat format = console::OutputFormat::Table;
     try
@@ -103,15 +111,97 @@ int main(int argc, char *argv[])
         console::write_line("Loading data...");
         selectedController->Refresh(false);
 
-        // Sort by first column ascending (default behavior for predictable output)
-        // User can override with --sort argument in the future
-        console::write_line("Sorting by first column...");
-        selectedController->Sort(0, true);
-        console::write_line("Sorting complete");
+        // Get filter argument (if provided)
+        std::string filter;
+        try
+        {
+            filter = selectedSubparser->get<std::string>("--filter");
+        }
+        catch (const std::exception &)
+        {
+            // Filter not provided, use empty string (no filtering)
+        }
+
+        // Get sort argument (if provided)
+        std::string sortColumn;
+        try
+        {
+            sortColumn = selectedSubparser->get<std::string>("--sort");
+        }
+        catch (const std::exception &)
+        {
+            // Sort not provided, use empty string (will default to first column)
+        }
+
+        // Get descending flag (if provided)
+        bool sortDescending = false;
+        try
+        {
+            sortDescending = selectedSubparser->get<bool>("--desc");
+        }
+        catch (const std::exception &)
+        {
+            // Desc not provided, use ascending
+        }
+
+        // Apply sorting
+        int sortColumnIndex = 0;
+        bool sortAscending = !sortDescending;
+
+        if (!sortColumn.empty())
+        {
+            // Find column by name (case-insensitive)
+            const auto &columns = selectedController->GetColumns();
+            bool found = false;
+
+            for (size_t i = 0; i < columns.size(); ++i)
+            {
+                if (utils::ToLower(columns[i].DisplayName) == utils::ToLower(sortColumn) ||
+                    utils::ToLower(columns[i].BindingName) == utils::ToLower(sortColumn))
+                {
+                    sortColumnIndex = static_cast<int>(i);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                console::write_line(CONSOLE_FOREGROUND_YELLOW "Warning: Column '" + sortColumn + "' not found, using first column" CONSOLE_STANDARD);
+            }
+        }
+
+        selectedController->Sort(sortColumnIndex, sortAscending);
+
+        // Parse column-specific filters
+        std::map<int, std::string> columnFilters;
+        const auto &columns = selectedController->GetColumns();
+        for (size_t i = 0; i < columns.size(); ++i)
+        {
+            std::string argName = "--col-" + utils::ToLower(columns[i].BindingName);
+            spdlog::debug("Parsing column filter: argName='{}', column='{}' (index={})",
+                          argName, columns[i].DisplayName, i);
+            try
+            {
+                std::string filterValue = selectedSubparser->get<std::string>(argName);
+                spdlog::debug("  Found filter value: '{}'", filterValue);
+                if (!filterValue.empty())
+                {
+                    columnFilters[static_cast<int>(i)] = filterValue;
+                    spdlog::info("Column filter applied: column={} ({}), filter='{}'",
+                                 i, columns[i].DisplayName, filterValue);
+                }
+            }
+            catch (const std::exception &e)
+            {
+                // Column filter not provided
+                spdlog::debug("  No filter provided: {}", e.what());
+            }
+        }
 
         // Render the data
         console::ConsoleTable table(selectedController, format);
-        table.Render(selectedController->GetDataObjects());
+        table.Render(selectedController->GetDataObjects(), filter, columnFilters);
     }
     catch (const std::exception &err)
     {

@@ -3,6 +3,7 @@
 #include <core/data_object_column.h>
 #include <core/data_object_container.h>
 #include <core/data_controller.h>
+#include <map>
 
 namespace pserv
 {
@@ -29,7 +30,9 @@ namespace pserv
             ConsoleTable(const DataController *controller, OutputFormat format = OutputFormat::Table);
 
             // Render the entire table (headers + all rows)
-            void Render(const DataObjectContainer &objects);
+            // filter: optional case-insensitive substring filter across all fields (empty = no filter)
+            // columnFilters: map of column index -> filter value for column-specific filtering
+            void Render(const DataObjectContainer &objects, const std::string &filter = "", const std::map<int, std::string> &columnFilters = {});
 
         private:
             // Calculate optimal column widths based on content
@@ -50,11 +53,14 @@ namespace pserv
             // Get ANSI color code based on visual state
             const char *GetColorForState(VisualState state) const;
 
+            // Check if an object matches all filters
+            bool ObjectMatchesFilters(const DataObject *obj, const std::string &lowerFilter, const std::map<int, std::string> &columnFilters) const;
+
             // Render as JSON
-            void RenderAsJson(const DataObjectContainer &objects);
+            void RenderAsJson(const DataObjectContainer &objects, const std::string &lowerFilter, const std::map<int, std::string> &columnFilters);
 
             // Render as CSV
-            void RenderAsCsv(const DataObjectContainer &objects);
+            void RenderAsCsv(const DataObjectContainer &objects, const std::string &lowerFilter, const std::map<int, std::string> &columnFilters);
 
             // Escape string for JSON output
             std::string JsonEscape(const std::string &str) const;

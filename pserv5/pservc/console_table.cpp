@@ -74,17 +74,20 @@ namespace pserv
         {
         }
 
-        void ConsoleTable::Render(const DataObjectContainer &objects)
+        void ConsoleTable::Render(const DataObjectContainer &objects, const std::string &filter, const std::map<int, std::string> &columnFilters)
         {
+            // Prepare lowercase filter for case-insensitive matching
+            std::string lowerFilter = filter.empty() ? "" : utils::ToLower(filter);
+
             // Handle non-table formats
             if (m_format == OutputFormat::Json)
             {
-                RenderAsJson(objects);
+                RenderAsJson(objects, lowerFilter, columnFilters);
                 return;
             }
             else if (m_format == OutputFormat::Csv)
             {
-                RenderAsCsv(objects);
+                RenderAsCsv(objects, lowerFilter, columnFilters);
                 return;
             }
 
@@ -95,14 +98,29 @@ namespace pserv
             RenderHeader();
             RenderSeparator();
 
-            // Render each row
+            // Render each row (with filtering)
+            size_t matchCount = 0;
             for (const auto *obj : objects)
             {
+                // Apply filters
+                if (!ObjectMatchesFilters(obj, lowerFilter, columnFilters))
+                {
+                    continue;
+                }
+
                 RenderRow(obj);
+                matchCount++;
             }
 
             // Summary
-            write_line(std::format("\n{} {} found", objects.GetSize(), m_controller->GetItemName()));
+            if (!filter.empty() || !columnFilters.empty())
+            {
+                write_line(std::format("\n{} {} found (filtered from {})", matchCount, m_controller->GetItemName(), objects.GetSize()));
+            }
+            else
+            {
+                write_line(std::format("\n{} {} found", objects.GetSize(), m_controller->GetItemName()));
+            }
         }
 
         void ConsoleTable::CalculateColumnWidths(const DataObjectContainer &objects)
@@ -331,17 +349,59 @@ namespace pserv
             }
         }
 
-        void ConsoleTable::RenderAsJson(const DataObjectContainer &objects)
+        bool ConsoleTable::ObjectMatchesFilters(const DataObject *obj, const std::string &lowerFilter, const std::map<int, std::string> &columnFilters) const
+        {
+            // Check global filter (if specified)
+            if (!lowerFilter.empty() && !obj->MatchesFilter(lowerFilter))
+            {
+                return false;
+            }
+
+            // Check column-specific filters (if any)
+            for (const auto &[columnIndex, filterValue] : columnFilters)
+            {
+                std::string cellValue = obj->GetProperty(columnIndex);
+                std::string lowerCellValue = utils::ToLower(cellValue);
+                std::string lowerFilterValue = utils::ToLower(filterValue);
+
+                // Case-insensitive substring match
+                if (lowerCellValue.find(lowerFilterValue) == std::string::npos)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        void ConsoleTable::RenderAsJson(const DataObjectContainer &objects, const std::string &lowerFilter, const std::map<int, std::string> &columnFilters)
         {
             write_line("{");
             write_line(std::format("  \"controller\": \"{}\",", m_controller->GetControllerName()));
             write_line(std::format("  \"item_type\": \"{}\",", m_controller->GetItemName()));
-            write_line(std::format("  \"count\": {},", objects.GetSize()));
+
+            // Count matches first
+            size_t matchCount = 0;
+            for (const auto *obj : objects)
+            {
+                if (ObjectMatchesFilters(obj, lowerFilter, columnFilters))
+                {
+                    matchCount++;
+                }
+            }
+
+            write_line(std::format("  \"count\": {},", matchCount));
             write_line("  \"items\": [");
 
             bool first = true;
             for (const auto *obj : objects)
             {
+                // Apply filters
+                if (!ObjectMatchesFilters(obj, lowerFilter, columnFilters))
+                {
+                    continue;
+                }
+
                 if (!first)
                     write_line(",");
                 first = false;
@@ -365,7 +425,7 @@ namespace pserv
             write_line("}");
         }
 
-        void ConsoleTable::RenderAsCsv(const DataObjectContainer &objects)
+        void ConsoleTable::RenderAsCsv(const DataObjectContainer &objects, const std::string &lowerFilter, const std::map<int, std::string> &columnFilters)
         {
             // Header row
             for (size_t i = 0; i < m_columns.size(); ++i)
@@ -379,6 +439,12 @@ namespace pserv
             // Data rows
             for (const auto *obj : objects)
             {
+                // Apply filters
+                if (!ObjectMatchesFilters(obj, lowerFilter, columnFilters))
+                {
+                    continue;
+                }
+
                 for (size_t i = 0; i < m_columns.size(); ++i)
                 {
                     if (i > 0)

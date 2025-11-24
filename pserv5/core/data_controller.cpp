@@ -54,15 +54,33 @@ namespace pserv
             .help("Output format: table, json, csv")
             .default_value(std::string("table"));
 
-        // Add filter option
+        // Add filter option (global text search)
         cmd.add_argument("--filter")
-            .help("Filter results by text (case-insensitive substring match)")
+            .help("Filter results by text (case-insensitive substring match across all fields)")
             .default_value(std::string(""));
 
         // Add sort option
         cmd.add_argument("--sort")
-            .help("Sort by column name")
+            .help("Sort by column name (ascending by default)")
             .default_value(std::string(""));
+
+        // Add descending sort flag
+        cmd.add_argument("--desc")
+            .help("Sort in descending order (use with --sort)")
+            .default_value(false)
+            .implicit_value(true);
+
+        // Add column-specific filter arguments dynamically
+        for (const auto &col : m_columns)
+        {
+            std::string argName = "--col-" + utils::ToLower(col.BindingName);
+            std::string helpText = "Filter by " + col.DisplayName + " (case-insensitive substring match)";
+            spdlog::debug("RegisterArguments: Adding argument '{}' for column '{}' (BindingName='{}')",
+                          argName, col.DisplayName, col.BindingName);
+            cmd.add_argument(argName)
+                .help(helpText)
+                .default_value(std::string(""));
+        }
 
         // Add the subparser to the main program
         program.add_subparser(cmd);
