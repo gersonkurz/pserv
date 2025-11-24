@@ -112,33 +112,90 @@ Implement a full-featured console interface for pserv5 that exposes all controll
 
 ### Phase 4: Action Command Integration
 **Goal**: Map DataAction objects to executable console commands
-**Status**: NOT STARTED - actions will come after basic list functionality works
+**Status**: READY TO START
 
-- [ ] **Step 4.1**: Design action command mapping
-  - Decide: actions as subcommands (`pservc services start <name>`) vs verbs?
-  - Actions requiring input: add arguments (e.g., `--output <file>` for export)
-  - Handle multi-selection (pass multiple targets)
+**Architecture Summary**:
+- Actions are verbs after controller name: `pservc services start <name>`
+- Target selection by first column (Name), exact match
+- Destructive actions require `--force` flag
+- Actions can register custom arguments via new `RegisterArguments()` method
+- DataAction receives parsed arguments for custom parameter handling
 
-- [ ] **Step 4.2**: Extend RegisterArguments() for actions
-  - Query controller's GetActions() for available actions
-  - Register each action as subcommand or verb
-  - Add action-specific arguments based on action type
+**Key Design Decisions**:
+1. **Command Structure**: Actions as verbs (e.g., `pservc services start BITS`)
+2. **Target Selection**: First column exact match (e.g., service Name)
+3. **Multi-target**: Space-separated names (e.g., `pservc services start BITS Spooler`)
+4. **Confirmations**: Destructive actions check `IsDestructive()` and require `--force`
+5. **Custom Arguments**: Actions like export add `--output <file>` via `RegisterArguments()`
 
-- [ ] **Step 4.3**: Implement action execution
-  - Create console DataActionDispatchContext
-  - Execute action with provided arguments
-  - Handle progress reporting for async operations
-  - Report success/failure with colored output
+- [ ] **Step 4.1**: Extend DataAction base class
+  - Add virtual `RegisterArguments(argparse::ArgumentParser &cmd)` method (default: no-op)
+  - Keep existing `Execute(DataActionDispatchContext &ctx)` signature
+  - Actions access custom arguments via ctx (need to extend context)
+  - Examples:
+    - ExportAction adds `--output <file>` argument
+    - Destructive actions check for `--force` flag in Execute()
 
-- [ ] **Step 4.4**: Handle actions requiring user input
-  - Export actions: `--output <file>` argument
-  - Delete actions: `--force` to skip confirmation
-  - Interactive prompts when arguments missing
+- [ ] **Step 4.2**: Extend DataActionDispatchContext
+  - Add `argparse::ArgumentParser *m_pActionParser` for action-specific arguments
+  - Console variant doesn't use HWND, m_pAsyncOp (set nullptr)
+  - Keep m_selectedObjects, m_pController as-is
+  - Actions query parsed arguments via m_pActionParser->get<T>(arg)
 
-- [ ] **Step 4.5**: Verify and commit
-  - Test each action type (start/stop/delete/export)
-  - Test error handling
-  - Commit action execution
+- [ ] **Step 4.3**: Update controller RegisterArguments() to register actions
+  - After registering common arguments (--filter, --sort, --col-*):
+  - Get all actions from GetActions() (need unified method, not state-dependent)
+  - For each action:
+    - Create action subcommand: `cmd_name + "_" + action_name` (e.g., "services_start")
+    - Add positional argument for target name(s): `.remaining()` or `.nargs(argparse::nargs_pattern::at_least_one)`
+    - Add `--force` flag for destructive actions (`action->IsDestructive()`)
+    - Call `action->RegisterArguments(action_cmd)` for custom arguments
+    - Store action subparser in subparsers vector
+
+- [ ] **Step 4.4**: Create GetAllActions() helper method
+  - Current: Actions created based on object state (e.g., CreateServiceActions(state, controls))
+  - Problem: Need all possible actions at registration time, not per-object
+  - Solution: Add `GetAllActions()` to DataController (virtual, controller-specific)
+  - Returns vector of all possible actions (ignoring availability)
+  - Service example: return {start, stop, restart, pause, resume, set-startup-*, export-*, delete, ...}
+
+- [ ] **Step 4.5**: Implement action dispatch in pservc.cpp main()
+  - After checking for list-only mode (no action subcommand used):
+  - Loop through all actions to find which action subcommand was used
+  - If action found:
+    - Parse target name(s) from positional arguments
+    - Find matching DataObject(s) by first column exact match (case-insensitive)
+    - If destructive and no `--force`: print error and exit
+    - Create console DataActionDispatchContext with:
+      - m_selectedObjects = matched objects
+      - m_pController = controller
+      - m_pActionParser = action subparser
+      - m_hWnd = nullptr, m_pAsyncOp = nullptr (console doesn't use GUI)
+    - Call action->Execute(ctx)
+    - If ctx.m_bNeedsRefresh: call controller->Refresh()
+    - Report success/failure with colored console output
+
+- [ ] **Step 4.6**: Handle async operations in console
+  - Console doesn't have progress dialog (m_bShowProgressDialog ignored)
+  - AsyncOperation still runs, but output to console instead
+  - Option 1: Print progress updates to console (ReportProgress messages)
+  - Option 2: Simple "Working..." message, then final result
+  - For now: No progress output, just wait for completion and report result
+
+- [ ] **Step 4.7**: Implement ExportAction for console
+  - Export actions need `--output <file>` argument (no file dialog in console)
+  - In RegisterArguments(): add `--output` required argument
+  - In Execute(): read filename from ctx.m_pActionParser->get<std::string>("--output")
+  - Skip clipboard operations in console build (#ifdef PSERV_CONSOLE_BUILD)
+  - Write directly to specified file
+
+- [ ] **Step 4.8**: Test and verify
+  - Test service lifecycle: start, stop, restart
+  - Test multi-target: `pservc services start BITS Spooler`
+  - Test destructive with --force: `pservc services uninstall TestService --force`
+  - Test export: `pservc services export --output services.json` (or similar)
+  - Test error cases: invalid name, missing --force, missing --output
+  - Commit action integration
 
 ### Phase 5: Command Execution and Output
 **Goal**: Wire everything together in pservc.cpp main()
