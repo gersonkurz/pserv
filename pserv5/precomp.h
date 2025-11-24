@@ -1,5 +1,8 @@
 #pragma once
 
+// Version information - single source of truth
+#include "version.h"
+
 #ifdef _CONSOLE
 #define PSERV_CONSOLE_BUILD
 #else

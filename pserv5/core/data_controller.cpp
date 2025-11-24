@@ -46,7 +46,7 @@ namespace pserv
         // Using unique_ptr because ArgumentParser has deleted copy/move constructors
         // Disable exit_on_default_arguments to prevent std::exit() on --help, allowing proper cleanup
         subparsers.push_back(std::make_unique<argparse::ArgumentParser>(
-            cmd_name, "5.0.0", argparse::default_arguments::help, false));
+            cmd_name, PSERV_VERSION_STRING, argparse::default_arguments::help, false));
         auto &cmd = *subparsers.back();
         cmd.add_description("Manage " + std::string(GetItemName()) + "s");
 
@@ -100,7 +100,7 @@ namespace pserv
 
             // Create action subparser
             subparsers.push_back(std::make_unique<argparse::ArgumentParser>(
-                action_name, "5.0.0", argparse::default_arguments::help, false));
+                action_name, PSERV_VERSION_STRING, argparse::default_arguments::help, false));
             auto &action_cmd = *subparsers.back();
 
             // Add description with warning for destructive actions

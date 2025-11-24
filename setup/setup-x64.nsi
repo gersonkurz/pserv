@@ -44,9 +44,9 @@ RequestExecutionLevel admin
   VIProductVersion "${CURRENT_VERSION}.0"
   VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "pserv5"
   VIAddVersionKey /LANG=${LANG_ENGLISH} "Comments" "MIT Licensed"
-  VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "p-nand-q.com"
+  VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "Gerson Kurz"
   VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalTrademarks" ""
-  VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "(C) p-nand-q.com"
+  VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "(C) Gerson Kurz"
   VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "pserv5"
   VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" ${CURRENT_VERSION}
 

@@ -1,0 +1,48 @@
+// Version resource - include this from the main .rc file
+// or add to project as additional resource
+
+#include "version.h"
+#include <winver.h>
+
+#ifdef PSERV_CONSOLE_BUILD
+#define VER_FILEDESCRIPTION_STR PSERV_FILE_DESCRIPTION_CONSOLE
+#define VER_INTERNALNAME_STR "pservc"
+#define VER_ORIGINALFILENAME_STR "pservc.exe"
+#else
+#define VER_FILEDESCRIPTION_STR PSERV_FILE_DESCRIPTION_GUI
+#define VER_INTERNALNAME_STR "pserv5"
+#define VER_ORIGINALFILENAME_STR "pserv5.exe"
+#endif
+
+VS_VERSION_INFO VERSIONINFO
+    FILEVERSION PSERV_VERSION_RC
+    PRODUCTVERSION PSERV_VERSION_RC
+    FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+    FILEFLAGS VS_FF_DEBUG
+#else
+    FILEFLAGS 0x0L
+#endif
+    FILEOS VOS_NT_WINDOWS32
+    FILETYPE VFT_APP
+    FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", PSERV_COMPANY_NAME
+            VALUE "FileDescription", VER_FILEDESCRIPTION_STR
+            VALUE "FileVersion", PSERV_VERSION_STRING
+            VALUE "InternalName", VER_INTERNALNAME_STR
+            VALUE "LegalCopyright", PSERV_COPYRIGHT
+            VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
+            VALUE "ProductName", PSERV_PRODUCT_NAME
+            VALUE "ProductVersion", PSERV_VERSION_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
