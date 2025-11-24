@@ -8,4 +8,8 @@ namespace pserv
     // Factory function to create environment variable actions
     std::vector<const DataAction *> CreateEnvironmentVariableActions(EnvironmentVariableScope scope);
 
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> CreateAllEnvironmentVariableActions();
+#endif
+
 } // namespace pserv

@@ -339,7 +339,7 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - ✅ **Startup Programs** - COMPLETE (7 actions: enable/disable, delete, copy x2, open location x2)
 - ✅ **Scheduled Tasks** - COMPLETE (7 actions: run/enable/disable, delete, copy x2, edit config)
 - ✅ **Network Connections** - COMPLETE (4 actions: copy x3, close - all GUI-only)
-- ⏭️ **Environment Variables** - Has environment_variable_actions.cpp
+- ✅ **Environment Variables** - COMPLETE (6 actions: copy x2, delete, add x2, open registry)
 
 ### Implementation Plan:
 
@@ -388,19 +388,46 @@ See "Phase 7: Additional Controller Support" below for detailed plan.
 - Added: GetAllActions() override in NetworkConnectionsDataController
 - Console handling: All actions throw error (require clipboard or unimplemented)
 - 4 actions total: Copy Local Endpoint, Copy Remote Endpoint, Copy Process Name, Close Connection (not implemented)
-- Read: network_connection_actions.cpp to see available actions
-- Add: CreateAllNetworkConnectionActions() function (if any actions exist)
-- Override: GetAllActions() in NetworkConnectionsDataController
-- Test: `pservc network-connections`
 
-**Step 7.9: Add Environment Variables actions support**
-- Read: environment_variable_actions.cpp to see available actions
-- Add: CreateAllEnvironmentVariableActions() function
-- Override: GetAllActions() in EnvironmentVariablesDataController
-- Test: `pservc environment-variables`
+**Step 7.9: Add Environment Variables actions support** ✅ COMPLETE
+- Added: CreateAllEnvironmentVariableActions() function in environment_variable_actions.cpp
+- Added: GetAllActions() override in EnvironmentVariablesDataController
+- Console handling: Delete works in console, Copy/Add/Open actions throw error (require GUI/clipboard or not implemented)
+- 6 actions total: Copy Value, Copy Name, Delete (destructive), Add System Variable, Add User Variable, Open in Registry
 
-**Step 7.10: Final verification**
-- Test all 10 controllers with `pservc <controller> --help`
-- Verify action epilog shows available actions
-- Test at least one action per controller
-- Update pservc-plan.md with completion status
+**Step 7.10: Final verification** ✅ COMPLETE
+- All 10 controllers tested with `pservc <controller> --help`
+- Action subcommands properly listed with destructive warnings
+- All controllers can list data in console mode
+- Console-compatible actions work correctly with --force flag where needed
+
+## Phase 7 Summary
+
+**Status**: ✅ COMPLETE
+
+All 10 controllers now support console interface:
+- Services, Devices, Processes, Windows, Modules, Uninstaller, Startup Programs, Scheduled Tasks, Network Connections, Environment Variables
+
+**Console-Compatible Actions** (work in pservc):
+- Services: Start, Stop, Restart, Pause, Continue, Uninstall
+- Devices: (inherits Service actions)
+- Processes: Terminate, Set Priority (6 levels)
+- Windows: Show, Hide, Minimize, Maximize, Restore, Bring to Front, Close
+- Modules: (none - Open Folder requires GUI)
+- Uninstaller: Uninstall (launches external uninstaller)
+- Startup Programs: Enable, Disable, Delete
+- Scheduled Tasks: Run Now, Enable, Disable, Delete
+- Network Connections: (none - all require clipboard or unimplemented)
+- Environment Variables: Delete
+
+**GUI-Only Actions** (throw errors in pservc):
+- Clipboard operations: All "Copy" actions
+- Shell operations: Open File Location, Open in Registry, Edit Configuration
+- Unimplemented: Close Connection, Add Variable
+
+**Architecture Improvements**:
+- GetAllActions() pattern for console command registration
+- Conditional compilation with PSERV_CONSOLE_BUILD guards
+- Destructive actions marked with "(DESTRUCTIVE - requires --force)" in help
+- No duplicate action lists in help output
+- Proper error messages for GUI-only operations

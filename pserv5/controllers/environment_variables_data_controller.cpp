@@ -49,6 +49,13 @@ namespace pserv
         return CreateEnvironmentVariableActions(envVar->GetScope());
     }
 
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> EnvironmentVariablesDataController::GetAllActions() const
+    {
+        return CreateAllEnvironmentVariableActions();
+    }
+#endif
+
     VisualState EnvironmentVariablesDataController::GetVisualState(const DataObject *dataObject) const
     {
         if (!dataObject)

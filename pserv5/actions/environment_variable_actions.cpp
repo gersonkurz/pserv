@@ -38,12 +38,17 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+#ifdef PSERV_CONSOLE_BUILD
+                spdlog::error("'Copy Value' is not supported in console build");
+                throw std::runtime_error("This action requires clipboard and is not available in console mode");
+#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
                 const auto *envVar = GetEnvVarInfo(ctx.m_selectedObjects[0]);
                 utils::CopyToClipboard(envVar->GetValue().c_str());
                 spdlog::info("Copied environment variable value to clipboard: {}", envVar->GetName());
+#endif
             }
         };
 
@@ -62,12 +67,17 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+#ifdef PSERV_CONSOLE_BUILD
+                spdlog::error("'Copy Name' is not supported in console build");
+                throw std::runtime_error("This action requires clipboard and is not available in console mode");
+#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
                 const auto *envVar = GetEnvVarInfo(ctx.m_selectedObjects[0]);
                 utils::CopyToClipboard(envVar->GetName().c_str());
                 spdlog::info("Copied environment variable name to clipboard: {}", envVar->GetName());
+#endif
             }
         };
 
@@ -101,12 +111,16 @@ namespace pserv
             void Execute(DataActionDispatchContext &ctx) const override
             {
                 std::vector<const EnvironmentVariableInfo *> envVars;
-                std::string confirmMsg = "Are you sure you want to delete the following environment variables?\n\n";
-
                 for (const auto *obj : ctx.m_selectedObjects)
                 {
-                    const auto *envVar = GetEnvVarInfo(obj);
-                    envVars.push_back(envVar);
+                    envVars.push_back(GetEnvVarInfo(obj));
+                }
+
+#ifndef PSERV_CONSOLE_BUILD
+                // GUI: Show confirmation dialog
+                std::string confirmMsg = "Are you sure you want to delete the following environment variables?\n\n";
+                for (const auto *envVar : envVars)
+                {
                     confirmMsg += std::format("{} ({})\n", envVar->GetName(), envVar->GetScopeString());
                     if (envVars.size() >= 10)
                     {
@@ -114,21 +128,22 @@ namespace pserv
                         break;
                     }
                 }
-
-                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Deletion", MB_YESNO | MB_ICONWARNING) == IDYES)
+                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Deletion", MB_YESNO | MB_ICONWARNING) != IDYES)
                 {
-                    int success = 0;
-                    for (const auto *envVar : envVars)
-                    {
-                        if (EnvironmentVariableManager::DeleteEnvironmentVariable(envVar->GetName(), envVar->GetScope()))
-                        {
-                            success++;
-                        }
-                    }
-                    spdlog::info("Deleted {}/{} environment variables", success, envVars.size());
-
-                    // TODO: Trigger refresh (refresh mechanism to be implemented)
+                    return;
                 }
+#endif
+                // Console: --force flag already checked by pservc.cpp
+
+                int success = 0;
+                for (const auto *envVar : envVars)
+                {
+                    if (EnvironmentVariableManager::DeleteEnvironmentVariable(envVar->GetName(), envVar->GetScope()))
+                    {
+                        success++;
+                    }
+                }
+                spdlog::info("Deleted {}/{} environment variables", success, envVars.size());
             }
         };
 
@@ -156,13 +171,16 @@ namespace pserv
             void Execute(DataActionDispatchContext &ctx) const override
             {
                 // TODO: This would ideally open a dialog to enter name/value
-                // For now, we'll just show a message box as a placeholder
+                spdlog::error("Adding new environment variables is not yet implemented");
+#ifndef PSERV_CONSOLE_BUILD
                 MessageBoxA(ctx.m_hWnd,
                     "Adding new environment variables requires a dedicated input dialog.\n"
                     "This will be implemented in a future update.\n\n"
                     "For now, use the property editing feature to modify existing variables.",
                     "Not Yet Implemented",
                     MB_OK | MB_ICONINFORMATION);
+#endif
+                throw std::runtime_error("Adding new environment variables is not yet implemented");
             }
         };
 
@@ -185,6 +203,10 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+#ifdef PSERV_CONSOLE_BUILD
+                spdlog::error("'Open in Registry Editor' is not supported in console build");
+                throw std::runtime_error("This action requires GUI and is not available in console mode");
+#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
@@ -238,6 +260,7 @@ namespace pserv
                 {
                     LogWin32Error("ShellExecuteW", "opening regedit.exe");
                 }
+#endif
             }
         };
 
@@ -287,5 +310,22 @@ namespace pserv
 
         return actions;
     }
+
+#ifdef PSERV_CONSOLE_BUILD
+    std::vector<const DataAction *> CreateAllEnvironmentVariableActions()
+    {
+        // Console: Return all actions regardless of variable scope
+        return {
+            &theCopyValueAction,
+            &theCopyNameAction,
+            &theDataActionSeparator,
+            &theAddSystemVariableAction,
+            &theAddUserVariableAction,
+            &theDataActionSeparator,
+            &theOpenInRegistryAction,
+            &theDataActionSeparator,
+            &theDeleteAction};
+    }
+#endif
 
 } // namespace pserv
