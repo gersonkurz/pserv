@@ -8,7 +8,7 @@ XPStyle on
 
 
 Name "pserv5 ${CURRENT_VERSION}" 
-OutFile "pserv5-${CURRENT_VERSION}-setup-x86.exe"
+OutFile "pserv-${CURRENT_VERSION}-setup-x86.exe"
 InstallDir "$PROGRAMFILES\pserv5"
 InstallDirRegKey HKLM SOFTWARE\p-nand-q.com\pserv5 "Install_Dir"
 
