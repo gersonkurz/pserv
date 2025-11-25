@@ -145,6 +145,7 @@ namespace pserv
                     }
                 }
                 spdlog::info("Deleted {}/{} environment variables", success, envVars.size());
+                ctx.m_bNeedsRefresh = true;
             }
         };
 

@@ -182,6 +182,7 @@ namespace pserv
                     }
                 }
                 spdlog::info("Deleted {}/{} scheduled tasks", success, tasks.size());
+                ctx.m_bNeedsRefresh = true;
             }
         };
 

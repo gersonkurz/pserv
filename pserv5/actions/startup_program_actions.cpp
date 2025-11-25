@@ -152,8 +152,7 @@ namespace pserv
                     }
                 }
                 spdlog::info("Deleted {}/{} startup programs", success, programs.size());
-
-                // TODO: Trigger refresh
+                ctx.m_bNeedsRefresh = true;
             }
         };
 

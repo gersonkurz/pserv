@@ -196,10 +196,7 @@ theSettings.save();  // Persist to disk
 
 2. **Close TCP Connection** ✅ Implemented (IPv4 only, requires admin)
 
-3. **Missing Auto-Refresh After Deletes** (3 locations)
-   - Environment variables, scheduled tasks, startup programs
-   - User must manually refresh after delete operations
-   - Files: `environment_variable_actions.cpp:130`, `scheduled_task_actions.cpp:178`, `startup_program_actions.cpp:145`
+3. **Missing Auto-Refresh After Deletes** ✅ Fixed in all 3 locations
 
 ### TODO
 
