@@ -192,9 +192,7 @@ theSettings.save();  // Persist to disk
 ## Pre-Release Gap Analysis
 
 ### Incomplete Features
-1. **Add Environment Variable** (`environment_variable_actions.cpp:158`)
-   - Shows "Not Yet Implemented" placeholder
-   - Either implement or hide action
+1. **Add Environment Variable** ✅ Implemented with dialog
 
 2. **Close TCP Connection** (`network_connection_actions.cpp:130`)
    - Shows "Not Yet Implemented" placeholder

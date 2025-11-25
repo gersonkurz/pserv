@@ -166,4 +166,121 @@ namespace pserv
         }
     }
 
+#ifndef PSERV_CONSOLE_BUILD
+    void EnvironmentVariablesDataController::ShowAddVariableDialog(EnvironmentVariableScope scope)
+    {
+        m_bShowAddDialog = true;
+        m_addDialogScope = scope;
+        m_addNameBuffer[0] = '\0';
+        m_addValueBuffer[0] = '\0';
+        m_addDialogError.clear();
+    }
+
+    void EnvironmentVariablesDataController::RenderAddVariableDialog(HWND hWnd)
+    {
+        if (m_bShowAddDialog)
+        {
+            ImGui::OpenPopup("Add Environment Variable");
+            m_bShowAddDialog = false;
+        }
+
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(450, 0));
+
+        if (ImGui::BeginPopupModal("Add Environment Variable", nullptr, ImGuiWindowFlags_NoResize))
+        {
+            // Escape key to close dialog
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+            {
+                m_addDialogError.clear();
+                ImGui::CloseCurrentPopup();
+            }
+
+            const char *scopeStr = (m_addDialogScope == EnvironmentVariableScope::System) ? "System" : "User";
+            ImGui::Text("Add new %s environment variable:", scopeStr);
+            ImGui::Spacing();
+
+            ImGui::Text("Name:");
+            ImGui::SetNextItemWidth(-1);
+            bool nameEnterPressed = ImGui::InputText("##VarName", m_addNameBuffer, sizeof(m_addNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+
+            ImGui::Spacing();
+            ImGui::Text("Value:");
+            ImGui::SetNextItemWidth(-1);
+            bool valueEnterPressed = ImGui::InputText("##VarValue", m_addValueBuffer, sizeof(m_addValueBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+
+            // Show error message if any
+            if (!m_addDialogError.empty())
+            {
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+                ImGui::TextWrapped("%s", m_addDialogError.c_str());
+                ImGui::PopStyleColor();
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            bool shouldAdd = (nameEnterPressed || valueEnterPressed) && strlen(m_addNameBuffer) > 0;
+
+            if (ImGui::Button("Add", ImVec2(120, 0)) || shouldAdd)
+            {
+                if (strlen(m_addNameBuffer) == 0)
+                {
+                    m_addDialogError = "Variable name cannot be empty.";
+                }
+                else
+                {
+                    // Check if variable already exists
+                    std::string name = m_addNameBuffer;
+                    std::string lowerName = name;
+                    std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+                    bool exists = false;
+                    for (const auto *obj : m_objects)
+                    {
+                        const auto *envVar = static_cast<const EnvironmentVariableInfo *>(obj);
+                        std::string existingName = envVar->GetName();
+                        std::transform(existingName.begin(), existingName.end(), existingName.begin(), ::tolower);
+                        if (envVar->GetScope() == m_addDialogScope && existingName == lowerName)
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+
+                    if (exists)
+                    {
+                        m_addDialogError = std::format("Variable '{}' already exists in {} scope.", name, scopeStr);
+                    }
+                    else
+                    {
+                        // Try to create the variable
+                        if (EnvironmentVariableManager::SetEnvironmentVariable(m_addNameBuffer, m_addValueBuffer, m_addDialogScope))
+                        {
+                            spdlog::info("Created new {} environment variable: {}", scopeStr, m_addNameBuffer);
+                            m_addDialogError.clear();
+                            Refresh(false);
+                            ImGui::CloseCurrentPopup();
+                        }
+                        else
+                        {
+                            m_addDialogError = std::format("Failed to create variable. You may need administrator privileges for {} variables.", scopeStr);
+                        }
+                    }
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
+            {
+                m_addDialogError.clear();
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+#endif
+
 } // namespace pserv

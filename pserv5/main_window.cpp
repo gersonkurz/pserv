@@ -13,6 +13,7 @@
 #include <core/data_controller.h>
 #include <core/data_object_container.h>
 #include <controllers/services_data_controller.h>
+#include <controllers/environment_variables_data_controller.h>
 #include <windows_api/service_manager.h>
 
 #pragma comment(lib, "d3d11.lib")
@@ -1160,6 +1161,12 @@ namespace pserv
 
         // Render remote machine dialog if active
         RenderRemoteMachineDialog();
+
+        // Render environment variable add dialog if active
+        if (m_pCurrentController && m_pCurrentController->GetControllerName() == ENVIRONMENT_VARIABLES_CONTROLLER_NAME)
+        {
+            static_cast<EnvironmentVariablesDataController *>(m_pCurrentController)->RenderAddVariableDialog(m_hWnd);
+        }
 
         if (m_pCurrentController)
         {

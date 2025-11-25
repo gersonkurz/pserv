@@ -1,5 +1,6 @@
 #include "precomp.h"
 #include <actions/environment_variable_actions.h>
+#include <controllers/environment_variables_data_controller.h>
 #include <core/data_action.h>
 #include <core/data_action_dispatch_context.h>
 #include <models/environment_variable_info.h>
@@ -170,17 +171,14 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-                // TODO: This would ideally open a dialog to enter name/value
-                spdlog::error("Adding new environment variables is not yet implemented");
 #ifndef PSERV_CONSOLE_BUILD
-                MessageBoxA(ctx.m_hWnd,
-                    "Adding new environment variables requires a dedicated input dialog.\n"
-                    "This will be implemented in a future update.\n\n"
-                    "For now, use the property editing feature to modify existing variables.",
-                    "Not Yet Implemented",
-                    MB_OK | MB_ICONINFORMATION);
+                // Show the add variable dialog
+                auto *controller = static_cast<EnvironmentVariablesDataController *>(ctx.m_pController);
+                controller->ShowAddVariableDialog(m_scope);
+#else
+                spdlog::error("Adding new environment variables is not supported in console mode");
+                throw std::runtime_error("Adding new environment variables is not supported in console mode. Use the GUI application.");
 #endif
-                throw std::runtime_error("Adding new environment variables is not yet implemented");
             }
         };
 
