@@ -14,6 +14,7 @@
 #define NOMINMAX
 #include <winsock2.h>
 #include <windows.h>
+#include <windowsx.h>
 #include <iphlpapi.h>
 #include <taskschd.h>
 //#include <ws2tcpip.h>

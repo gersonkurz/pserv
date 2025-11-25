@@ -185,6 +185,45 @@ namespace pserv
 
         switch (message)
         {
+        case WM_NCCALCSIZE:
+            // Return 0 to remove the entire non-client area (title bar, borders)
+            // This eliminates the white pixels at the top
+            if (wParam == TRUE)
+            {
+                // When wParam is TRUE, lParam points to NCCALCSIZE_PARAMS
+                // Returning 0 tells Windows to use the entire window as client area
+                return 0;
+            }
+            return DefWindowProc(hWnd, message, wParam, lParam);
+
+        case WM_NCHITTEST:
+        {
+            // Handle hit testing for resize borders since we removed the non-client area
+            POINT pt = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+            ScreenToClient(hWnd, &pt);
+
+            RECT rc;
+            GetClientRect(hWnd, &rc);
+
+            const int borderWidth = 5; // Resize border thickness
+
+            bool onLeft = pt.x < borderWidth;
+            bool onRight = pt.x >= rc.right - borderWidth;
+            bool onTop = pt.y < borderWidth;
+            bool onBottom = pt.y >= rc.bottom - borderWidth;
+
+            if (onTop && onLeft) return HTTOPLEFT;
+            if (onTop && onRight) return HTTOPRIGHT;
+            if (onBottom && onLeft) return HTBOTTOMLEFT;
+            if (onBottom && onRight) return HTBOTTOMRIGHT;
+            if (onLeft) return HTLEFT;
+            if (onRight) return HTRIGHT;
+            if (onTop) return HTTOP;
+            if (onBottom) return HTBOTTOM;
+
+            return HTCLIENT;
+        }
+
         case WM_ACTIVATE:
             if (pWindow)
             {
@@ -868,16 +907,22 @@ namespace pserv
         const float titleBarHeight = static_cast<float>(GetSystemMetrics(SM_CYCAPTION));
 
         // Render custom title bar in a separate window at the very top
+        // Extend the title bar window down to cover the gap between title bar and menu bar background
+        const float titleBarOverlap = 2.0f;
         {
             ImGui::SetNextWindowPos(viewport->Pos); // Use Pos instead of WorkPos to start at 0,0
-            ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, titleBarHeight));
+            ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, titleBarHeight + titleBarOverlap));
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // No padding
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);      // No border
+            // Set window background to menu bar color to fill the gap
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_MenuBarBg));
             ImGuiWindowFlags titleBarFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
                                              ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
             ImGui::Begin("TitleBar", nullptr, titleBarFlags);
             RenderTitleBar();
             ImGui::End();
-            ImGui::PopStyleVar();
+            ImGui::PopStyleColor(1);
+            ImGui::PopStyleVar(2);
         }
 
         // Create main window below title bar for menu and content
@@ -886,6 +931,7 @@ namespace pserv
 
         // Add some vertical padding for the menu bar
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 6)); // Add vertical padding
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);     // No border
 
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings |
                                         ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_MenuBar;
@@ -895,7 +941,7 @@ namespace pserv
         // Render menu bar (ImGui positions this automatically at the top of this window)
         RenderMenuBar();
 
-        ImGui::PopStyleVar(); // Pop FramePadding
+        ImGui::PopStyleVar(2); // Pop FramePadding and WindowBorderSize
 
         // Handle Ctrl+Mousewheel for font size changes
         ImGuiIO &io = ImGui::GetIO();
@@ -1832,8 +1878,9 @@ namespace pserv
         const float buttonHeight = titleBarHeight;
 
         ImGuiIO &io = ImGui::GetIO();
-        ImVec2 titleBarMin = ImGui::GetCursorScreenPos();
-        ImVec2 titleBarMax = ImVec2(titleBarMin.x + ImGui::GetContentRegionAvail().x, titleBarMin.y + titleBarHeight);
+        // Use window position directly to ensure we fill the entire title bar area
+        ImVec2 titleBarMin = ImGui::GetWindowPos();
+        ImVec2 titleBarMax = ImVec2(titleBarMin.x + ImGui::GetWindowSize().x, titleBarMin.y + titleBarHeight);
 
         // Draw title bar background with accent color when focused
         ImDrawList *drawList = ImGui::GetWindowDrawList();
@@ -1874,53 +1921,94 @@ namespace pserv
         ImGui::SetCursorScreenPos(ImVec2(titleBarMin.x + 10.0f, titleBarMin.y + (titleBarHeight - ImGui::GetTextLineHeight()) * 0.5f));
         ImGui::Text("pserv5");
 
-        // Window control buttons (right side)
-        ImVec2 buttonPos = ImVec2(titleBarMax.x - buttonWidth * 3, titleBarMin.y);
+        // Window control buttons (right side) - drawn with primitives for consistent alignment
+        const ImU32 iconColor = IM_COL32(255, 255, 255, 255);
+        const float iconSize = 10.0f;
+        const float iconThickness = 1.0f;
 
-        // Minimize button - using horizontal line symbol
-        ImGui::SetCursorScreenPos(buttonPos);
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+        // First pass: detect hover states for all buttons
+        ImVec2 minBtnPos = ImVec2(titleBarMax.x - buttonWidth * 3, titleBarMin.y);
+        ImVec2 maxBtnPos = ImVec2(titleBarMax.x - buttonWidth * 2, titleBarMin.y);
+        ImVec2 closeBtnPos = ImVec2(titleBarMax.x - buttonWidth, titleBarMin.y);
 
-        if (ImGui::Button("\xE2\x80\x94##minimize", ImVec2(buttonWidth, buttonHeight)))
-        { // EM DASH (UTF-8)
-            ShowWindow(m_hWnd, SW_MINIMIZE);
+        bool minHovered = mousePos.x >= minBtnPos.x && mousePos.x < minBtnPos.x + buttonWidth &&
+                          mousePos.y >= minBtnPos.y && mousePos.y < minBtnPos.y + buttonHeight;
+        bool maxHovered = mousePos.x >= maxBtnPos.x && mousePos.x < maxBtnPos.x + buttonWidth &&
+                          mousePos.y >= maxBtnPos.y && mousePos.y < maxBtnPos.y + buttonHeight;
+        bool closeHovered = mousePos.x >= closeBtnPos.x && mousePos.x < closeBtnPos.x + buttonWidth &&
+                            mousePos.y >= closeBtnPos.y && mousePos.y < closeBtnPos.y + buttonHeight;
+
+        // Draw hover backgrounds first
+        if (minHovered)
+            drawList->AddRectFilled(minBtnPos, ImVec2(minBtnPos.x + buttonWidth, minBtnPos.y + buttonHeight), IM_COL32(255, 255, 255, 30));
+        if (maxHovered)
+            drawList->AddRectFilled(maxBtnPos, ImVec2(maxBtnPos.x + buttonWidth, maxBtnPos.y + buttonHeight), IM_COL32(255, 255, 255, 30));
+        if (closeHovered)
+            drawList->AddRectFilled(closeBtnPos, ImVec2(closeBtnPos.x + buttonWidth, closeBtnPos.y + buttonHeight), IM_COL32(196, 43, 28, 255));
+
+        // Draw icons on top
+        // Minimize icon (horizontal line)
+        {
+            ImVec2 center = ImVec2(minBtnPos.x + buttonWidth * 0.5f, minBtnPos.y + buttonHeight * 0.5f);
+            drawList->AddLine(
+                ImVec2(center.x - iconSize * 0.5f, center.y),
+                ImVec2(center.x + iconSize * 0.5f, center.y),
+                iconColor, iconThickness);
         }
 
-        ImGui::PopStyleColor(3);
-
-        // Maximize/Restore button - using square symbols
-        buttonPos.x += buttonWidth;
-        ImGui::SetCursorScreenPos(buttonPos);
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-
+        // Maximize/Restore icon
         bool isMaximized = IsWindowMaximized();
-        const char *maxButtonLabel = isMaximized ? "\xE2\x9D\x8F##restore" : "\xE2\x96\xA1##maximize"; // SHADOWED SQUARE / WHITE SQUARE (UTF-8)
-
-        if (ImGui::Button(maxButtonLabel, ImVec2(buttonWidth, buttonHeight)))
         {
-            ShowWindow(m_hWnd, isMaximized ? SW_RESTORE : SW_MAXIMIZE);
+            ImVec2 center = ImVec2(maxBtnPos.x + buttonWidth * 0.5f, maxBtnPos.y + buttonHeight * 0.5f);
+            if (isMaximized)
+            {
+                // Restore icon: two overlapping rectangles
+                float smallSize = iconSize * 0.7f;
+                // Back rectangle (offset up-right)
+                drawList->AddRect(
+                    ImVec2(center.x - smallSize * 0.5f + 2, center.y - smallSize * 0.5f - 2),
+                    ImVec2(center.x + smallSize * 0.5f + 2, center.y + smallSize * 0.5f - 2),
+                    iconColor, 0.0f, 0, iconThickness);
+                // Front rectangle
+                drawList->AddRect(
+                    ImVec2(center.x - smallSize * 0.5f - 1, center.y - smallSize * 0.5f + 1),
+                    ImVec2(center.x + smallSize * 0.5f - 1, center.y + smallSize * 0.5f + 1),
+                    iconColor, 0.0f, 0, iconThickness);
+            }
+            else
+            {
+                // Maximize icon: single rectangle
+                drawList->AddRect(
+                    ImVec2(center.x - iconSize * 0.5f, center.y - iconSize * 0.5f),
+                    ImVec2(center.x + iconSize * 0.5f, center.y + iconSize * 0.5f),
+                    iconColor, 0.0f, 0, iconThickness);
+            }
         }
 
-        ImGui::PopStyleColor(3);
-
-        // Close button - using X symbol with red hover
-        buttonPos.x += buttonWidth;
-        ImGui::SetCursorScreenPos(buttonPos);
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // White text
-
-        if (ImGui::Button("X##close", ImVec2(buttonWidth, buttonHeight)))
+        // Close icon (X)
         {
-            DestroyWindow(m_hWnd);
+            ImVec2 center = ImVec2(closeBtnPos.x + buttonWidth * 0.5f, closeBtnPos.y + buttonHeight * 0.5f);
+            float halfSize = iconSize * 0.5f;
+            drawList->AddLine(
+                ImVec2(center.x - halfSize, center.y - halfSize),
+                ImVec2(center.x + halfSize, center.y + halfSize),
+                iconColor, iconThickness);
+            drawList->AddLine(
+                ImVec2(center.x + halfSize, center.y - halfSize),
+                ImVec2(center.x - halfSize, center.y + halfSize),
+                iconColor, iconThickness);
         }
 
-        ImGui::PopStyleColor(4);
+        // Handle button clicks
+        if (ImGui::IsMouseClicked(0))
+        {
+            if (minHovered)
+                ShowWindow(m_hWnd, SW_MINIMIZE);
+            else if (maxHovered)
+                ShowWindow(m_hWnd, isMaximized ? SW_RESTORE : SW_MAXIMIZE);
+            else if (closeHovered)
+                DestroyWindow(m_hWnd);
+        }
     }
 
     void MainWindow::RenderMenuBar()
