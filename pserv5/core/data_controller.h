@@ -1,3 +1,8 @@
+/// @file data_controller.h
+/// @brief Base class for all data view controllers.
+///
+/// DataController is the central abstraction for managing a collection of
+/// DataObjects representing a specific system resource type (services, processes, etc.).
 #pragma once
 #include <core/data_object_column.h>
 #include <core/data_object_container.h>
@@ -8,6 +13,9 @@
 
 namespace pserv
 {
+    /// @name Controller Name Constants
+    /// @brief Well-known names for built-in data controllers.
+    /// @{
     inline constexpr std::string_view SERVICES_DATA_CONTROLLER_NAME{"Services"};
     inline constexpr std::string_view DEVICES_DATA_CONTROLLER_NAME{"Devices"};
     inline constexpr std::string_view PROCESSES_DATA_CONTROLLER_NAME{"Processes"};
@@ -18,20 +26,22 @@ namespace pserv
     inline constexpr std::string_view SCHEDULED_TASKS_DATA_CONTROLLER_NAME{"Scheduled Tasks"};
     inline constexpr std::string_view MODULES_DATA_CONTROLLER_NAME{"Modules"};
     inline constexpr std::string_view ENVIRONMENT_VARIABLES_CONTROLLER_NAME{"Environment Variables"};
+    /// @}
 
     class DataAction;
     class DataObject;
     class DataActionDispatchContext;
 
+    /// @brief Visual rendering state for a data object row.
     enum class VisualState
     {
-        Normal,      // Default text color
-        Highlighted, // Special highlight (e.g., running services, own processes)
-        Disabled     // Grayed out (e.g., disabled services, inaccessible processes)
+        Normal,      ///< Default text color.
+        Highlighted, ///< Special highlight (e.g., running services, own processes).
+        Disabled     ///< Grayed out (e.g., disabled services, inaccessible processes).
     };
 
-    // Common actions available across all controllers (export/copy functionality)
-    // Use negative IDs to avoid collision with controller-specific actions
+    /// @brief IDs for common actions available across all controllers.
+    /// Negative IDs avoid collision with controller-specific action indices.
     enum class CommonAction
     {
         Separator = -1,
@@ -45,9 +55,43 @@ namespace pserv
     class DataPropertiesDialog;
 #endif
 
+    /// @brief Abstract base class for data view controllers.
+    ///
+    /// Each DataController manages a specific type of system resource:
+    /// - Services, Devices, Processes, Windows, etc.
+    ///
+    /// Controllers are responsible for:
+    /// - Defining column metadata for the data grid
+    /// - Loading and refreshing data from the system
+    /// - Providing actions available for their objects
+    /// - Determining visual state for row rendering
+    /// - Supporting property editing in the properties dialog
+    ///
+    /// @par Implementing a Custom Controller:
+    /// @code
+    /// class MyController : public DataController {
+    /// public:
+    ///     MyController() : DataController("MyItems", "Item", {
+    ///         {"Name", "name", ColumnDataType::String},
+    ///         {"Value", "value", ColumnDataType::Integer}
+    ///     }) {}
+    ///
+    ///     void Refresh(bool isAutoRefresh) override { /* Load data */ }
+    ///     VisualState GetVisualState(const DataObject*) const override {
+    ///         return VisualState::Normal;
+    ///     }
+    ///     std::vector<const DataAction*> GetActions(const DataObject*) const override {
+    ///         return { /* action list */ };
+    ///     }
+    /// };
+    /// @endcode
     class DataController
     {
     public:
+        /// @brief Construct a controller with name, item type, and columns.
+        /// @param controllerName Unique name for this controller (e.g., "Services").
+        /// @param itemName Singular name for items (e.g., "service") for UI labels.
+        /// @param columns Column definitions for the data grid.
         DataController(std::string_view controllerName, std::string itemName, std::vector<DataObjectColumn> &&columns)
             : m_controllerName{std::move(controllerName)}
             , m_itemName{std::move(itemName)}
@@ -58,117 +102,107 @@ namespace pserv
         {
         }
 
+        virtual ~DataController();
+
 #ifndef PSERV_CONSOLE_BUILD
+        /// @brief Show the properties dialog for selected objects.
         void ShowPropertiesDialog(DataActionDispatchContext &ctx);
 #endif
 
-        virtual ~DataController();
+        /// @name Core Abstract Methods
+        /// @{
 
-        // Core abstract methods
+        /// @brief Load or reload data from the system.
+        /// @param isAutoRefresh True if called by auto-refresh timer (may optimize behavior).
         virtual void Refresh(bool isAutoRefresh = false) = 0;
 
-#ifdef PSERV_CONSOLE_BUILD
-        virtual void RegisterArguments(argparse::ArgumentParser &program, std::vector<std::unique_ptr<argparse::ArgumentParser>> &subparsers) const;
-#endif
-
-        const DataObjectContainer &GetDataObjects() const
-        {
-            return m_objects;
-        }
-
+        /// @brief Determine the visual rendering state for an object.
+        /// @param service The DataObject to evaluate.
+        /// @return VisualState for row coloring (normal, highlighted, or disabled).
         virtual VisualState GetVisualState(const DataObject *service) const = 0;
 
-        // Action system - new object-based interface
+        /// @brief Get available actions for a specific object.
+        /// @param dataObject The object to get actions for (nullptr for global actions).
+        /// @return Vector of action pointers (includes separators).
         virtual std::vector<const DataAction *> GetActions(const DataObject *dataObject) const = 0;
+        /// @}
 
 #ifdef PSERV_CONSOLE_BUILD
-        // Console: Get all possible actions for command registration (ignores object state/availability)
-        // Override in derived controllers to return complete action set
-        // Default: returns empty vector (no actions)
-        virtual std::vector<const DataAction *> GetAllActions() const
-        {
-            return {};
-        }
+        /// @brief Register CLI subcommands for this controller.
+        virtual void RegisterArguments(argparse::ArgumentParser &program, std::vector<std::unique_ptr<argparse::ArgumentParser>> &subparsers) const;
+
+        /// @brief Get all possible actions for CLI command registration.
+        /// Override to return complete action set regardless of object state.
+        virtual std::vector<const DataAction *> GetAllActions() const { return {}; }
 #endif
 
-        // Auto-refresh support - controllers decide if they support periodic refresh
-        virtual bool SupportsAutoRefresh() const
-        {
-            return true; // Default: most views support auto-refresh
-        }
+        /// @brief Get read-only access to the data container.
+        const DataObjectContainer &GetDataObjects() const { return m_objects; }
+
+        /// @brief Check if this controller supports auto-refresh.
+        /// @return true if periodic refresh is meaningful for this data type.
+        virtual bool SupportsAutoRefresh() const { return true; }
 
 #ifndef PSERV_CONSOLE_BUILD
-        // Check if properties dialog has unsaved edits (pause auto-refresh during edits)
+        /// @brief Check if properties dialog has unsaved edits.
+        /// Used to pause auto-refresh during editing.
         bool HasPropertiesDialogWithEdits() const;
-        
+
+        /// @brief Render the properties dialog if open.
         void RenderPropertiesDialog();
 #endif
 
-        // Generic sort implementation using column metadata and GetTypedProperty()
+        /// @brief Sort objects by a column.
+        /// @param columnIndex Column index to sort by.
+        /// @param ascending True for ascending, false for descending.
         void Sort(int columnIndex, bool ascending);
 
-        // Property editing transaction methods
-        virtual void BeginPropertyEdits(DataObject *obj)
-        {
-            // Default: no-op
-        }
+        /// @name Property Editing Transaction
+        /// Override these methods to support in-place editing in the properties dialog.
+        /// @{
 
-        virtual bool SetPropertyEdit(DataObject *obj, int columnIndex, const std::string &newValue)
-        {
-            return false; // Default: not editable
-        }
+        /// @brief Begin an editing transaction for an object.
+        virtual void BeginPropertyEdits(DataObject *obj) { }
 
-        virtual bool CommitPropertyEdits(DataObject *obj)
-        {
-            return false; // Default: no changes to commit
-        }
+        /// @brief Set a property value during editing.
+        /// @return true if the value was accepted.
+        virtual bool SetPropertyEdit(DataObject *obj, int columnIndex, const std::string &newValue) { return false; }
 
-        // Get combo box options for a specific column (only called if EditType is Combo)
-        virtual std::vector<std::string> GetComboOptions(int columnIndex) const
-        {
-            return {}; // Default: no options
-        }
+        /// @brief Commit all pending edits to the system.
+        /// @return true if changes were successfully applied.
+        virtual bool CommitPropertyEdits(DataObject *obj) { return false; }
 
-        const std::vector<DataObjectColumn> &GetColumns() const
-        {
-            return m_columns;
-        }
-        const auto &GetControllerName() const
-        {
-            return m_controllerName;
-        }
-        const auto &GetItemName() const
-        {
-            return m_itemName;
-        }
-        bool IsLoaded() const
-        {
-            return m_bLoaded;
-        }
-        bool NeedsRefresh() const
-        {
-            return m_bNeedsRefresh;
-        }
-        void ClearRefreshFlag()
-        {
-            m_bNeedsRefresh = false;
-        }
+        /// @brief Get dropdown options for a Combo-type column.
+        virtual std::vector<std::string> GetComboOptions(int columnIndex) const { return {}; }
+        /// @}
+
+        /// @name Accessors
+        /// @{
+        const std::vector<DataObjectColumn> &GetColumns() const { return m_columns; }
+        const auto &GetControllerName() const { return m_controllerName; }
+        const auto &GetItemName() const { return m_itemName; }
+        bool IsLoaded() const { return m_bLoaded; }
+        bool NeedsRefresh() const { return m_bNeedsRefresh; }
+        void ClearRefreshFlag() { m_bNeedsRefresh = false; }
+        /// @}
 
     protected:
+        /// @brief Clear all data objects from the container.
         void Clear();
 
     protected:
-        const std::string m_controllerName;
-        const std::string m_itemName;
-        const std::vector<DataObjectColumn> m_columns;
-        DataObjectContainer m_objects;
-        int m_lastSortColumn{-1};
-        bool m_bLoaded{false};
-        bool m_bNeedsRefresh{false};
-        bool m_lastSortAscending{true};
+        const std::string m_controllerName;              ///< Controller identifier.
+        const std::string m_itemName;                    ///< Singular item name for UI.
+        const std::vector<DataObjectColumn> m_columns;   ///< Column definitions.
+        DataObjectContainer m_objects;                   ///< Data storage.
+        int m_lastSortColumn{-1};                        ///< Last sorted column index.
+        bool m_bLoaded{false};                           ///< True after first successful load.
+        bool m_bNeedsRefresh{false};                     ///< True if data needs reloading.
+        bool m_lastSortAscending{true};                  ///< Last sort direction.
+
 #ifndef PSERV_CONSOLE_BUILD
     private:
-        DataPropertiesDialog *m_pPropertiesDialog{nullptr};
+        DataPropertiesDialog *m_pPropertiesDialog{nullptr}; ///< Active properties dialog.
 #endif
     };
 } // namespace pserv

@@ -1,3 +1,5 @@
+/// @file format_utils.h
+/// @brief Formatting utilities for human-readable output.
 #pragma once
 #include <string>
 #include <cstdint>
@@ -5,8 +7,9 @@
 
 namespace pserv::utils {
 
-// Formats bytes into human-readable size (KB, MB, GB, etc.)
-// Returns empty string if bytes == 0
+/// @brief Format a byte count as human-readable size.
+/// @param bytes Number of bytes.
+/// @return Formatted string (e.g., "1.50 MB") or empty if bytes == 0.
 inline std::string FormatSize(uint64_t bytes) {
     if (bytes == 0) {
         return "";

@@ -1,3 +1,8 @@
+/// @file console.h
+/// @brief Console output utilities with ANSI color support.
+///
+/// Provides functions for writing to the console with optional ANSI
+/// escape codes for text formatting and colors.
 #pragma once
 
 namespace pserv
@@ -71,17 +76,26 @@ namespace pserv
 #define CONSOLE_STANDARD "\x1b\xFF"
 #endif
 
+		/// @brief Encode wide string with color codes for console output.
 		std::string encode_as_output_bytes(std::wstring_view text);
+
+		/// @brief Ensure console output handle is initialized.
 		bool ensure_output_handle();
+
+		/// @brief Write UTF-16 string to console.
 		bool write(std::wstring_view utf16_encoded_string);
+
+		/// @brief Write UTF-8 string to console.
 		bool write(std::string_view utf8_encoded_string);
 
+		/// @brief Write a line of text to console.
 		template <typename T>
 		bool write_line(T text)
 		{
             return write(std::string{text} + "\n");
 		}
 
+		/// @brief Format and write a line to console.
 		template <typename... Args>
 		constexpr bool format_line(std::string_view text, Args&&... args)
 		{

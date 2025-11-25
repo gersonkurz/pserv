@@ -1,29 +1,28 @@
+/// @file file_dialogs.h
+/// @brief Native Windows file dialog wrappers.
+///
+/// Provides COM-based IFileSaveDialog wrapper for modern file dialogs.
 #pragma once
 
 namespace pserv
 {
     namespace utils
     {
-
-        /**
-         * File type filter for save/open dialogs.
-         */
+        /// @brief File type filter for save/open dialogs.
         struct FileTypeFilter
         {
-            std::wstring name;    // Display name (e.g., L"JSON Files")
-            std::wstring pattern; // Pattern (e.g., L"*.json")
+            std::wstring name;    ///< Display name (e.g., L"JSON Files").
+            std::wstring pattern; ///< Pattern (e.g., L"*.json").
         };
 
-        /**
-         * Show a native Windows file save dialog using IFileSaveDialog COM interface.
-         * @param hwnd Parent window handle
-         * @param title Dialog title
-         * @param defaultFileName Default file name (without extension)
-         * @param filters File type filters
-         * @param defaultFilterIndex Zero-based index of default filter
-         * @param outFilePath [out] Selected file path (empty if cancelled)
-         * @return true if user selected a file, false if cancelled
-         */
+        /// @brief Show a native Windows file save dialog.
+        /// @param hwnd Parent window handle.
+        /// @param title Dialog title.
+        /// @param defaultFileName Default file name (without extension).
+        /// @param filters File type filters.
+        /// @param defaultFilterIndex Zero-based index of default filter.
+        /// @param outFilePath [out] Selected file path (empty if cancelled).
+        /// @return true if user selected a file, false if cancelled.
         bool SaveFileDialog(HWND hwnd,
             const std::wstring &title,
             const std::wstring &defaultFileName,

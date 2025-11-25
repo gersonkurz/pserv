@@ -1,9 +1,14 @@
+/// @file network_connection_info.h
+/// @brief Data model for active network connection information.
+///
+/// Contains NetworkConnectionInfo class representing a TCP or UDP
+/// connection/socket from the IP Helper API.
 #pragma once
 #include <core/data_object.h>
 
 namespace pserv
 {
-
+    /// @brief Column indices for network connection properties.
     enum class NetworkConnectionProperty
     {
         Protocol = 0,
@@ -16,31 +21,39 @@ namespace pserv
         ProcessName
     };
 
+    /// @brief Network protocol type.
     enum class NetworkProtocol
     {
-        TCP,
-        UDP,
-        TCPv6,
-        UDPv6
+        TCP,    ///< TCP over IPv4.
+        UDP,    ///< UDP over IPv4.
+        TCPv6,  ///< TCP over IPv6.
+        UDPv6   ///< UDP over IPv6.
     };
 
-    // TCP connection states (from MIB_TCP_STATE)
+    /// @brief TCP connection state (matches MIB_TCP_STATE).
     enum class TcpState
     {
-        Closed = 1,
-        Listen = 2,
-        SynSent = 3,
-        SynReceived = 4,
-        Established = 5,
-        FinWait1 = 6,
-        FinWait2 = 7,
-        CloseWait = 8,
-        Closing = 9,
-        LastAck = 10,
-        TimeWait = 11,
-        DeleteTcb = 12
+        Closed = 1,       ///< Connection closed.
+        Listen = 2,       ///< Listening for connections.
+        SynSent = 3,      ///< SYN packet sent.
+        SynReceived = 4,  ///< SYN packet received.
+        Established = 5,  ///< Connection established.
+        FinWait1 = 6,     ///< FIN sent, waiting for ACK.
+        FinWait2 = 7,     ///< FIN acknowledged, waiting for FIN.
+        CloseWait = 8,    ///< FIN received, waiting for close.
+        Closing = 9,      ///< Both sides sent FIN.
+        LastAck = 10,     ///< Waiting for final ACK.
+        TimeWait = 11,    ///< Waiting for delayed packets.
+        DeleteTcb = 12    ///< TCB being deleted.
     };
 
+    /// @brief Data model representing a network connection.
+    ///
+    /// Stores connection information from IP Helper API:
+    /// - Endpoints: local/remote address and port
+    /// - Protocol: TCP, UDP, IPv4, IPv6
+    /// - State: TCP connection state
+    /// - Owner: process ID and name
     class NetworkConnectionInfo : public DataObject
     {
     private:

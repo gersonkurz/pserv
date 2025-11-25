@@ -1,9 +1,15 @@
+/// @file win32_error.h
+/// @brief Win32 error message formatting and logging utilities.
+///
+/// Provides functions and macros for converting Win32 error codes to
+/// human-readable messages and logging API failures with source location.
 #pragma once
 
 namespace pserv::utils
 {
-
-    /// Get formatted error message for a Win32 error code
+    /// @brief Get formatted error message for a Win32 error code.
+    /// @param errorCode The Win32 error code (from GetLastError() or API return).
+    /// @return Human-readable error message with hex code.
     inline std::string GetWin32ErrorMessage(DWORD errorCode)
     {
         if (errorCode == 0)

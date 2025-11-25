@@ -1,3 +1,8 @@
+/// @file typed_vector_value.h
+/// @brief Template class for storing dynamic arrays of configuration sections.
+///
+/// TypedValueVector<T> allows storing a variable number of configuration
+/// sections, useful for lists like recent files or saved connections.
 #pragma once
 
 #include <config/value_interface.h>
@@ -10,9 +15,31 @@ namespace pserv
 
         extern std::shared_ptr<spdlog::logger> logger;
 
+        /// @brief Template class for storing a dynamic array of Section-derived items.
+        /// @tparam SectionType A class derived from Section.
+        ///
+        /// TypedValueVector manages a vector of configuration sections that can
+        /// grow or shrink at runtime. Items are stored with indexed paths
+        /// (e.g., "RecentFiles/0", "RecentFiles/1", etc.).
+        ///
+        /// @par Example Usage:
+        /// @code
+        /// struct RecentFile : public Section {
+        ///     RecentFile(Section* parent, std::string name)
+        ///         : Section(parent, name) {}
+        ///     TypedValue<std::string> path{this, "Path", ""};
+        ///     TypedValue<int32_t> timestamp{this, "Timestamp", 0};
+        /// };
+        ///
+        /// TypedValueVector<RecentFile> recentFiles{this, "RecentFiles"};
+        /// recentFiles.addNew()->path.set("/path/to/file");
+        /// @endcode
         template <typename SectionType> class TypedValueVector : public ValueInterface
         {
         public:
+            /// @brief Construct a vector container.
+            /// @param parentSection Parent section that owns this vector.
+            /// @param keyName Name for this vector in the configuration path.
             TypedValueVector(Section *parentSection, std::string keyName)
                 : m_keyName{std::move(keyName)},
                   m_parentSection{parentSection}

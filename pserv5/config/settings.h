@@ -1,3 +1,8 @@
+/// @file settings.h
+/// @brief Application-wide configuration settings structure.
+///
+/// This file defines the complete configuration schema for pserv5,
+/// including window state, display preferences, and per-table settings.
 #pragma once
 
 #include <config/section.h>
@@ -8,20 +13,44 @@ namespace pserv
     namespace config
     {
 
+        /// @brief Configuration section for table/grid display settings.
+        ///
+        /// Each data view (Services, Processes, etc.) has its own DisplayTable
+        /// to store column widths, order, and sort preferences.
         struct DisplayTable : public Section
         {
             DisplayTable(Section *pParent, std::string name)
                 : Section{pParent, name}
             {
             }
-            // Default widths for 18 columns: DisplayName, Name, Status, StartType, ProcessId, ServiceType, BinaryPathName, Description, User, LoadOrderGroup,
-            // ErrorControl, TagId, Win32ExitCode, ServiceSpecificExitCode, CheckPoint, WaitHint, ServiceFlags, ControlsAccepted
+
+            /// @brief Comma-separated list of column widths in pixels.
             TypedValue<std::string> columnWidths{this, "ColumnWidths", "250,180,120,100,80,200,400,300,150,120,80,60,100,150,80,80,80,200"};
+
+            /// @brief Comma-separated list of column indices defining display order.
             TypedValue<std::string> columnOrder{this, "ColumnOrder", "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17"};
+
+            /// @brief Index of the column to sort by (-1 for no sort).
             TypedValue<int32_t> sortColumn{this, "SortColumn", -1};
+
+            /// @brief Sort direction: true for ascending, false for descending.
             TypedValue<bool> sortAscending{this, "SortAscending", true};
         };
 
+        /// @brief Root configuration section containing all application settings.
+        ///
+        /// RootSettings is the top-level Section that owns all configuration
+        /// subsections. Use the global `theSettings` instance to access settings.
+        ///
+        /// @par Example Usage:
+        /// @code
+        /// // Read a setting
+        /// int width = config::theSettings.window.width;
+        ///
+        /// // Write a setting
+        /// config::theSettings.window.width.set(1920);
+        /// config::theSettings.save(*backend);
+        /// @endcode
         class RootSettings : public Section
         {
         public:

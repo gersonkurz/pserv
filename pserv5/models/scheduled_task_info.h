@@ -1,9 +1,14 @@
+/// @file scheduled_task_info.h
+/// @brief Data model for Windows Task Scheduler task information.
+///
+/// Contains ScheduledTaskInfo class representing a scheduled task
+/// from the Task Scheduler service.
 #pragma once
 #include <core/data_object.h>
 
 namespace pserv
 {
-
+    /// @brief Column indices for scheduled task properties.
     enum class ScheduledTaskProperty
     {
         Name = 0,
@@ -15,15 +20,22 @@ namespace pserv
         Enabled
     };
 
+    /// @brief Execution state of a scheduled task.
     enum class ScheduledTaskState
     {
-        Unknown = 0,
-        Disabled = 1,
-        Queued = 2,
-        Ready = 3,
-        Running = 4
+        Unknown = 0,   ///< State cannot be determined.
+        Disabled = 1,  ///< Task is disabled.
+        Queued = 2,    ///< Task is queued to run.
+        Ready = 3,     ///< Task is ready, waiting for trigger.
+        Running = 4    ///< Task is currently executing.
     };
 
+    /// @brief Data model representing a scheduled task.
+    ///
+    /// Stores task information from Task Scheduler 2.0 COM API:
+    /// - Identity: name, path, author
+    /// - Schedule: triggers, last/next run times
+    /// - State: enabled, current execution state
     class ScheduledTaskInfo : public DataObject
     {
     private:

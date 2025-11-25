@@ -1,3 +1,8 @@
+/// @file toml_backend.h
+/// @brief TOML file-based configuration backend implementation.
+///
+/// TomlBackend provides persistent storage for configuration values using
+/// the TOML file format. Configuration is stored in %APPDATA%/pserv5/config.toml.
 #pragma once
 
 #include <config/config_backend.h>
@@ -10,9 +15,29 @@ namespace pserv
 
         extern std::shared_ptr<spdlog::logger> logger;
 
+        /// @brief ConfigBackend implementation using TOML files.
+        ///
+        /// This class reads and writes configuration values to a TOML file.
+        /// Changes are persisted immediately on each save() call.
+        ///
+        /// @par File Format:
+        /// @code
+        /// [Window]
+        /// Width = 1280
+        /// Height = 720
+        /// Maximized = false
+        ///
+        /// [Application]
+        /// Theme = "Dark"
+        /// @endcode
         class TomlBackend : public ConfigBackend
         {
         public:
+            /// @brief Construct a TOML backend for the specified file.
+            /// @param filename Path to the TOML configuration file.
+            ///
+            /// If the file exists, it will be loaded. If not, an empty
+            /// configuration will be created (file is created on first save).
             explicit TomlBackend(const std::string &filename)
                 : m_filename{filename},
                   m_config{}

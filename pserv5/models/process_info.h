@@ -1,9 +1,14 @@
+/// @file process_info.h
+/// @brief Data model for running process information.
+///
+/// Contains ProcessInfo class representing a running process with
+/// memory usage, timing, and identification properties.
 #pragma once
 #include <core/data_object.h>
 
 namespace pserv
 {
-
+    /// @brief Column indices for process properties.
     enum class ProcessProperty
     {
         Name = 0,
@@ -31,6 +36,12 @@ namespace pserv
         PageFaultCount
     };
 
+    /// @brief Data model representing a running process.
+    ///
+    /// Stores process information from Tool Help and process APIs:
+    /// - Identity: PID, name, path, command line, owning user
+    /// - Resources: memory usage, handle/thread counts
+    /// - Timing: start time, CPU time (user/kernel)
     class ProcessInfo : public DataObject
     {
     private:

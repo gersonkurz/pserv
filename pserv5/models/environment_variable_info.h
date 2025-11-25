@@ -1,9 +1,14 @@
+/// @file environment_variable_info.h
+/// @brief Data model for environment variable information.
+///
+/// Contains EnvironmentVariableInfo class representing a system or
+/// user environment variable from the Windows registry.
 #pragma once
 #include <core/data_object.h>
 
 namespace pserv
 {
-
+    /// @brief Column indices for environment variable properties.
     enum class EnvironmentVariableProperty
     {
         Name = 0,
@@ -11,12 +16,18 @@ namespace pserv
         Scope
     };
 
+    /// @brief Scope of the environment variable.
     enum class EnvironmentVariableScope
     {
-        System,
-        User
+        System,  ///< System-wide variable (HKLM).
+        User     ///< Per-user variable (HKCU).
     };
 
+    /// @brief Data model representing an environment variable.
+    ///
+    /// Stores environment variable information from registry:
+    /// - HKCU\\Environment for user variables
+    /// - HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment for system variables
     class EnvironmentVariableInfo : public DataObject
     {
     private:

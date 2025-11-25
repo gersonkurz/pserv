@@ -1,3 +1,8 @@
+/// @file base_app.h
+/// @brief Application initialization and lifecycle management.
+///
+/// BaseApp handles startup sequence: memory leak detection, logging
+/// initialization, config loading, and log file configuration.
 #pragma once
 
 #include <filesystem>
@@ -8,9 +13,17 @@
 #include <config/settings.h>
 
 namespace pserv
-{    
+{
     namespace utils
     {
+        /// @brief Application bootstrap class.
+        ///
+        /// Instantiate at the start of main() to initialize:
+        /// 1. CRT memory leak detection (debug builds)
+        /// 2. Logging with console/debug output
+        /// 3. Configuration from TOML file
+        /// 4. File logging with configured path
+        /// 5. Log level from configuration
         class BaseApp final
         {
         public:
@@ -63,9 +76,9 @@ namespace pserv
                 delete m_pBackend;
             }
 
-            config::TomlBackend *m_pBackend = nullptr;
-            std::filesystem::path m_appDataPath;
-            std::filesystem::path m_configPath;
+            config::TomlBackend *m_pBackend = nullptr; ///< Configuration backend.
+            std::filesystem::path m_appDataPath;        ///< %APPDATA%/pserv5 path.
+            std::filesystem::path m_configPath;         ///< Path to pserv5.toml.
         };
     } // namespace utils
 } // namespace pserv

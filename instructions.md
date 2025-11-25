@@ -12,7 +12,7 @@
 - ✅ Export System: JSON and plaintext export/copy functionality for all views
 - ✅ UI: Custom title bar, modern menu bar, DPI-aware rendering, context menus, async operations
 
-**Current completion: ~95%** (All major views implemented, auto-refresh complete)
+**Current completion: 100%** (Initial release ready)
 
 ## Core Architecture
 
@@ -200,11 +200,22 @@ theSettings.save();  // Persist to disk
 
 ### TODO
 
+All initial release tasks completed.
+
 #### User Documentation ✅
 Created `docs/pservc.md` (comprehensive CLI reference) and `docs/pserv5.md` (GUI overview with screenshot placeholders).
 
-#### Code Documentation
-Systematically document all classes / methods, ideally in a system that can be exported (e.g. doxygen or modern alternatives)
+#### Code Documentation ✅
+Added Doxygen-style documentation to all 63 header files across all modules:
+- `config/` (7 files) - Configuration system
+- `core/` (9 files) - Base abstractions
+- `controllers/` (10 files) - Data controllers
+- `actions/` (10 files) - Action implementations
+- `models/` (9 files) - Data objects
+- `windows_api/` (9 files) - Windows API wrappers
+- `utils/` (6 files) - Utilities
+- `dialogs/` (1 file) - Properties dialog
+- `pservc/` (2 files) - Console application
 
 #### Security Review ✅
 Completed. No critical vulnerabilities found. Codebase uses modern C++ with RAII patterns, WIL for handle management, no unsafe string operations, and proper error handling. Inherent risks (ShellExecute with system-derived paths) are appropriate for a system admin tool.

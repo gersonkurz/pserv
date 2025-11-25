@@ -1,9 +1,14 @@
+/// @file startup_program_info.h
+/// @brief Data model for Windows startup program entries.
+///
+/// Contains StartupProgramInfo class representing a program configured
+/// to run at Windows startup from registry Run keys or Startup folders.
 #pragma once
 #include <core/data_object.h>
 
 namespace pserv
 {
-
+    /// @brief Column indices for startup program properties.
     enum class StartupProgramProperty
     {
         Name = 0,
@@ -13,19 +18,26 @@ namespace pserv
         Enabled
     };
 
+    /// @brief Type of startup entry storage location.
     enum class StartupProgramType
     {
-        RegistryRun,
-        RegistryRunOnce,
-        StartupFolder
+        RegistryRun,      ///< Registry Run key (persistent).
+        RegistryRunOnce,  ///< Registry RunOnce key (one-time).
+        StartupFolder     ///< Startup folder shortcut.
     };
 
+    /// @brief Scope of the startup entry (user vs system-wide).
     enum class StartupProgramScope
     {
-        System,  // HKLM or ProgramData
-        User     // HKCU or AppData
+        System,  ///< HKLM or ProgramData (all users).
+        User     ///< HKCU or AppData (current user only).
     };
 
+    /// @brief Data model representing a startup program entry.
+    ///
+    /// Stores startup entry information from:
+    /// - Registry Run/RunOnce keys (HKLM and HKCU)
+    /// - Startup folders (common and per-user)
     class StartupProgramInfo : public DataObject
     {
     private:

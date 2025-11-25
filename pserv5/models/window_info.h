@@ -1,9 +1,14 @@
+/// @file window_info.h
+/// @brief Data model for desktop window information.
+///
+/// Contains WindowInfo class representing a top-level window with
+/// its title, class, dimensions, and owning process.
 #pragma once
 #include <core/data_object.h>
 
 namespace pserv
 {
-
+    /// @brief Column indices for window properties.
     enum class WindowProperty
     {
         InternalID,
@@ -19,6 +24,13 @@ namespace pserv
         Process
     };
 
+    /// @brief Data model representing a desktop window.
+    ///
+    /// Stores window information from the Win32 window manager:
+    /// - Identity: handle, title, window class
+    /// - Geometry: position and size
+    /// - Style: window and extended style flags
+    /// - Ownership: process ID, thread ID, process name
     class WindowInfo : public DataObject
     {
     public:

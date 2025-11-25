@@ -1,38 +1,44 @@
+/// @file scheduled_task_manager.h
+/// @brief Windows Task Scheduler COM API wrapper.
+///
+/// Provides task enumeration and control operations using the
+/// Task Scheduler 2.0 COM interface.
 #pragma once
-
 
 namespace pserv
 {
     class DataObjectContainer;
     class ScheduledTaskInfo;
 
+    /// @brief Static class for Task Scheduler operations.
+    ///
+    /// Uses ITaskService COM interface to enumerate and control
+    /// scheduled tasks. Recursively enumerates all task folders.
     class ScheduledTaskManager
     {
     public:
-        // Enumerate all scheduled tasks
+        /// @brief Enumerate all scheduled tasks into a container.
+        /// @param doc Container to populate with ScheduledTaskInfo objects.
         static void EnumerateTasks(DataObjectContainer *doc);
 
-        // Enable/disable a task
+        /// @brief Enable or disable a scheduled task.
+        /// @param task The task to modify.
+        /// @param enabled true to enable, false to disable.
         static bool SetTaskEnabled(const ScheduledTaskInfo *task, bool enabled);
 
-        // Run a task immediately
+        /// @brief Run a task immediately.
+        /// @param task The task to execute.
         static bool RunTask(const ScheduledTaskInfo *task);
 
-        // Delete a task
+        /// @brief Delete a scheduled task.
+        /// @param task The task to delete.
         static bool DeleteTask(const ScheduledTaskInfo *task);
 
     private:
-        // Helper to recursively enumerate tasks from a folder
         static void EnumerateTasksInFolder(ITaskFolder *pFolder,
             const std::wstring &folderPath, DataObjectContainer *doc);
-
-        // Helper to extract task information
         static void ExtractTaskInfo(DataObjectContainer *doc, IRegisteredTask *pTask, const std::wstring &taskPath);
-
-        // Helper to format SYSTEMTIME to string
         static std::string FormatSystemTime(const SYSTEMTIME &st);
-
-        // Helper to format trigger description
         static std::string FormatTriggerDescription(ITaskDefinition *pTaskDef);
     };
 

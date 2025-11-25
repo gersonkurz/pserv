@@ -1,9 +1,14 @@
+/// @file installed_program_info.h
+/// @brief Data model for installed program information.
+///
+/// Contains InstalledProgramInfo class representing an installed
+/// application from the Windows registry uninstall keys.
 #pragma once
 #include <core/data_object.h>
 
 namespace pserv
 {
-
+    /// @brief Column indices for installed program properties.
     enum class ProgramProperty
     {
         DisplayName = 0,
@@ -18,6 +23,13 @@ namespace pserv
         URLInfoAbout
     };
 
+    /// @brief Data model representing an installed program.
+    ///
+    /// Stores program information from registry uninstall keys:
+    /// - Identity: display name, version, publisher
+    /// - Installation: location, date, size
+    /// - Uninstall: uninstall command string
+    /// - Links: help URL, about URL
     class InstalledProgramInfo : public DataObject
     {
     public:

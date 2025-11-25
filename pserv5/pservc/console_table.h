@@ -1,3 +1,8 @@
+/// @file console_table.h
+/// @brief Console table renderer for DataObject collections.
+///
+/// Provides formatted table, JSON, and CSV output of data controller
+/// contents for the command-line interface.
 #pragma once
 #include <core/data_object.h>
 #include <core/data_object_column.h>
@@ -9,15 +14,18 @@ namespace pserv
 {
     namespace console
     {
-        // Output format for table rendering
+        /// @brief Output format for console rendering.
         enum class OutputFormat
         {
-            Table, // Formatted table with colors
-            Json,  // JSON output
-            Csv    // CSV output
+            Table, ///< Formatted ASCII table with colors.
+            Json,  ///< JSON array output.
+            Csv    ///< Comma-separated values.
         };
 
-        // Table renderer for DataObject collections
+        /// @brief Table renderer for DataObject collections.
+        ///
+        /// Renders data controller contents to the console in various
+        /// formats with support for filtering and column alignment.
         class ConsoleTable
         {
         private:
@@ -29,9 +37,10 @@ namespace pserv
         public:
             ConsoleTable(const DataController *controller, OutputFormat format = OutputFormat::Table);
 
-            // Render the entire table (headers + all rows)
-            // filter: optional case-insensitive substring filter across all fields (empty = no filter)
-            // columnFilters: map of column index -> filter value for column-specific filtering
+            /// @brief Render the data to console.
+            /// @param objects Container of DataObjects to render.
+            /// @param filter Optional case-insensitive substring filter (empty = no filter).
+            /// @param columnFilters Map of column index -> filter value for column-specific filtering.
             void Render(const DataObjectContainer &objects, const std::string &filter = "", const std::map<int, std::string> &columnFilters = {});
 
         private:

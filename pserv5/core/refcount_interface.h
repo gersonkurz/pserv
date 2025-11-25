@@ -1,5 +1,12 @@
+/// @file refcount_interface.h
+/// @brief Reference counting infrastructure for managed object lifetimes.
+///
+/// Provides IRefCounted interface and RefCountImpl base class for automatic
+/// memory management of DataObject instances in containers.
 #pragma once
 
+/// @def USE_REFCOUNT_DEBUGGING
+/// @brief Enable to add file/line tracking to Retain/Release calls for debugging.
 #undef USE_REFCOUNT_DEBUGGING
 #ifdef USE_REFCOUNT_DEBUGGING
 #define REFCOUNT_DEBUG_ARGS __FILE__, __LINE__
@@ -11,17 +18,21 @@
 
 namespace pserv
 {
+    /// @brief Interface for reference-counted objects.
+    ///
+    /// Objects implementing IRefCounted can be shared across multiple owners
+    /// with automatic cleanup when the last reference is released.
     class IRefCounted
     {
     public:
-        IRefCounted() = default; // Default constructor
+        IRefCounted() = default;
         virtual ~IRefCounted() = default;
 
-        // Note: We use deleted move constructors/assignment operators to allow moving but prevent copying.
-        IRefCounted(const IRefCounted &) = delete;            // No copy
-        IRefCounted &operator=(const IRefCounted &) = delete; // No assignment
-        IRefCounted(IRefCounted &&) = default;                // Move is fine
-        IRefCounted &operator=(IRefCounted &&) = default;     // Move assignment is fine
+        // Non-copyable but movable
+        IRefCounted(const IRefCounted &) = delete;
+        IRefCounted &operator=(const IRefCounted &) = delete;
+        IRefCounted(IRefCounted &&) = default;
+        IRefCounted &operator=(IRefCounted &&) = default;
 
         /// @brief Increment the reference count.
         /// This method should be called when a new reference to the object is created.
@@ -46,6 +57,11 @@ namespace pserv
         virtual std::string GetStableID() const = 0;
     };
 
+    /// @brief Mixin template that adds reference counting to any base class.
+    /// @tparam T Base class that will gain reference counting capability.
+    ///
+    /// Use this when you need to add reference counting to an existing class
+    /// hierarchy without modifying the base class.
     template <typename T> class RefCounted : public T
     {
     public:
@@ -65,12 +81,17 @@ namespace pserv
         }
         void Clear() override
         {
-        } // Often unused in non-UI objects
+        }
 
     private:
-        mutable std::atomic<int> m_refCount;
+        mutable std::atomic<int> m_refCount; ///< Thread-safe reference counter.
     };
 
+    /// @brief Concrete implementation of IRefCounted for direct inheritance.
+    ///
+    /// Use this as a base class for objects that need reference counting.
+    /// The object starts with a reference count of 1 and is deleted when
+    /// the count reaches 0.
     class RefCountImpl : public IRefCounted
     {
     public:
@@ -92,9 +113,9 @@ namespace pserv
 
         void Clear() override
         {
-        } // Often unused in non-UI objects
+        }
 
     private:
-        mutable std::atomic<int> m_refCount;
+        mutable std::atomic<int> m_refCount; ///< Thread-safe reference counter.
     };
 } // namespace pserv

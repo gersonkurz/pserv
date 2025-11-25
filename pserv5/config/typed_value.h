@@ -1,3 +1,8 @@
+/// @file typed_value.h
+/// @brief Template class for storing typed configuration values.
+///
+/// TypedValue<T> represents a leaf node in the configuration tree that
+/// holds an actual value of type T (int32_t, bool, or std::string).
 #pragma once
 
 #include <config/value_interface.h>
@@ -9,9 +14,25 @@ namespace pserv
 
         extern std::shared_ptr<spdlog::logger> logger;
 
-        /// @brief Template for holding actual data values in the configuration system.
-        /// @tparam T The type of the value to hold, e.g. int, bool, std::string.
-        /// @note This class is a leaf in the configuration tree, meaning it does not have child items
+        /// @brief Template class for holding typed configuration values.
+        /// @tparam T The value type: int32_t, bool, or std::string.
+        ///
+        /// TypedValue is a leaf node in the configuration tree. It stores a single
+        /// value of type T along with a default value for reset functionality.
+        ///
+        /// @par Example Usage:
+        /// @code
+        /// TypedValue<int32_t> width{this, "Width", 1280};  // Default: 1280
+        /// TypedValue<bool> maximized{this, "Maximized", false};
+        /// TypedValue<std::string> theme{this, "Theme", "Dark"};
+        ///
+        /// // Reading
+        /// int w = width.get();
+        /// int w2 = width;  // Implicit conversion
+        ///
+        /// // Writing
+        /// width.set(1920);
+        /// @endcode
         template <typename T> class TypedValue : public ValueInterface
         {
         public:

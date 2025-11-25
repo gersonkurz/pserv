@@ -1,7 +1,9 @@
+/// @file value_interface.h
+/// @brief Base interface for all configuration values in the hierarchy.
+///
+/// This file defines ValueInterface, the abstract base class for all nodes
+/// in the configuration tree (both Section containers and TypedValue leaves).
 #pragma once
-
-// @file pserv::config/value_interface.h
-// @brief defines what a configuration value does
 
 #include <config/config_backend.h>
 

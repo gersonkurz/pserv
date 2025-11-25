@@ -1,19 +1,28 @@
+/// @file module_manager.h
+/// @brief Windows module (DLL) enumeration API wrapper.
+///
+/// Provides module listing for a specific process using the
+/// PSAPI EnumProcessModules function.
 #pragma once
 
 namespace pserv
 {
     class DataObjectContainer;
 
+    /// @brief Static class for module enumeration.
+    ///
+    /// Uses EnumProcessModules from PSAPI to list all DLLs loaded
+    /// in a target process's address space.
     class ModuleManager final
     {
     public:
-        // Enumerates all modules for a given process ID
+        /// @brief Enumerate all modules loaded in a process.
+        /// @param doc Container to populate with ModuleInfo objects.
+        /// @param processId Target process ID.
         static void EnumerateModules(DataObjectContainer *doc, uint32_t processId);
 
     private:
-        // Helper to get module base name (e.g., "ntdll.dll")
         static std::string RetrieveModuleBaseName(HANDLE hProcess, HMODULE hModule);
-        // Helper to get module full path (e.g., "C:\Windows\System32\ntdll.dll")
         static std::string RetrieveModuleFileName(HANDLE hProcess, HMODULE hModule);
     };
 

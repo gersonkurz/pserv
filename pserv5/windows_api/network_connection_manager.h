@@ -1,3 +1,8 @@
+/// @file network_connection_manager.h
+/// @brief Windows IP Helper API wrapper for network connections.
+///
+/// Provides enumeration of active TCP/UDP connections (IPv4 and IPv6)
+/// and TCP connection termination using SetTcpEntry.
 #pragma once
 #include <core/data_object.h>
 #include <models/network_connection_info.h>
@@ -6,35 +11,32 @@ namespace pserv
 {
     class DataObjectContainer;
 
+    /// @brief Static class for network connection enumeration and control.
+    ///
+    /// Uses GetExtendedTcpTable/GetExtendedUdpTable for enumeration
+    /// and SetTcpEntry for closing TCP connections.
     class NetworkConnectionManager final
     {
     public:
-        // Enumerate all network connections
+        /// @brief Enumerate all network connections into a container.
+        /// @param doc Container to populate with NetworkConnectionInfo objects.
+        /// Enumerates TCP and UDP connections for both IPv4 and IPv6.
         static void EnumerateConnections(DataObjectContainer *doc);
 
-        // Close a TCP connection
+        /// @brief Close a TCP connection.
+        /// @param connection The TCP connection to close.
+        /// @return true on success.
+        /// @note Only works for TCP connections in Established state.
+        /// @note Requires administrator privileges.
         static bool CloseConnection(const NetworkConnectionInfo *connection);
 
     private:
-        // Helper to enumerate TCP connections (IPv4)
         static void EnumerateTcpConnections(DataObjectContainer *doc);
-
-        // Helper to enumerate TCP connections (IPv6)
         static void EnumerateTcp6Connections(DataObjectContainer *doc);
-
-        // Helper to enumerate UDP connections (IPv4)
         static void EnumerateUdpConnections(DataObjectContainer *doc);
-
-        // Helper to enumerate UDP connections (IPv6)
         static void EnumerateUdp6Connections(DataObjectContainer *doc);
-
-        // Helper to get process name from PID
         static std::string GetProcessNameFromPid(DWORD pid);
-
-        // Helper to format IPv4 address
         static std::string FormatIPv4Address(DWORD addr);
-
-        // Helper to format IPv6 address
         static std::string FormatIPv6Address(const BYTE addr[16]);
     };
 

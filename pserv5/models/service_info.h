@@ -1,9 +1,14 @@
+/// @file service_info.h
+/// @brief Data model for Windows service information.
+///
+/// Contains ServiceInfo class representing a Windows service with all
+/// its configuration and runtime status properties.
 #pragma once
 #include <core/data_object.h>
 
 namespace pserv
 {
-
+    /// @brief Column indices for service properties.
     enum class ServiceProperty
     {
         Name = 0,
@@ -26,6 +31,12 @@ namespace pserv
         ControlsAccepted
     };
 
+    /// @brief Data model representing a Windows service.
+    ///
+    /// Stores all service information from the Service Control Manager:
+    /// - Identity: name, display name, description
+    /// - Configuration: start type, binary path, service account
+    /// - Runtime status: current state, process ID, exit codes
     class ServiceInfo : public DataObject
     {
     private:

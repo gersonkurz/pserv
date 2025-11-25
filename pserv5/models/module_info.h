@@ -1,9 +1,14 @@
+/// @file module_info.h
+/// @brief Data model for loaded module (DLL) information.
+///
+/// Contains ModuleInfo class representing a DLL or executable module
+/// loaded in a process's address space.
 #pragma once
 #include <core/data_object.h>
 
 namespace pserv
 {
-
+    /// @brief Column indices for module properties.
     enum class ModuleProperty
     {
         BaseAddress = 0,
@@ -13,6 +18,12 @@ namespace pserv
         ProcessId
     };
 
+    /// @brief Data model representing a loaded module.
+    ///
+    /// Stores module information from Tool Help snapshots:
+    /// - Identity: module name and full path
+    /// - Memory: base address and size in memory
+    /// - Context: owning process ID
     class ModuleInfo : public DataObject
     {
     public:
