@@ -217,12 +217,6 @@ Systematically document all classes / methods, ideally in a system that can be e
 #### Security Review
 Perform a security review via AI
 
-#### ARM64 build
-Add ARM64 build for Parallels Desktop use on Macbook Pro M4
-
-#### Add proper Win32 version resources
-Exactly. We have a .rc file, but it doesn't contain a lot of meaningful data.
-
 ## Historical Context
 
 - **1998 (v1)**: Custom Windows library
