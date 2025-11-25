@@ -4,6 +4,12 @@
 
 A Windows system administration tool for managing services, devices, processes, and more. Native C++20 application with a modern ImGui interface.
 
+More than 10 years after the last iteration, I decided to rewrite an old tool of mine originally started in 1998. [Click here to find out more about the history of the product](https://p-nand-q.com/download/pserv_cpl/index.html).
+
+## Manual
+
+[Brief instructions for the UI](docs/pserv5.md) and [for the command line interface](docs/pservc.md).
+
 ## Screenshot
 
 ![Screenshot of main application](docs/main.png)
