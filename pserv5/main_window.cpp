@@ -1452,8 +1452,25 @@ namespace pserv
                         bool isSelected = std::find(m_dispatchContext.m_selectedObjects.begin(), m_dispatchContext.m_selectedObjects.end(), dataObject) !=
                                           m_dispatchContext.m_selectedObjects.end();
 
-                        if (ImGui::Selectable(value.c_str(), isSelected, ImGuiSelectableFlags_SpanAllColumns))
+                        if (ImGui::Selectable(value.c_str(), isSelected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick))
                         {
+                            // Handle double-click: open properties dialog
+                            if (ImGui::IsMouseDoubleClicked(0))
+                            {
+                                // Select only this item for properties dialog
+                                for (auto *obj : m_dispatchContext.m_selectedObjects)
+                                {
+                                    obj->Release(REFCOUNT_DEBUG_ARGS);
+                                }
+                                m_dispatchContext.m_selectedObjects.clear();
+                                dataObject->Retain(REFCOUNT_DEBUG_ARGS);
+                                m_dispatchContext.m_selectedObjects.push_back(dataObject);
+                                m_lastClickedObject = dataObject;
+
+                                theDataPropertiesAction.Execute(m_dispatchContext);
+                            }
+                            else
+                            {
                             // Handle selection logic
                             ImGuiIO &io = ImGui::GetIO();
 
@@ -1512,6 +1529,7 @@ namespace pserv
                                 dataObject->Retain(REFCOUNT_DEBUG_ARGS);
                                 m_dispatchContext.m_selectedObjects.push_back(dataObject);
                                 m_lastClickedObject = dataObject;
+                            }
                             }
                         }
 
