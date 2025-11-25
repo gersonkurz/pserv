@@ -194,9 +194,7 @@ theSettings.save();  // Persist to disk
 ### Incomplete Features
 1. **Add Environment Variable** ✅ Implemented with dialog
 
-2. **Close TCP Connection** (`network_connection_actions.cpp:130`)
-   - Shows "Not Yet Implemented" placeholder
-   - Requires `SetTcpEntry` implementation or hide action
+2. **Close TCP Connection** ✅ Implemented (IPv4 only, requires admin)
 
 3. **Missing Auto-Refresh After Deletes** (3 locations)
    - Environment variables, scheduled tasks, startup programs

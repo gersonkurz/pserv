@@ -248,15 +248,44 @@ namespace pserv
             MIB_TCPROW row{};
             row.dwState = MIB_TCP_STATE_DELETE_TCB;
 
-            // Convert address strings back to network byte order
-            // This is simplified - in production would need proper parsing
-            spdlog::warn("TCP connection closing not fully implemented - requires address parsing");
-            return false;
+            // Convert local address string to network byte order
+            struct in_addr localAddr;
+            if (inet_pton(AF_INET, connection->GetLocalAddress().c_str(), &localAddr) != 1)
+            {
+                spdlog::error("Failed to parse local address: {}", connection->GetLocalAddress());
+                return false;
+            }
+            row.dwLocalAddr = localAddr.S_un.S_addr;
+            row.dwLocalPort = htons(static_cast<u_short>(connection->GetLocalPort()));
+
+            // Convert remote address string to network byte order
+            struct in_addr remoteAddr;
+            if (inet_pton(AF_INET, connection->GetRemoteAddress().c_str(), &remoteAddr) != 1)
+            {
+                spdlog::error("Failed to parse remote address: {}", connection->GetRemoteAddress());
+                return false;
+            }
+            row.dwRemoteAddr = remoteAddr.S_un.S_addr;
+            row.dwRemotePort = htons(static_cast<u_short>(connection->GetRemotePort()));
+
+            DWORD result = SetTcpEntry(&row);
+            if (result != NO_ERROR)
+            {
+                LogWin32ErrorCode("SetTcpEntry", result, "closing TCP connection {}:{} -> {}:{}",
+                    connection->GetLocalAddress(), connection->GetLocalPort(),
+                    connection->GetRemoteAddress(), connection->GetRemotePort());
+                return false;
+            }
+
+            spdlog::info("Closed TCP connection {}:{} -> {}:{}",
+                connection->GetLocalAddress(), connection->GetLocalPort(),
+                connection->GetRemoteAddress(), connection->GetRemotePort());
+            return true;
         }
         else
         {
-            // IPv6
-            spdlog::warn("TCPv6 connection closing not implemented");
+            // IPv6 - SetTcpEntry doesn't support IPv6, would need SetTcp6Entry (undocumented)
+            spdlog::warn("Closing TCPv6 connections is not supported by the Windows API");
             return false;
         }
     }

@@ -129,8 +129,8 @@ namespace pserv
             bool IsAvailableFor(const DataObject *obj) const override
             {
                 const auto *conn = GetConnectionInfo(obj);
-                // Only TCP connections can be closed
-                return (conn->GetProtocol() == NetworkProtocol::TCP || conn->GetProtocol() == NetworkProtocol::TCPv6) &&
+                // Only IPv4 TCP connections can be closed (IPv6 not supported by SetTcpEntry)
+                return conn->GetProtocol() == NetworkProtocol::TCP &&
                        conn->GetState() != TcpState::Listen &&
                        conn->GetState() != TcpState::Closed;
             }
@@ -142,19 +142,37 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-                // TODO: Implement TCP connection closing
-                // Requires parsing addresses back to binary format and calling SetTcpEntry
-                spdlog::error("Closing TCP connections is not yet implemented");
+                for (const auto *obj : ctx.m_selectedObjects)
+                {
+                    const auto *conn = GetConnectionInfo(obj);
+
+                    // Check for IPv6 - not supported
+                    if (conn->GetProtocol() == NetworkProtocol::TCPv6)
+                    {
+                        spdlog::warn("Cannot close TCPv6 connection - not supported by Windows API");
 #ifndef PSERV_CONSOLE_BUILD
-                MessageBoxA(ctx.m_hWnd,
-                    "Closing TCP connections is not yet implemented.\n\n"
-                    "This requires converting address strings back to binary format\n"
-                    "and calling SetTcpEntry with MIB_TCP_STATE_DELETE_TCB state.\n\n"
-                    "This will be implemented in a future update.",
-                    "Not Yet Implemented",
-                    MB_OK | MB_ICONINFORMATION);
+                        MessageBoxA(ctx.m_hWnd,
+                            "Closing IPv6 TCP connections is not supported by the Windows API.",
+                            "Not Supported",
+                            MB_OK | MB_ICONWARNING);
 #endif
-                throw std::runtime_error("Closing TCP connections is not yet implemented");
+                        continue;
+                    }
+
+                    if (!NetworkConnectionManager::CloseConnection(conn))
+                    {
+                        std::string errorMsg = std::format("Failed to close connection {}:{} -> {}:{}.\n\n"
+                            "This operation requires administrator privileges.",
+                            conn->GetLocalAddress(), conn->GetLocalPort(),
+                            conn->GetRemoteAddress(), conn->GetRemotePort());
+                        spdlog::error("{}", errorMsg);
+#ifndef PSERV_CONSOLE_BUILD
+                        MessageBoxA(ctx.m_hWnd, errorMsg.c_str(), "Error", MB_OK | MB_ICONERROR);
+#endif
+                        throw std::runtime_error(errorMsg);
+                    }
+                }
+                ctx.m_bNeedsRefresh = true;
             }
         };
 
