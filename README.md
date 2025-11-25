@@ -4,6 +4,10 @@
 
 A Windows system administration tool for managing services, devices, processes, and more. Native C++20 application with a modern ImGui interface.
 
+## Screenshot
+
+![Screenshot of main application](docs/main.png)
+
 ## Features
 
 - **Services** - View, start, stop, configure Windows services
@@ -16,15 +20,6 @@ A Windows system administration tool for managing services, devices, processes, 
 - **Scheduled Tasks** - View and control Windows scheduled tasks
 - **Network Connections** - Monitor active TCP/UDP connections
 - **Environment Variables** - View and edit system/user environment variables
-
-## Screenshots
-
-*(Coming soon)*
-
-## Requirements
-
-- Windows 10 or later (64-bit)
-- No .NET runtime required
 
 ## Building
 
