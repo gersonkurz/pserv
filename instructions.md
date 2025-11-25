@@ -200,12 +200,11 @@ theSettings.save();  // Persist to disk
 
 ### TODO
 
-#### User Documentation
-
-Add a user guide to understand the functionality, specifically now that also `pservc.exe` is available.
+#### User Documentation ✅
+Created `docs/pservc.md` (comprehensive CLI reference) and `docs/pserv5.md` (GUI overview with screenshot placeholders).
 
 #### Code Documentation
-Systematically document all classes / methods, ideally in a system that can be exported (e.g. doxgen or modern alternatives)
+Systematically document all classes / methods, ideally in a system that can be exported (e.g. doxygen or modern alternatives)
 
 #### Security Review ✅
 Completed. No critical vulnerabilities found. Codebase uses modern C++ with RAII patterns, WIL for handle management, no unsafe string operations, and proper error handling. Inherent risks (ShellExecute with system-derived paths) are appropriate for a system admin tool.
