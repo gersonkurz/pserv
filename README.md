@@ -2,8 +2,6 @@
   <img src="logo.jpg" alt="pserv logo" width="1024"/>
 </p>
 
-# pserv
-
 A Windows system administration tool for managing services, devices, processes, and more. Native C++20 application with a modern ImGui interface.
 
 ## Features
