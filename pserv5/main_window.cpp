@@ -1239,10 +1239,11 @@ namespace pserv
         ImGui::SameLine();
         ImGui::SetNextItemWidth(300.0f);
 
+        bool filterChanged = false;
         {
             const auto label{std::format("##filter_{}", controllerName)};
             const auto hint{std::format("Filter {}...", controllerName)};
-            ImGui::InputTextWithHint(label.c_str(), hint.c_str(), m_filterText, IM_ARRAYSIZE(m_filterText));
+            filterChanged = ImGui::InputTextWithHint(label.c_str(), hint.c_str(), m_filterText, IM_ARRAYSIZE(m_filterText));
         }
 
         ImGui::Separator();
@@ -1407,6 +1408,30 @@ namespace pserv
             {
                 // No filter - show all data Objects
                 filteredDataObjects.assign(pAllDataObjects->begin(), pAllDataObjects->end());
+            }
+
+            if (filterChanged)
+            {
+                auto &selectedObjects = m_dispatchContext.m_selectedObjects;
+                auto selectedIt = selectedObjects.begin();
+                while (selectedIt != selectedObjects.end())
+                {
+                    if (std::find(filteredDataObjects.begin(), filteredDataObjects.end(), *selectedIt) == filteredDataObjects.end())
+                    {
+                        (*selectedIt)->Release(REFCOUNT_DEBUG_ARGS);
+                        selectedIt = selectedObjects.erase(selectedIt);
+                    }
+                    else
+                    {
+                        ++selectedIt;
+                    }
+                }
+
+                if (m_lastClickedObject &&
+                    std::find(filteredDataObjects.begin(), filteredDataObjects.end(), m_lastClickedObject) == filteredDataObjects.end())
+                {
+                    m_lastClickedObject = nullptr;
+                }
             }
 
             // Lambda to render a single row (shared between clipper and non-clipper paths)
