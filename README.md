@@ -39,6 +39,11 @@ Dependencies are included as git submodules:
 - [RapidJSON](https://github.com/Tencent/rapidjson) - JSON export
 - [argparse](https://github.com/p-ranav/argparse) - Command-line parsing
 
+If you `git checkout` a different commit, remember to update submodules:
+```
+git submodule update --init --recursive
+```
+
 ## History
 
 pserv has been around since 1998:
