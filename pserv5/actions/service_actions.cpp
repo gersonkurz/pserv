@@ -65,6 +65,7 @@ namespace pserv
                         try
                         {
                             size_t total = serviceNames.size();
+                            size_t successCount = 0;
                             for (size_t i = 0; i < total; ++i)
                             {
                                 const std::string &serviceName = serviceNames[i];
@@ -73,15 +74,23 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Starting service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::StartServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message)
+                                bool success = ServiceManager::StartServiceByName(serviceName,
+                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        return !op->IsCancelRequested();
                                     });
+                                if (success)
+                                    successCount++;
                             }
 
-                            op->ReportProgress(1.0f, std::format("Started {} service(s) successfully", total));
-                            return true;
+                            if (successCount == total)
+                                op->ReportProgress(1.0f, std::format("Started {} service(s) successfully", total));
+                            else if (successCount == 0)
+                                op->ReportProgress(1.0f, std::format("Failed to start {} service(s)", total));
+                            else
+                                op->ReportProgress(1.0f, std::format("Started {} of {} service(s)", successCount, total));
+                            return successCount > 0;
                         }
                         catch (const std::exception &e)
                         {
@@ -131,6 +140,7 @@ namespace pserv
                         try
                         {
                             size_t total = serviceNames.size();
+                            size_t successCount = 0;
                             for (size_t i = 0; i < total; ++i)
                             {
                                 const std::string &serviceName = serviceNames[i];
@@ -139,15 +149,23 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Stopping service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::StopServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message)
+                                bool success = ServiceManager::StopServiceByName(serviceName,
+                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        return !op->IsCancelRequested();
                                     });
+                                if (success)
+                                    successCount++;
                             }
 
-                            op->ReportProgress(1.0f, std::format("Stopped {} service(s) successfully", total));
-                            return true;
+                            if (successCount == total)
+                                op->ReportProgress(1.0f, std::format("Stopped {} service(s) successfully", total));
+                            else if (successCount == 0)
+                                op->ReportProgress(1.0f, std::format("Failed to stop {} service(s)", total));
+                            else
+                                op->ReportProgress(1.0f, std::format("Stopped {} of {} service(s)", successCount, total));
+                            return successCount > 0;
                         }
                         catch (const std::exception &e)
                         {
@@ -196,6 +214,7 @@ namespace pserv
                         try
                         {
                             size_t total = serviceNames.size();
+                            size_t successCount = 0;
                             for (size_t i = 0; i < total; ++i)
                             {
                                 const std::string &serviceName = serviceNames[i];
@@ -204,15 +223,23 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Restarting service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::RestartServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message)
+                                bool success = ServiceManager::RestartServiceByName(serviceName,
+                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        return !op->IsCancelRequested();
                                     });
+                                if (success)
+                                    successCount++;
                             }
 
-                            op->ReportProgress(1.0f, std::format("Restarted {} service(s) successfully", total));
-                            return true;
+                            if (successCount == total)
+                                op->ReportProgress(1.0f, std::format("Restarted {} service(s) successfully", total));
+                            else if (successCount == 0)
+                                op->ReportProgress(1.0f, std::format("Failed to restart {} service(s)", total));
+                            else
+                                op->ReportProgress(1.0f, std::format("Restarted {} of {} service(s)", successCount, total));
+                            return successCount > 0;
                         }
                         catch (const std::exception &e)
                         {
@@ -262,6 +289,7 @@ namespace pserv
                         try
                         {
                             size_t total = serviceNames.size();
+                            size_t successCount = 0;
                             for (size_t i = 0; i < total; ++i)
                             {
                                 const std::string &serviceName = serviceNames[i];
@@ -270,15 +298,23 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Pausing service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::PauseServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message)
+                                bool success = ServiceManager::PauseServiceByName(serviceName,
+                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        return !op->IsCancelRequested();
                                     });
+                                if (success)
+                                    successCount++;
                             }
 
-                            op->ReportProgress(1.0f, std::format("Paused {} service(s) successfully", total));
-                            return true;
+                            if (successCount == total)
+                                op->ReportProgress(1.0f, std::format("Paused {} service(s) successfully", total));
+                            else if (successCount == 0)
+                                op->ReportProgress(1.0f, std::format("Failed to pause {} service(s)", total));
+                            else
+                                op->ReportProgress(1.0f, std::format("Paused {} of {} service(s)", successCount, total));
+                            return successCount > 0;
                         }
                         catch (const std::exception &e)
                         {
@@ -327,6 +363,7 @@ namespace pserv
                         try
                         {
                             size_t total = serviceNames.size();
+                            size_t successCount = 0;
                             for (size_t i = 0; i < total; ++i)
                             {
                                 const std::string &serviceName = serviceNames[i];
@@ -335,15 +372,23 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Resuming service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::ResumeServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message)
+                                bool success = ServiceManager::ResumeServiceByName(serviceName,
+                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        return !op->IsCancelRequested();
                                     });
+                                if (success)
+                                    successCount++;
                             }
 
-                            op->ReportProgress(1.0f, std::format("Resumed {} service(s) successfully", total));
-                            return true;
+                            if (successCount == total)
+                                op->ReportProgress(1.0f, std::format("Resumed {} service(s) successfully", total));
+                            else if (successCount == 0)
+                                op->ReportProgress(1.0f, std::format("Failed to resume {} service(s)", total));
+                            else
+                                op->ReportProgress(1.0f, std::format("Resumed {} of {} service(s)", successCount, total));
+                            return successCount > 0;
                         }
                         catch (const std::exception &e)
                         {

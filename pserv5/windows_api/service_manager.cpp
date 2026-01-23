@@ -216,7 +216,7 @@ namespace pserv
             spdlog::info("Enumerated {} services", doc->GetSize());
     }
 
-    bool ServiceManager::StartServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback)
+    bool ServiceManager::StartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
     {
         spdlog::info("Starting service: {}", serviceName);
 
@@ -259,6 +259,7 @@ namespace pserv
         const int pollInterval = 1000; // Check every 1 second for progress updates
         int totalWait = 0;
         DWORD estimatedWaitTime = 0;
+        bool cancelled = false;
 
         while (totalWait < maxWaitTime)
         {
@@ -287,10 +288,14 @@ namespace pserv
             // Calculate progress based on elapsed time vs estimated time
             float progress = std::min(0.95f, static_cast<float>(totalWait) / static_cast<float>(estimatedWaitTime));
 
-            // Report progress
+            // Report progress and check for cancellation
             if (progressCallback)
             {
-                progressCallback(progress, std::format("Service state: {}", stateStr));
+                if (!progressCallback(progress, std::format("Service state: {}", stateStr)))
+                {
+                    cancelled = true;
+                    break;
+                }
             }
 
             if (ssp.dwCurrentState == SERVICE_RUNNING)
@@ -317,6 +322,12 @@ namespace pserv
         CloseServiceHandle(hService);
         CloseServiceHandle(hScManager);
 
+        if (cancelled)
+        {
+            spdlog::info("Service '{}' start cancelled by user", serviceName);
+            return false;
+        }
+
         if (totalWait >= maxWaitTime)
         {
             spdlog::warn("Service '{}' did not reach running state within timeout", serviceName);
@@ -327,7 +338,7 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::StopServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback)
+    bool ServiceManager::StopServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
     {
         spdlog::info("Stopping service: {}", serviceName);
 
@@ -370,6 +381,7 @@ namespace pserv
         const int pollInterval = 1000; // Check every 1 second for progress updates
         int totalWait = 0;
         DWORD estimatedWaitTime = 0;
+        bool cancelled = false;
 
         while (totalWait < maxWaitTime)
         {
@@ -398,10 +410,14 @@ namespace pserv
             // Calculate progress based on elapsed time vs estimated time
             float progress = std::min(0.95f, static_cast<float>(totalWait) / static_cast<float>(estimatedWaitTime));
 
-            // Report progress
+            // Report progress and check for cancellation
             if (progressCallback)
             {
-                progressCallback(progress, std::format("Service state: {}", stateStr));
+                if (!progressCallback(progress, std::format("Service state: {}", stateStr)))
+                {
+                    cancelled = true;
+                    break;
+                }
             }
 
             if (ssp.dwCurrentState == SERVICE_STOPPED)
@@ -420,6 +436,12 @@ namespace pserv
         CloseServiceHandle(hService);
         CloseServiceHandle(hScManager);
 
+        if (cancelled)
+        {
+            spdlog::info("Service '{}' stop cancelled by user", serviceName);
+            return false;
+        }
+
         if (totalWait >= maxWaitTime)
         {
             spdlog::warn("Service '{}' did not reach stopped state within timeout", serviceName);
@@ -430,7 +452,7 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::PauseServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback)
+    bool ServiceManager::PauseServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
     {
         spdlog::info("Pausing service: {}", serviceName);
 
@@ -473,6 +495,7 @@ namespace pserv
         const int pollInterval = 1000;
         int totalWait = 0;
         DWORD estimatedWaitTime = 0;
+        bool cancelled = false;
 
         while (totalWait < maxWaitTime)
         {
@@ -499,7 +522,11 @@ namespace pserv
 
             if (progressCallback)
             {
-                progressCallback(progress, std::format("Service state: {}", stateStr));
+                if (!progressCallback(progress, std::format("Service state: {}", stateStr)))
+                {
+                    cancelled = true;
+                    break;
+                }
             }
 
             if (ssp.dwCurrentState == SERVICE_PAUSED)
@@ -518,6 +545,12 @@ namespace pserv
         CloseServiceHandle(hService);
         CloseServiceHandle(hScManager);
 
+        if (cancelled)
+        {
+            spdlog::info("Service '{}' pause cancelled by user", serviceName);
+            return false;
+        }
+
         if (totalWait >= maxWaitTime)
         {
             spdlog::warn("Service '{}' did not reach paused state within timeout", serviceName);
@@ -528,7 +561,7 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::ResumeServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback)
+    bool ServiceManager::ResumeServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
     {
         spdlog::info("Resuming service: {}", serviceName);
 
@@ -571,6 +604,7 @@ namespace pserv
         const int pollInterval = 1000;
         int totalWait = 0;
         DWORD estimatedWaitTime = 0;
+        bool cancelled = false;
 
         while (totalWait < maxWaitTime)
         {
@@ -597,7 +631,11 @@ namespace pserv
 
             if (progressCallback)
             {
-                progressCallback(progress, std::format("Service state: {}", stateStr));
+                if (!progressCallback(progress, std::format("Service state: {}", stateStr)))
+                {
+                    cancelled = true;
+                    break;
+                }
             }
 
             if (ssp.dwCurrentState == SERVICE_RUNNING)
@@ -616,6 +654,12 @@ namespace pserv
         CloseServiceHandle(hService);
         CloseServiceHandle(hScManager);
 
+        if (cancelled)
+        {
+            spdlog::info("Service '{}' resume cancelled by user", serviceName);
+            return false;
+        }
+
         if (totalWait >= maxWaitTime)
         {
             spdlog::warn("Service '{}' did not reach running state within timeout", serviceName);
@@ -626,41 +670,61 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::RestartServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback)
+    bool ServiceManager::RestartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
     {
         spdlog::info("Restarting service: {}", serviceName);
 
         // Stop the service (0-50% progress)
         if (progressCallback)
         {
-            progressCallback(0.0f, "Stopping service...");
+            if (!progressCallback(0.0f, "Stopping service..."))
+            {
+                spdlog::info("Service '{}' restart cancelled by user", serviceName);
+                return false;
+            }
         }
 
-        StopServiceByName(serviceName,
-            [progressCallback](float progress, std::string message)
+        bool stopSuccess = StopServiceByName(serviceName,
+            [progressCallback](float progress, std::string message) -> bool
             {
                 if (progressCallback)
                 {
                     // Map 0-100% to 0-50%
-                    progressCallback(progress * 0.5f, message);
+                    return progressCallback(progress * 0.5f, message);
                 }
+                return true;
             });
+
+        if (!stopSuccess)
+        {
+            return false;
+        }
 
         // Start the service (50-100% progress)
         if (progressCallback)
         {
-            progressCallback(0.5f, "Starting service...");
+            if (!progressCallback(0.5f, "Starting service..."))
+            {
+                spdlog::info("Service '{}' restart cancelled by user", serviceName);
+                return false;
+            }
         }
 
-        StartServiceByName(serviceName,
-            [progressCallback](float progress, std::string message)
+        bool startSuccess = StartServiceByName(serviceName,
+            [progressCallback](float progress, std::string message) -> bool
             {
                 if (progressCallback)
                 {
                     // Map 0-100% to 50-100%
-                    progressCallback(0.5f + progress * 0.5f, message);
+                    return progressCallback(0.5f + progress * 0.5f, message);
                 }
+                return true;
             });
+
+        if (!startSuccess)
+        {
+            return false;
+        }
 
         spdlog::info("Service '{}' restarted successfully", serviceName);
         return true;

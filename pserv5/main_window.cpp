@@ -277,7 +277,15 @@ namespace pserv
                     }
                     else if (status == AsyncStatus::Failed)
                     {
-                        spdlog::error("Async operation failed: {}", pWindow->m_dispatchContext.m_pAsyncOp->GetErrorMessage());
+                        auto errorMsg = pWindow->m_dispatchContext.m_pAsyncOp->GetErrorMessage();
+                        spdlog::error("Async operation failed: {}", errorMsg);
+                        pWindow->m_errorDialogMessage = errorMsg;
+                        pWindow->m_bShowErrorDialog = true;
+                        // Refresh controller to show actual state
+                        if (pWindow->m_dispatchContext.m_pController)
+                        {
+                            pWindow->m_dispatchContext.m_pController->Refresh();
+                        }
                     }
                 }
             }
@@ -847,6 +855,45 @@ namespace pserv
         }
     }
 
+    void MainWindow::RenderErrorDialog()
+    {
+        if (m_bShowErrorDialog)
+        {
+            ImGui::OpenPopup("Operation Failed");
+            m_bShowErrorDialog = false; // Only open once
+        }
+
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+        if (ImGui::BeginPopupModal("Operation Failed", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            // Escape key or Enter to close dialog
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape) || ImGui::IsKeyPressed(ImGuiKey_Enter))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f)); // Red text
+            ImGui::TextWrapped("%s", m_errorDialogMessage.c_str());
+            ImGui::PopStyleColor();
+
+            ImGui::Separator();
+
+            // Center the OK button
+            float buttonWidth = 120.0f;
+            float windowWidth = ImGui::GetWindowSize().x;
+            ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
+
+            if (ImGui::Button("OK", ImVec2(buttonWidth, 0)))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+
     void MainWindow::Render()
     {
         if (!m_pDeviceContext || !m_pRenderTargetView)
@@ -1176,6 +1223,9 @@ namespace pserv
 
         // Render remote machine dialog if active
         RenderRemoteMachineDialog();
+
+        // Render error dialog if active
+        RenderErrorDialog();
 
         // Render environment variable add dialog if active
         if (m_pCurrentController && m_pCurrentController->GetControllerName() == ENVIRONMENT_VARIABLES_CONTROLLER_NAME)

@@ -45,6 +45,9 @@ namespace pserv
                     }
                     else
                     {
+                        // Use last progress message as error message
+                        std::lock_guard<std::mutex> lock(m_mutex);
+                        m_errorMessage = m_progressMessage;
                         m_status = AsyncStatus::Failed;
                     }
                 }

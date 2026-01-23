@@ -41,14 +41,14 @@ namespace pserv
 
         /// @name Service Control Operations
         /// Static methods that open their own SCM handles.
-        /// @param progressCallback Optional callback for progress updates (0.0-1.0).
+        /// @param progressCallback Optional callback for progress updates (0.0-1.0). Returns false to cancel.
         /// @throws std::runtime_error on failure.
         /// @{
-        static bool StartServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
-        static bool StopServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
-        static bool PauseServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
-        static bool ResumeServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
-        static bool RestartServiceByName(const std::string &serviceName, std::function<void(float, std::string)> progressCallback = nullptr);
+        static bool StartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
+        static bool StopServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
+        static bool PauseServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
+        static bool ResumeServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
+        static bool RestartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
         /// @}
 
         /// @brief Change service startup type.

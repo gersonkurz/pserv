@@ -97,12 +97,17 @@ namespace pserv
         // Remote machine connection dialog state
         bool m_bShowRemoteMachineDialog{false};
 
+        // Error dialog state
+        bool m_bShowErrorDialog{false};
+        std::string m_errorDialogMessage;
+
         // Helper methods
         bool ShouldAutoRefresh() const;
         void SaveWindowState();
         void SaveCurrentTableState(bool force = false);
         void RenderProgressDialog();
         void RenderRemoteMachineDialog();
+        void RenderErrorDialog();
         void RenderTitleBar();
         void RenderMenuBar();
         bool IsWindowMaximized() const;

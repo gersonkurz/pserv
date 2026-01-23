@@ -233,7 +233,6 @@ namespace pserv
         const auto &exporters = ExporterRegistry::Instance().GetExporters();
         if (exporters.empty())
         {
-            spdlog::debug("AddCommonExportActions: No exporters registered");
             return;
         }
 
@@ -243,18 +242,15 @@ namespace pserv
         // Add Copy/Export action pairs for each registered exporter
         for (const auto *exporter : exporters)
         {
-            spdlog::debug("AddCommonExportActions: Checking exporter '{}'", exporter->GetFormatName());
             if (exporter->GetFormatName() == "JSON")
             {
                 actions.push_back(&theCopyAsJsonAction);
                 actions.push_back(&theExportToJsonAction);
-                spdlog::debug("AddCommonExportActions: Added JSON actions");
             }
             else if (exporter->GetFormatName() == "Plain Text")
             {
                 actions.push_back(&theCopyAsTextAction);
                 actions.push_back(&theExportToTextAction);
-                spdlog::debug("AddCommonExportActions: Added Plain Text actions");
             }
         }
 
@@ -262,7 +258,6 @@ namespace pserv
 #ifndef PSERV_CONSOLE_BUILD
         actions.push_back(&theDataPropertiesAction);
 #endif
-        spdlog::debug("AddCommonExportActions: Created {} common actions", actions.size());
     }
 
 } // namespace pserv
