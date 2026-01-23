@@ -2047,7 +2047,7 @@ namespace pserv
 
         // Draw window title on the left
         ImGui::SetCursorScreenPos(ImVec2(titleBarMin.x + 10.0f, titleBarMin.y + (titleBarHeight - ImGui::GetTextLineHeight()) * 0.5f));
-        ImGui::Text("pserv5");
+        ImGui::Text("pserv " PSERV_VERSION_STRING);
 
         // Window control buttons (right side) - drawn with primitives for consistent alignment
         const ImU32 iconColor = IM_COL32(255, 255, 255, 255);
