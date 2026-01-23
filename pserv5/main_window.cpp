@@ -287,6 +287,10 @@ namespace pserv
                             pWindow->m_dispatchContext.m_pController->Refresh();
                         }
                     }
+
+                    // Clean up async operation to allow auto-refresh to resume
+                    delete pWindow->m_dispatchContext.m_pAsyncOp;
+                    pWindow->m_dispatchContext.m_pAsyncOp = nullptr;
                 }
             }
             return 0;
