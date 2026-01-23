@@ -473,5 +473,8 @@
   <ItemGroup>
     <None Include="..\claude.md" />
     <None Include="..\instructions.md" />
+    <None Include="..\AGENTS.md" />
+    <None Include="..\GEMINI.md" />
+    <None Include="..\README.md" />
   </ItemGroup>
 </Project>

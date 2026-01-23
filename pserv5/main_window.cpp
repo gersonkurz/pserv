@@ -1012,6 +1012,21 @@ namespace pserv
             spdlog::info("Auto-refresh {}", config::theSettings.autoRefresh.enabled.get() ? "enabled" : "disabled");
         }
 
+        // F5 to refresh current view
+        if (ImGui::IsKeyPressed(ImGuiKey_F5) && m_pCurrentController)
+        {
+            spdlog::debug("F5 pressed, refreshing current view");
+            try
+            {
+                m_pCurrentController->Refresh();
+                m_pCurrentController->ClearRefreshFlag();
+            }
+            catch (const std::exception &e)
+            {
+                spdlog::error("Failed to refresh: {}", e.what());
+            }
+        }
+
         // Delete key to execute delete action on selected items
         if (ImGui::IsKeyPressed(ImGuiKey_Delete) && m_pCurrentController && !m_dispatchContext.m_selectedObjects.empty())
         {
@@ -1763,6 +1778,19 @@ namespace pserv
                 ImGui::SameLine();
                 ImGui::TextDisabled("(not supported for this view)");
             }
+        }
+
+        // Last refresh timestamp
+        if (controller->IsLoaded())
+        {
+            auto refreshTime = controller->GetLastRefreshTime();
+            auto timeT = std::chrono::system_clock::to_time_t(refreshTime);
+            std::tm tm;
+            localtime_s(&tm, &timeT);
+            ImGui::SameLine();
+            ImGui::TextDisabled("|");
+            ImGui::SameLine();
+            ImGui::Text("Refreshed: %02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
         }
 
         // Connection target indicator

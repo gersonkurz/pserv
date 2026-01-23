@@ -37,7 +37,7 @@ namespace pserv
             }
 
             spdlog::info("Successfully refreshed {} startup programs", m_objects.GetSize());
-            m_bLoaded = true;
+            SetLoaded();
         }
         catch (const std::exception &e)
         {

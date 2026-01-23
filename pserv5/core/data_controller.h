@@ -184,11 +184,20 @@ namespace pserv
         bool IsLoaded() const { return m_bLoaded; }
         bool NeedsRefresh() const { return m_bNeedsRefresh; }
         void ClearRefreshFlag() { m_bNeedsRefresh = false; }
+        std::chrono::system_clock::time_point GetLastRefreshTime() const { return m_lastRefreshTime; }
         /// @}
 
     protected:
         /// @brief Clear all data objects from the container.
         void Clear();
+
+        /// @brief Mark the controller as loaded and record the refresh timestamp.
+        /// Call this at the end of a successful Refresh() implementation.
+        void SetLoaded()
+        {
+            m_bLoaded = true;
+            m_lastRefreshTime = std::chrono::system_clock::now();
+        }
 
     protected:
         const std::string m_controllerName;              ///< Controller identifier.
@@ -199,6 +208,7 @@ namespace pserv
         bool m_bLoaded{false};                           ///< True after first successful load.
         bool m_bNeedsRefresh{false};                     ///< True if data needs reloading.
         bool m_lastSortAscending{true};                  ///< Last sort direction.
+        std::chrono::system_clock::time_point m_lastRefreshTime{}; ///< Time of last successful refresh.
 
 #ifndef PSERV_CONSOLE_BUILD
     private:

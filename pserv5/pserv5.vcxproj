@@ -440,8 +440,11 @@
     <Manifest Include="pserv5.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\AGENTS.md" />
     <None Include="..\claude.md" />
+    <None Include="..\GEMINI.md" />
     <None Include="..\instructions.md" />
+    <None Include="..\README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

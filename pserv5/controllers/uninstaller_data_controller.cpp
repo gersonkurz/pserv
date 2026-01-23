@@ -42,7 +42,7 @@ namespace pserv
         }
 
         spdlog::info("Refreshed {} installed programs", m_objects.GetSize());
-        m_bLoaded = true;
+        SetLoaded();
     }
 
     std::vector<const DataAction *> UninstallerDataController::GetActions(const DataObject *dataObject) const

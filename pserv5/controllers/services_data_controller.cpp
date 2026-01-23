@@ -65,7 +65,7 @@ namespace pserv
                 Sort(m_lastSortColumn, m_lastSortAscending);
             }
 
-            m_bLoaded = true;
+            SetLoaded();
         }
         catch (const std::exception &e)
         {

@@ -34,7 +34,7 @@ namespace pserv
         m_objects.FinishRefresh();
 
         spdlog::info("Refreshed {} windows", m_objects.GetSize());
-        m_bLoaded = true;
+        SetLoaded();
     }
 
     std::vector<const DataAction *> WindowsDataController::GetActions(const DataObject *dataObject) const

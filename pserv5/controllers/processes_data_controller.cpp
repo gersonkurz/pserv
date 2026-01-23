@@ -65,7 +65,7 @@ namespace pserv
             }
 
             spdlog::info("Refreshed {} processes", m_objects.GetSize());
-            m_bLoaded = true;
+            SetLoaded();
         }
         catch (const std::exception &e)
         {

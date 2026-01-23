@@ -39,7 +39,7 @@ namespace pserv
         }
         m_objects.FinishRefresh();
         spdlog::info("Refreshed {} modules from {} processes", m_objects.GetSize(), processes.GetSize());
-        m_bLoaded = true;
+        SetLoaded();
     }
 
     std::vector<const DataAction *> ModulesDataController::GetActions(const DataObject *dataObject) const

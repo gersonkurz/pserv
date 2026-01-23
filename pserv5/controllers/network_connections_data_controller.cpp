@@ -40,7 +40,7 @@ namespace pserv
             }
 
             spdlog::info("Successfully refreshed {} network connections", m_objects.GetSize());
-            m_bLoaded = true;
+            SetLoaded();
         }
         catch (const std::exception &e)
         {
