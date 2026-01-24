@@ -1,6 +1,6 @@
 SetCompressor /SOLID LZMA 
 
-!define CURRENT_VERSION "5.0.0"
+!define CURRENT_VERSION "5.1.0"
 
 !include "MUI2.nsh"
 
