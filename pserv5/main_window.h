@@ -42,7 +42,17 @@ namespace pserv
             Loading,     // Loading data in background
             Ready        // Normal operation
         };
+
+        enum class Theme
+        {
+            Dark,
+            Light,
+            TomorrowNightBlue,
+            SunnyDay
+        };
+
         AppState m_appState{AppState::Splash};
+        Theme m_currentTheme{Theme::Dark};
         std::thread m_loadThread;
         std::atomic<bool> m_loadingComplete{false};
         static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -51,7 +61,11 @@ namespace pserv
         void CleanupDirectX();
         bool InitializeImGui();
         void CleanupImGui();
-        void ApplyOrangeAccent();
+        void ApplyTheme(Theme theme);
+        void ApplyDarkTheme();
+        void ApplyLightTheme();
+        void ApplyTomorrowNightBlueTheme();
+        void ApplySunnyDayTheme();
         void RebuildFontAtlas(float fontSize);
         void CreateRenderTarget();
         void CleanupRenderTarget();

@@ -408,14 +408,13 @@ namespace pserv
         // Setup Dear ImGui style - apply saved theme from config
         std::string savedTheme = config::theSettings.application.theme.get();
         if (savedTheme == "Light")
-        {
-            ImGui::StyleColorsLight();
-        }
+            ApplyTheme(Theme::Light);
+        else if (savedTheme == "TomorrowNightBlue")
+            ApplyTheme(Theme::TomorrowNightBlue);
+        else if (savedTheme == "SunnyDay")
+            ApplyTheme(Theme::SunnyDay);
         else
-        {
-            ImGui::StyleColorsDark(); // Default to Dark if not set or unrecognized
-        }
-        ApplyOrangeAccent();
+            ApplyTheme(Theme::Dark);
 
         // Setup Platform/Renderer backends first
         ImGui_ImplWin32_Init(m_hWnd);
@@ -440,8 +439,30 @@ namespace pserv
         }
     }
 
-    void MainWindow::ApplyOrangeAccent()
+    void MainWindow::ApplyTheme(Theme theme)
     {
+        m_currentTheme = theme;
+        switch (theme)
+        {
+        case Theme::Dark:
+            ApplyDarkTheme();
+            break;
+        case Theme::Light:
+            ApplyLightTheme();
+            break;
+        case Theme::TomorrowNightBlue:
+            ApplyTomorrowNightBlueTheme();
+            break;
+        case Theme::SunnyDay:
+            ApplySunnyDayTheme();
+            break;
+        }
+    }
+
+    void MainWindow::ApplyDarkTheme()
+    {
+        ImGui::StyleColorsDark();
+
         ImGuiStyle &style = ImGui::GetStyle();
         ImVec4 *colors = style.Colors;
 
@@ -468,6 +489,279 @@ namespace pserv
         colors[ImGuiCol_ResizeGripHovered] = orangeHovered;
         colors[ImGuiCol_ResizeGripActive] = orangeActive;
         colors[ImGuiCol_TextSelectedBg] = ImVec4(orange.x, orange.y, orange.z, 0.35f);
+
+        style.FrameRounding = 0.0f;
+        style.GrabRounding = 0.0f;
+        style.WindowRounding = 0.0f;
+        style.TabRounding = 0.0f;
+    }
+
+    void MainWindow::ApplyLightTheme()
+    {
+        ImGuiStyle &style = ImGui::GetStyle();
+        ImVec4 *colors = style.Colors;
+
+        // Cool minimal light theme - GitHub-inspired with blue-gray accents
+        const ImVec4 bgMain = ImVec4(0.973f, 0.976f, 0.980f, 1.0f);      // #F8F9FA - main background
+        const ImVec4 bgChild = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);           // #FFFFFF - panels/popups
+        const ImVec4 bgPopup = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);           // #FFFFFF - popups
+        const ImVec4 border = ImVec4(0.85f, 0.87f, 0.89f, 1.0f);         // #D9DEDE - subtle borders
+        const ImVec4 textPrimary = ImVec4(0.14f, 0.16f, 0.18f, 1.0f);    // #24292E - main text
+        const ImVec4 textSecondary = ImVec4(0.35f, 0.39f, 0.43f, 1.0f);  // #586069 - secondary text
+
+        // Muted blue-gray accent (desaturated, more gray than blue)
+        const ImVec4 accent = ImVec4(0.40f, 0.50f, 0.92f, 1.0f);         // #66809E - muted slate
+        const ImVec4 accentHover = ImVec4(0.48f, 0.58f, 0.70f, 1.0f);    // #7A94B3 - lighter
+        const ImVec4 accentActive = ImVec4(0.35f, 0.44f, 0.55f, 1.0f);   // #59708C - darker
+
+        // Frame/input backgrounds
+        const ImVec4 frameBg = ImVec4(0.95f, 0.96f, 0.97f, 1.0f);        // #F2F4F6
+        const ImVec4 frameBgHover = ImVec4(0.92f, 0.93f, 0.95f, 1.0f);   // #EBEDF2
+        const ImVec4 frameBgActive = ImVec4(0.88f, 0.90f, 0.92f, 1.0f);  // #E1E6EB
+
+        // Header/table row backgrounds
+        const ImVec4 headerBg = ImVec4(0.92f, 0.93f, 0.95f, 1.0f);       // #EBEDF2
+        const ImVec4 headerHover = ImVec4(0.85f, 0.88f, 0.92f, 1.0f);    // #D9E0EB
+        const ImVec4 headerActive = ImVec4(0.78f, 0.82f, 0.88f, 1.0f);   // #C7D1E0
+
+        // Set all colors
+        colors[ImGuiCol_Text] = textPrimary;
+        colors[ImGuiCol_TextDisabled] = textSecondary;
+        colors[ImGuiCol_WindowBg] = bgMain;
+        colors[ImGuiCol_ChildBg] = bgChild;
+        colors[ImGuiCol_PopupBg] = bgPopup;
+        colors[ImGuiCol_Border] = border;
+        colors[ImGuiCol_BorderShadow] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        colors[ImGuiCol_FrameBg] = frameBg;
+        colors[ImGuiCol_FrameBgHovered] = frameBgHover;
+        colors[ImGuiCol_FrameBgActive] = frameBgActive;
+        colors[ImGuiCol_TitleBg] = headerBg;
+        colors[ImGuiCol_TitleBgActive] = headerBg;
+        colors[ImGuiCol_TitleBgCollapsed] = headerBg;
+        colors[ImGuiCol_MenuBarBg] = bgMain;
+        colors[ImGuiCol_ScrollbarBg] = bgMain;
+        colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.75f, 0.78f, 0.82f, 1.0f);
+        colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.65f, 0.68f, 0.72f, 1.0f);
+        colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.55f, 0.58f, 0.62f, 1.0f);
+        colors[ImGuiCol_CheckMark] = accent;
+        colors[ImGuiCol_SliderGrab] = accent;
+        colors[ImGuiCol_SliderGrabActive] = accentActive;
+        colors[ImGuiCol_Button] = headerBg;
+        colors[ImGuiCol_ButtonHovered] = headerHover;
+        colors[ImGuiCol_ButtonActive] = headerActive;
+        colors[ImGuiCol_Header] = headerBg;
+        colors[ImGuiCol_HeaderHovered] = headerHover;
+        colors[ImGuiCol_HeaderActive] = headerActive;
+        colors[ImGuiCol_Separator] = border;
+        colors[ImGuiCol_SeparatorHovered] = accent;
+        colors[ImGuiCol_SeparatorActive] = accentActive;
+        colors[ImGuiCol_ResizeGrip] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        colors[ImGuiCol_ResizeGripHovered] = accentHover;
+        colors[ImGuiCol_ResizeGripActive] = accentActive;
+        colors[ImGuiCol_Tab] = headerBg;
+        colors[ImGuiCol_TabHovered] = accentHover;
+        colors[ImGuiCol_TabActive] = accent;
+        colors[ImGuiCol_TabUnfocused] = headerBg;
+        colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.35f, 0.55f, 0.78f, 1.0f);
+        colors[ImGuiCol_PlotLines] = accent;
+        colors[ImGuiCol_PlotLinesHovered] = accentHover;
+        colors[ImGuiCol_PlotHistogram] = accent;
+        colors[ImGuiCol_PlotHistogramHovered] = accentHover;
+        colors[ImGuiCol_TableHeaderBg] = headerBg;
+        colors[ImGuiCol_TableBorderStrong] = border;
+        colors[ImGuiCol_TableBorderLight] = ImVec4(0.90f, 0.91f, 0.93f, 1.0f);
+        colors[ImGuiCol_TableRowBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        colors[ImGuiCol_TableRowBgAlt] = ImVec4(0.96f, 0.97f, 0.98f, 1.0f);
+        colors[ImGuiCol_TextSelectedBg] = ImVec4(accent.x, accent.y, accent.z, 0.25f);
+        colors[ImGuiCol_DragDropTarget] = accent;
+        colors[ImGuiCol_NavHighlight] = accent;
+        colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.0f, 1.0f, 1.0f, 0.7f);
+        colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.8f, 0.8f, 0.8f, 0.2f);
+        colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.2f, 0.2f, 0.2f, 0.35f);
+
+        // Slightly rounded corners for modern feel
+        style.FrameRounding = 4.0f;
+        style.GrabRounding = 4.0f;
+        style.WindowRounding = 0.0f;  // Keep window square for borderless look
+        style.TabRounding = 4.0f;
+    }
+
+    void MainWindow::ApplyTomorrowNightBlueTheme()
+    {
+        ImGuiStyle &style = ImGui::GetStyle();
+        ImVec4 *colors = style.Colors;
+
+        // Tomorrow Night Blue color palette
+        const ImVec4 bgMain = ImVec4(0.0f, 0.14f, 0.32f, 1.0f);          // #002451 - main background
+        const ImVec4 bgChild = ImVec4(0.0f, 0.17f, 0.36f, 1.0f);         // #002B5C - slightly lighter
+        const ImVec4 bgPopup = ImVec4(0.0f, 0.12f, 0.28f, 1.0f);         // #001F47 - darker for popups
+        const ImVec4 border = ImVec4(0.0f, 0.22f, 0.45f, 1.0f);          // #003873 - subtle blue border
+        const ImVec4 textPrimary = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);       // #FFFFFF - white text
+        const ImVec4 textSecondary = ImVec4(0.49f, 0.63f, 0.82f, 1.0f);  // #7DA1D1 - muted blue text
+
+        // Cyan/teal accent
+        const ImVec4 accent = ImVec4(0.8f, 0.8f, 1.0f, 1.0f);          // #99DEFA - bright cyan
+        const ImVec4 accentHover = ImVec4(0.7f, 0.92f, 1.0f, 1.0f);      // #B3EBFF - lighter
+        const ImVec4 accentActive = ImVec4(0.4f, 0.75f, 0.9f, 1.0f);     // #66BFE6 - darker
+
+        // Frame/input backgrounds
+        const ImVec4 frameBg = ImVec4(0.0f, 0.10f, 0.24f, 1.0f);         // #001A3D
+        const ImVec4 frameBgHover = ImVec4(0.0f, 0.14f, 0.32f, 1.0f);    // #002451
+        const ImVec4 frameBgActive = ImVec4(0.0f, 0.18f, 0.38f, 1.0f);   // #002E61
+
+        // Header/selection backgrounds
+        const ImVec4 headerBg = ImVec4(0.0f, 0.18f, 0.38f, 1.0f);        // #002E61
+        const ImVec4 headerHover = ImVec4(0.0f, 0.22f, 0.45f, 1.0f);     // #003873
+        const ImVec4 headerActive = ImVec4(0.0f, 0.26f, 0.52f, 1.0f);    // #004285
+
+        // Set all colors
+        colors[ImGuiCol_Text] = textPrimary;
+        colors[ImGuiCol_TextDisabled] = textSecondary;
+        colors[ImGuiCol_WindowBg] = bgMain;
+        colors[ImGuiCol_ChildBg] = bgChild;
+        colors[ImGuiCol_PopupBg] = bgPopup;
+        colors[ImGuiCol_Border] = border;
+        colors[ImGuiCol_BorderShadow] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        colors[ImGuiCol_FrameBg] = frameBg;
+        colors[ImGuiCol_FrameBgHovered] = frameBgHover;
+        colors[ImGuiCol_FrameBgActive] = frameBgActive;
+        colors[ImGuiCol_TitleBg] = bgMain;
+        colors[ImGuiCol_TitleBgActive] = headerBg;
+        colors[ImGuiCol_TitleBgCollapsed] = bgMain;
+        colors[ImGuiCol_MenuBarBg] = bgMain;
+        colors[ImGuiCol_ScrollbarBg] = bgMain;
+        colors[ImGuiCol_ScrollbarGrab] = headerBg;
+        colors[ImGuiCol_ScrollbarGrabHovered] = headerHover;
+        colors[ImGuiCol_ScrollbarGrabActive] = headerActive;
+        colors[ImGuiCol_CheckMark] = accent;
+        colors[ImGuiCol_SliderGrab] = accent;
+        colors[ImGuiCol_SliderGrabActive] = accentActive;
+        colors[ImGuiCol_Button] = headerBg;
+        colors[ImGuiCol_ButtonHovered] = headerHover;
+        colors[ImGuiCol_ButtonActive] = headerActive;
+        colors[ImGuiCol_Header] = headerBg;
+        colors[ImGuiCol_HeaderHovered] = headerHover;
+        colors[ImGuiCol_HeaderActive] = headerActive;
+        colors[ImGuiCol_Separator] = border;
+        colors[ImGuiCol_SeparatorHovered] = accent;
+        colors[ImGuiCol_SeparatorActive] = accentActive;
+        colors[ImGuiCol_ResizeGrip] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        colors[ImGuiCol_ResizeGripHovered] = accentHover;
+        colors[ImGuiCol_ResizeGripActive] = accentActive;
+        colors[ImGuiCol_Tab] = headerBg;
+        colors[ImGuiCol_TabHovered] = accentHover;
+        colors[ImGuiCol_TabActive] = accent;
+        colors[ImGuiCol_TabUnfocused] = bgMain;
+        colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.4f, 0.65f, 0.85f, 1.0f);
+        colors[ImGuiCol_PlotLines] = accent;
+        colors[ImGuiCol_PlotLinesHovered] = accentHover;
+        colors[ImGuiCol_PlotHistogram] = accent;
+        colors[ImGuiCol_PlotHistogramHovered] = accentHover;
+        colors[ImGuiCol_TableHeaderBg] = headerBg;
+        colors[ImGuiCol_TableBorderStrong] = border;
+        colors[ImGuiCol_TableBorderLight] = ImVec4(0.0f, 0.18f, 0.38f, 1.0f);
+        colors[ImGuiCol_TableRowBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        colors[ImGuiCol_TableRowBgAlt] = ImVec4(0.0f, 0.08f, 0.18f, 0.5f);
+        colors[ImGuiCol_TextSelectedBg] = ImVec4(accent.x, accent.y, accent.z, 0.35f);
+        colors[ImGuiCol_DragDropTarget] = accent;
+        colors[ImGuiCol_NavHighlight] = accent;
+        colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.0f, 1.0f, 1.0f, 0.7f);
+        colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.2f);
+        colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
+
+        style.FrameRounding = 2.0f;
+        style.GrabRounding = 2.0f;
+        style.WindowRounding = 0.0f;
+        style.TabRounding = 2.0f;
+    }
+
+    void MainWindow::ApplySunnyDayTheme()
+    {
+        ImGuiStyle &style = ImGui::GetStyle();
+        ImVec4 *colors = style.Colors;
+
+        // Sunny Day - warm cream/yellow light theme inspired by VS
+        const ImVec4 bgMain = ImVec4(1.0f, 0.98f, 0.94f, 1.0f);          // #FFFAF0 - warm cream
+        const ImVec4 bgChild = ImVec4(1.0f, 1.0f, 0.98f, 1.0f);          // #FFFFFA - slightly warmer white
+        const ImVec4 bgPopup = ImVec4(1.0f, 0.99f, 0.96f, 1.0f);         // #FFFDF5 - popup bg
+        const ImVec4 border = ImVec4(0.85f, 0.80f, 0.70f, 1.0f);         // #D9CCB3 - warm tan border
+        const ImVec4 textPrimary = ImVec4(0.25f, 0.20f, 0.15f, 1.0f);    // #403326 - warm dark brown
+        const ImVec4 textSecondary = ImVec4(0.50f, 0.45f, 0.35f, 1.0f);  // #807359 - muted brown
+
+        // Warm orange/amber accent
+        const ImVec4 accent = ImVec4(0.90f, 0.55f, 0.15f, 1.0f);         // #E68C26 - warm amber
+        const ImVec4 accentHover = ImVec4(0.95f, 0.65f, 0.25f, 1.0f);    // #F2A640 - lighter
+        const ImVec4 accentActive = ImVec4(0.80f, 0.45f, 0.10f, 1.0f);   // #CC731A - darker
+
+        // Frame/input backgrounds
+        const ImVec4 frameBg = ImVec4(0.98f, 0.95f, 0.88f, 1.0f);        // #FAF2E0
+        const ImVec4 frameBgHover = ImVec4(0.96f, 0.92f, 0.82f, 1.0f);   // #F5EBD1
+        const ImVec4 frameBgActive = ImVec4(0.94f, 0.88f, 0.75f, 1.0f);  // #F0E0BF
+
+        // Header/selection backgrounds
+        const ImVec4 headerBg = ImVec4(0.95f, 0.90f, 0.80f, 1.0f);       // #F2E6CC
+        const ImVec4 headerHover = ImVec4(0.92f, 0.85f, 0.70f, 1.0f);    // #EBD9B3
+        const ImVec4 headerActive = ImVec4(0.88f, 0.78f, 0.58f, 1.0f);   // #E0C794
+
+        // Set all colors
+        colors[ImGuiCol_Text] = textPrimary;
+        colors[ImGuiCol_TextDisabled] = textSecondary;
+        colors[ImGuiCol_WindowBg] = bgMain;
+        colors[ImGuiCol_ChildBg] = bgChild;
+        colors[ImGuiCol_PopupBg] = bgPopup;
+        colors[ImGuiCol_Border] = border;
+        colors[ImGuiCol_BorderShadow] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        colors[ImGuiCol_FrameBg] = frameBg;
+        colors[ImGuiCol_FrameBgHovered] = frameBgHover;
+        colors[ImGuiCol_FrameBgActive] = frameBgActive;
+        colors[ImGuiCol_TitleBg] = headerBg;
+        colors[ImGuiCol_TitleBgActive] = headerBg;
+        colors[ImGuiCol_TitleBgCollapsed] = headerBg;
+        colors[ImGuiCol_MenuBarBg] = bgMain;
+        colors[ImGuiCol_ScrollbarBg] = bgMain;
+        colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.85f, 0.78f, 0.65f, 1.0f);
+        colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.78f, 0.70f, 0.55f, 1.0f);
+        colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.70f, 0.60f, 0.45f, 1.0f);
+        colors[ImGuiCol_CheckMark] = accent;
+        colors[ImGuiCol_SliderGrab] = accent;
+        colors[ImGuiCol_SliderGrabActive] = accentActive;
+        colors[ImGuiCol_Button] = headerBg;
+        colors[ImGuiCol_ButtonHovered] = headerHover;
+        colors[ImGuiCol_ButtonActive] = headerActive;
+        colors[ImGuiCol_Header] = headerBg;
+        colors[ImGuiCol_HeaderHovered] = headerHover;
+        colors[ImGuiCol_HeaderActive] = headerActive;
+        colors[ImGuiCol_Separator] = border;
+        colors[ImGuiCol_SeparatorHovered] = accent;
+        colors[ImGuiCol_SeparatorActive] = accentActive;
+        colors[ImGuiCol_ResizeGrip] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        colors[ImGuiCol_ResizeGripHovered] = accentHover;
+        colors[ImGuiCol_ResizeGripActive] = accentActive;
+        colors[ImGuiCol_Tab] = headerBg;
+        colors[ImGuiCol_TabHovered] = accentHover;
+        colors[ImGuiCol_TabActive] = accent;
+        colors[ImGuiCol_TabUnfocused] = headerBg;
+        colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.85f, 0.60f, 0.30f, 1.0f);
+        colors[ImGuiCol_PlotLines] = accent;
+        colors[ImGuiCol_PlotLinesHovered] = accentHover;
+        colors[ImGuiCol_PlotHistogram] = accent;
+        colors[ImGuiCol_PlotHistogramHovered] = accentHover;
+        colors[ImGuiCol_TableHeaderBg] = headerBg;
+        colors[ImGuiCol_TableBorderStrong] = border;
+        colors[ImGuiCol_TableBorderLight] = ImVec4(0.90f, 0.85f, 0.75f, 1.0f);
+        colors[ImGuiCol_TableRowBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        colors[ImGuiCol_TableRowBgAlt] = ImVec4(0.98f, 0.95f, 0.88f, 1.0f);
+        colors[ImGuiCol_TextSelectedBg] = ImVec4(accent.x, accent.y, accent.z, 0.25f);
+        colors[ImGuiCol_DragDropTarget] = accent;
+        colors[ImGuiCol_NavHighlight] = accent;
+        colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.0f, 1.0f, 1.0f, 0.7f);
+        colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.8f, 0.8f, 0.8f, 0.2f);
+        colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.3f, 0.25f, 0.15f, 0.35f);
+
+        style.FrameRounding = 3.0f;
+        style.GrabRounding = 3.0f;
+        style.WindowRounding = 0.0f;
+        style.TabRounding = 3.0f;
     }
 
     void MainWindow::RebuildFontAtlas(float fontSize)
@@ -1508,11 +1802,8 @@ namespace pserv
                 // Get visual state from controller
                 VisualState visualState = controller->GetVisualState(dataObject);
 
-                // Pre-calculate highlight color for reuse
-                ImVec4 highlightColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-                highlightColor.x *= 0.6f; // Reduce red
-                highlightColor.y *= 0.8f; // Reduce green
-                highlightColor.z = 1.0f;  // Full blue
+                // Use theme's accent color for highlighted items (e.g. running services)
+                ImVec4 highlightColor = ImGui::GetStyleColorVec4(ImGuiCol_CheckMark);
 
                 // Apply text color based on visual state
                 if (visualState == VisualState::Disabled)
@@ -2014,18 +2305,35 @@ namespace pserv
         ImDrawList *drawList = ImGui::GetWindowDrawList();
         ImVec4 titleBarColor;
 
+        bool isLightTheme = (m_currentTheme == Theme::Light || m_currentTheme == Theme::SunnyDay);
+
         if (m_bWindowFocused)
         {
-            // Use Windows accent color when focused
-            float r = GetRValue(m_accentColor) / 255.0f;
-            float g = GetGValue(m_accentColor) / 255.0f;
-            float b = GetBValue(m_accentColor) / 255.0f;
-            titleBarColor = ImVec4(r, g, b, 1.0f);
+            switch (m_currentTheme)
+            {
+            case Theme::Light:
+                titleBarColor = ImVec4(1.0f, 0.5f, 0.0f, 1.0f);  // Bright orange
+                break;
+            case Theme::SunnyDay:
+                titleBarColor = ImVec4(0.90f, 0.55f, 0.15f, 1.0f);  // Warm amber
+                break;
+            case Theme::TomorrowNightBlue:
+                titleBarColor = ImVec4(0.6f, 0.87f, 0.98f, 1.0f);  // Cyan accent
+                break;
+            case Theme::Dark:
+            default:
+                // Use Windows accent color when focused
+                float r = GetRValue(m_accentColor) / 255.0f;
+                float g = GetGValue(m_accentColor) / 255.0f;
+                float b = GetBValue(m_accentColor) / 255.0f;
+                titleBarColor = ImVec4(r, g, b, 1.0f);
+                break;
+            }
         }
         else
         {
-            // Use neutral gray when unfocused
-            titleBarColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+            // Use neutral gray when unfocused (lighter for light themes)
+            titleBarColor = isLightTheme ? ImVec4(0.75f, 0.78f, 0.82f, 1.0f) : ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
         }
 
         drawList->AddRectFilled(titleBarMin, titleBarMax, ImGui::ColorConvertFloat4ToU32(titleBarColor));
@@ -2047,7 +2355,13 @@ namespace pserv
 
         // Draw window title on the left
         ImGui::SetCursorScreenPos(ImVec2(titleBarMin.x + 10.0f, titleBarMin.y + (titleBarHeight - ImGui::GetTextLineHeight()) * 0.5f));
+        // Use dark text for Tomorrow Night Blue (bright cyan bg), white for others
+        ImVec4 titleTextColor = (m_currentTheme == Theme::TomorrowNightBlue && m_bWindowFocused)
+            ? ImVec4(0.0f, 0.14f, 0.32f, 1.0f)   // Dark blue text on cyan
+            : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);    // White text
+        ImGui::PushStyleColor(ImGuiCol_Text, titleTextColor);
         ImGui::Text("pserv " PSERV_VERSION_STRING);
+        ImGui::PopStyleColor();
 
         // Window control buttons (right side) - drawn with primitives for consistent alignment
         const ImU32 iconColor = IM_COL32(255, 255, 255, 255);
@@ -2265,27 +2579,27 @@ namespace pserv
                 auto &appSettings = config::theSettings.application;
                 std::string currentTheme = appSettings.theme.get();
 
-                if (ImGui::MenuItem("Dark", nullptr, currentTheme == "Dark"))
+                auto setTheme = [&](const char* themeName, Theme theme)
                 {
-                    appSettings.theme.set("Dark");
+                    appSettings.theme.set(themeName);
                     if (m_pConfigBackend)
                     {
                         appSettings.save(*m_pConfigBackend);
                     }
-                    ImGui::StyleColorsDark();
-                    ApplyOrangeAccent();
-                }
+                    ApplyTheme(theme);
+                };
+
+                if (ImGui::MenuItem("Dark", nullptr, currentTheme == "Dark"))
+                    setTheme("Dark", Theme::Dark);
 
                 if (ImGui::MenuItem("Light", nullptr, currentTheme == "Light"))
-                {
-                    appSettings.theme.set("Light");
-                    if (m_pConfigBackend)
-                    {
-                        appSettings.save(*m_pConfigBackend);
-                    }
-                    ImGui::StyleColorsLight();
-                    ApplyOrangeAccent();
-                }
+                    setTheme("Light", Theme::Light);
+
+                if (ImGui::MenuItem("Tomorrow Night Blue", nullptr, currentTheme == "TomorrowNightBlue"))
+                    setTheme("TomorrowNightBlue", Theme::TomorrowNightBlue);
+
+                if (ImGui::MenuItem("Sunny Day", nullptr, currentTheme == "SunnyDay"))
+                    setTheme("SunnyDay", Theme::SunnyDay);
 
                 ImGui::EndMenu();
             }
