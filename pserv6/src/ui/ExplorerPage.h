@@ -1,0 +1,48 @@
+#pragma once
+
+#include "pch.h"
+
+#include <memory>
+
+#include <interaction/services_adapter.h>
+
+class ExplorerPage : public pserv6::interaction::IActionExecutionHost
+{
+public:
+    ExplorerPage();
+
+    winrt::Microsoft::UI::Xaml::UIElement Root() const;
+
+    bool Confirm(const pserv6::interaction::ConfirmationRequest &request) override;
+    void ReportProgress(const pserv6::interaction::ActionProgress &progress) override;
+    bool IsCancellationRequested() const override;
+    void ReportError(std::string_view message) override;
+
+private:
+    using StackPanel = winrt::Microsoft::UI::Xaml::Controls::StackPanel;
+    using TextBlock = winrt::Microsoft::UI::Xaml::Controls::TextBlock;
+    using Grid = winrt::Microsoft::UI::Xaml::Controls::Grid;
+    using Border = winrt::Microsoft::UI::Xaml::Controls::Border;
+    using Button = winrt::Microsoft::UI::Xaml::Controls::Button;
+
+    winrt::Microsoft::UI::Xaml::UIElement m_root{nullptr};
+    StackPanel m_layout{nullptr};
+    StackPanel m_actionsPanel{nullptr};
+    StackPanel m_listPanel{nullptr};
+    StackPanel m_detailsPanel{nullptr};
+    TextBlock m_statusText{nullptr};
+
+    pserv6::interaction::ExplorerViewState m_state;
+    std::unique_ptr<pserv6::interaction::IExplorerViewAdapter> m_adapter;
+    std::unique_ptr<pserv6::interaction::IActionExecutor> m_actionExecutor;
+    std::vector<pserv6::interaction::ExplorerItem> m_items;
+
+    void BuildShell();
+    void Refresh();
+    void RenderActions();
+    void RenderList();
+    void RenderDetails();
+    void SelectItem(const std::string &itemId);
+    void ExecuteAction(const std::string &actionId);
+};
+

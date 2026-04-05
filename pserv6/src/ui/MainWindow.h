@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pch.h"
+#include "ExplorerPage.h"
 
 struct MainWindow
     : winrt::Microsoft::UI::Xaml::WindowT<
@@ -22,5 +23,5 @@ struct MainWindow
 
 private:
     winrt::Microsoft::UI::Xaml::XamlTypeInfo::XamlControlsXamlMetaDataProvider m_provider;
+    std::unique_ptr<ExplorerPage> m_explorerPage;
 };
-

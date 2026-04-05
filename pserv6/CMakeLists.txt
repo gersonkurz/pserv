@@ -87,8 +87,12 @@ add_executable(${TARGET_NAME} WIN32
     src/ui/main.cpp
     src/ui/App.cpp
     src/ui/App.h
+    src/ui/ExplorerPage.cpp
+    src/ui/ExplorerPage.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
+    interaction/services_adapter.cpp
+    interaction/services_adapter.h
     "${WindowsAppSDK_DIR}/include/UndockedRegFreeWinRT-AutoInitializer.cpp"
 )
 
@@ -139,4 +143,3 @@ add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
         -P "${CMAKE_CURRENT_SOURCE_DIR}/scripts/copy-runtime.cmake"
     COMMENT "Copying Windows App SDK runtime files"
 )
-
