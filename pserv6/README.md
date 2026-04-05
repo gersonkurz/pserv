@@ -19,8 +19,14 @@ Near-term goals:
 - bootstrap a WinUI application shell
 - adapt `Services` as the first vertical slice
 
+Current local build command:
+
+```powershell
+cmake -S pserv6 -B pserv6\build -G "Visual Studio 18 2026" -A x64
+cmake --build pserv6\build --config Debug
+```
+
 Non-goals:
 
 - cloning the ImGui UI one-for-one
 - mass refactoring `pserv5` before the new shell exists
-
