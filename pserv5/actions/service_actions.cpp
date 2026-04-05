@@ -4,6 +4,7 @@
 #include <core/data_action_dispatch_context.h>
 #include <core/data_controller.h>
 #include <models/service_info.h>
+#include <shellapi.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/service_manager.h>

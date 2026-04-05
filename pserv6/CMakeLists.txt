@@ -80,6 +80,44 @@ add_library(pserv6_interaction INTERFACE)
 target_include_directories(pserv6_interaction INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_features(pserv6_interaction INTERFACE cxx_std_20)
 
+add_library(pserv5_services_backend STATIC
+    ../pserv5/precomp.cpp
+    ../pserv5/core/async_operation.cpp
+    ../pserv5/core/data_action.cpp
+    ../pserv5/core/data_action_dispatch_context.cpp
+    ../pserv5/core/data_controller.cpp
+    ../pserv5/core/data_object_container.cpp
+    ../pserv5/controllers/services_data_controller.cpp
+    ../pserv5/models/service_info.cpp
+    ../pserv5/actions/service_actions.cpp
+    ../pserv5/windows_api/service_manager.cpp
+    interaction/services_adapter.cpp
+)
+
+target_compile_features(pserv5_services_backend PRIVATE cxx_std_20)
+target_compile_definitions(pserv5_services_backend PRIVATE _CONSOLE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_precompile_headers(pserv5_services_backend PRIVATE ../pserv5/precomp.h)
+target_include_directories(pserv5_services_backend PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/.."
+    "${CMAKE_CURRENT_SOURCE_DIR}/../pserv5"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../argparse/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../spdlog/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../wil/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../rapidjson/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../tomlplusplus/include"
+)
+target_compile_options(pserv5_services_backend PRIVATE
+    /W4
+    /utf-8
+    /external:anglebrackets
+    /external:W0
+)
+target_link_libraries(pserv5_services_backend PUBLIC
+    shell32
+    advapi32
+)
+
 set(TARGET_NAME pserv6)
 
 add_executable(${TARGET_NAME} WIN32
@@ -91,7 +129,6 @@ add_executable(${TARGET_NAME} WIN32
     src/ui/ExplorerPage.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
-    interaction/services_adapter.cpp
     interaction/services_adapter.h
     "${WindowsAppSDK_DIR}/include/UndockedRegFreeWinRT-AutoInitializer.cpp"
 )
@@ -126,6 +163,7 @@ target_link_directories(${TARGET_NAME} PRIVATE
 
 target_link_libraries(${TARGET_NAME} PRIVATE
     pserv6_interaction
+    pserv5_services_backend
     Microsoft.WindowsAppRuntime
     WindowsApp
     ole32

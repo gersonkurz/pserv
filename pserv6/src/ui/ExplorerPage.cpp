@@ -71,7 +71,7 @@ namespace
 
 ExplorerPage::ExplorerPage()
     : m_adapter{std::make_unique<pserv6::interaction::ServicesViewAdapter>()}
-    , m_actionExecutor{std::make_unique<pserv6::interaction::ServicesActionExecutor>()}
+    , m_actionExecutor{std::make_unique<pserv6::interaction::ServicesActionExecutor>(*m_adapter)}
 {
     BuildShell();
     Refresh();

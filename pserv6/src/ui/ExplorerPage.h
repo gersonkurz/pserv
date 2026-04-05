@@ -2,8 +2,6 @@
 
 #include "pch.h"
 
-#include <memory>
-
 #include <interaction/services_adapter.h>
 
 class ExplorerPage : public pserv6::interaction::IActionExecutionHost
@@ -33,8 +31,8 @@ private:
     TextBlock m_statusText{nullptr};
 
     pserv6::interaction::ExplorerViewState m_state;
-    std::unique_ptr<pserv6::interaction::IExplorerViewAdapter> m_adapter;
-    std::unique_ptr<pserv6::interaction::IActionExecutor> m_actionExecutor;
+    std::unique_ptr<pserv6::interaction::ServicesViewAdapter> m_adapter;
+    std::unique_ptr<pserv6::interaction::ServicesActionExecutor> m_actionExecutor;
     std::vector<pserv6::interaction::ExplorerItem> m_items;
 
     void BuildShell();
@@ -45,4 +43,3 @@ private:
     void SelectItem(const std::string &itemId);
     void ExecuteAction(const std::string &actionId);
 };
-

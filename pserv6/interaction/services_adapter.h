@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <interaction/action_execution.h>
 #include <interaction/explorer_contracts.h>
 
@@ -9,6 +11,7 @@ namespace pserv6::interaction
     {
     public:
         ServicesViewAdapter();
+        ~ServicesViewAdapter() override;
 
         const ExplorerViewDescriptor &Describe() const override;
         ViewRefreshResult Refresh(const ExplorerViewState &state, bool isAutoRefresh) override;
@@ -19,13 +22,21 @@ namespace pserv6::interaction
         RemoteContext GetRemoteContext() const override;
 
     private:
-        ExplorerViewDescriptor m_descriptor;
-        RemoteContext m_remoteContext;
+        friend class ServicesActionExecutor;
+        struct Impl;
+        std::unique_ptr<Impl> m_impl;
     };
 
     class ServicesActionExecutor final : public IActionExecutor
     {
     public:
+        explicit ServicesActionExecutor(ServicesViewAdapter &adapter);
+        ~ServicesActionExecutor() override;
+
         ActionResult Execute(const ActionRequest &request, IActionExecutionHost &host) override;
+
+    private:
+        struct Impl;
+        std::unique_ptr<Impl> m_impl;
     };
 } // namespace pserv6::interaction
