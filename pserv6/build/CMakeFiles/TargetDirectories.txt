@@ -1,0 +1,3 @@
+C:/Projects/pserv/pserv6/build/CMakeFiles/pserv6.dir
+C:/Projects/pserv/pserv6/build/CMakeFiles/ALL_BUILD.dir
+C:/Projects/pserv/pserv6/build/CMakeFiles/ZERO_CHECK.dir
