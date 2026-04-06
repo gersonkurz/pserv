@@ -49,7 +49,8 @@ namespace
         TextBlock tb;
         tb.Text(text);
         tb.FontSize(fontSize);
-        tb.TextWrapping(TextWrapping::Wrap);
+        tb.TextWrapping(TextWrapping::NoWrap);
+        tb.TextTrimming(TextTrimming::CharacterEllipsis);
         tb.Foreground(ThemeBrush(resourceKey));
         return tb;
     }
@@ -307,12 +308,42 @@ void ExplorerPage::BuildShell()
     listHost.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
     listHost.Background(ThemeBrush(L"SubtleFillColorSecondaryBrush"));
 
+    StackPanel resultsPanel;
+    resultsPanel.Spacing(6);
+
+    m_headerGrid = Grid{};
+    resultsPanel.Children().Append(m_headerGrid);
+
     m_listView = ListView{};
     m_listView.SelectionMode(ListViewSelectionMode::Extended);
     m_listView.IsItemClickEnabled(true);
-    m_listView.ItemClick([this](auto &&, auto &&) { UpdateSelectionFromList(); });
+    m_listView.HorizontalAlignment(HorizontalAlignment::Stretch);
+    m_listView.ItemClick([this](auto &&, ItemClickEventArgs const &args)
+    {
+        auto border = args.ClickedItem().try_as<Border>();
+        if (!border)
+        {
+            return;
+        }
+
+        auto tag = border.Tag();
+        if (!tag)
+        {
+            return;
+        }
+
+        const auto itemId = ToUtf8(winrt::unbox_value<winrt::hstring>(tag).c_str());
+        if (std::ranges::find(m_state.SelectedItemIds, itemId) == m_state.SelectedItemIds.end())
+        {
+            m_state.SelectedItemIds = {itemId};
+        }
+        m_state.FocusedItemId = itemId;
+        RenderActions();
+        RenderList();
+    });
     m_listView.SelectionChanged([this](auto &&, auto &&) { UpdateSelectionFromList(); });
-    listHost.Child(m_listView);
+    resultsPanel.Children().Append(m_listView);
+    listHost.Child(resultsPanel);
 
     m_layout.Children().Append(title);
     m_layout.Children().Append(subtitle);
@@ -349,6 +380,7 @@ void ExplorerPage::Refresh()
     }
 
     RenderActions();
+    RenderHeader();
     RenderList();
 }
 
@@ -382,6 +414,76 @@ void ExplorerPage::RenderActions()
     }
 }
 
+double ExplorerPage::GetColumnWidth(const pserv6::interaction::ColumnDescriptor &column, size_t index)
+{
+    if (index == 0)
+    {
+        return 190.0;
+    }
+    if (column.Id == "display_name")
+    {
+        return 280.0;
+    }
+    if (column.Kind == pserv6::interaction::ColumnKind::Integer ||
+        column.Kind == pserv6::interaction::ColumnKind::UnsignedInteger ||
+        column.Kind == pserv6::interaction::ColumnKind::Size ||
+        column.Kind == pserv6::interaction::ColumnKind::Time)
+    {
+        return 110.0;
+    }
+    return 150.0;
+}
+
+void ExplorerPage::RenderHeader()
+{
+    m_headerGrid.Children().Clear();
+    m_headerGrid.ColumnDefinitions().Clear();
+    m_headerGrid.Padding(ThicknessHelper::FromLengths(6, 0, 6, 0));
+    m_headerGrid.ColumnSpacing(8);
+
+    const auto &columns = m_adapter->Describe().Columns;
+    for (size_t i = 0; i < columns.size(); ++i)
+    {
+        const auto &column = columns[i];
+        auto definition = ColumnDefinition{};
+        definition.Width(GridLengthHelper::FromPixels(GetColumnWidth(column, i)));
+        m_headerGrid.ColumnDefinitions().Append(definition);
+
+        std::string title = column.Title;
+        if (m_state.Sort.has_value() && m_state.Sort->ColumnId == column.Id)
+        {
+            title += m_state.Sort->Ascending ? "  ^" : "  v";
+        }
+
+        auto button = Button{};
+        button.Content(winrt::box_value(winrt::hstring{ToWide(title)}));
+        button.HorizontalAlignment(HorizontalAlignment::Stretch);
+        button.HorizontalContentAlignment(
+            (column.Kind == pserv6::interaction::ColumnKind::Integer ||
+             column.Kind == pserv6::interaction::ColumnKind::UnsignedInteger ||
+             column.Kind == pserv6::interaction::ColumnKind::Size ||
+             column.Kind == pserv6::interaction::ColumnKind::Time)
+                ? HorizontalAlignment::Right
+                : HorizontalAlignment::Left);
+        button.Padding(ThicknessHelper::FromLengths(8, 6, 8, 6));
+        button.Click([this, columnId = column.Id](auto &&, auto &&)
+        {
+            if (m_state.Sort.has_value() && m_state.Sort->ColumnId == columnId)
+            {
+                m_state.Sort->Ascending = !m_state.Sort->Ascending;
+            }
+            else
+            {
+                m_state.Sort = pserv6::interaction::SortState{columnId, true};
+            }
+            Refresh();
+        });
+
+        Grid::SetColumn(button, static_cast<int>(i));
+        m_headerGrid.Children().Append(button);
+    }
+}
+
 void ExplorerPage::RenderList()
 {
     m_listView.Items().Clear();
@@ -390,7 +492,7 @@ void ExplorerPage::RenderList()
     {
         const auto &descriptor = m_adapter->Describe();
         auto rowBorder = Border{};
-        rowBorder.Padding(ThicknessHelper::FromLengths(10, 8, 10, 8));
+        rowBorder.Padding(ThicknessHelper::FromLengths(6, 6, 6, 6));
         rowBorder.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
         rowBorder.Margin(ThicknessHelper::FromLengths(0, 0, 0, 2));
 
@@ -404,36 +506,47 @@ void ExplorerPage::RenderList()
             rowBorder.Background(ThemeBrush(L"ControlFillColorDefaultBrush"));
         }
 
-        auto row = StackPanel{};
-        row.Spacing(4);
-
-        std::wstring line;
-        for (size_t i = 0; i < std::min(item.Values.size(), descriptor.Columns.size()); ++i)
+        if (!selected)
         {
-            if (i > 0)
+            if (item.State == pserv6::interaction::VisualState::Highlighted)
             {
-                line += L"  |  ";
+                rowBorder.Background(ThemeBrush(L"AccentFillColorTertiaryBrush"));
             }
-            line += ToWide(ValueToString(item.Values[i]));
+            else if (item.State == pserv6::interaction::VisualState::Disabled)
+            {
+                rowBorder.Background(ThemeBrush(L"SubtleFillColorTertiaryBrush"));
+            }
         }
 
-        auto text = MakeText(line, 13.0, L"TextFillColorPrimaryBrush");
-        row.Children().Append(text);
+        auto rowGrid = Grid{};
+        rowGrid.ColumnSpacing(8);
 
-        auto stateText = MakeText(
-            item.State == pserv6::interaction::VisualState::Highlighted ? L"Highlighted" :
-            item.State == pserv6::interaction::VisualState::Disabled ? L"Disabled" : L"Normal",
-            12.0,
-            L"TextFillColorSecondaryBrush");
-        row.Children().Append(stateText);
+        for (size_t i = 0; i < descriptor.Columns.size(); ++i)
+        {
+            auto definition = ColumnDefinition{};
+            definition.Width(GridLengthHelper::FromPixels(GetColumnWidth(descriptor.Columns[i], i)));
+            rowGrid.ColumnDefinitions().Append(definition);
 
-        rowBorder.Child(row);
+            const auto value = i < item.Values.size() ? ValueToString(item.Values[i]) : std::string{};
+            auto text = MakeText(ToWide(value), 13.0,
+                item.State == pserv6::interaction::VisualState::Disabled
+                    ? L"TextFillColorSecondaryBrush"
+                    : L"TextFillColorPrimaryBrush");
+            text.VerticalAlignment(VerticalAlignment::Center);
+            text.TextAlignment(
+                (descriptor.Columns[i].Kind == pserv6::interaction::ColumnKind::Integer ||
+                 descriptor.Columns[i].Kind == pserv6::interaction::ColumnKind::UnsignedInteger ||
+                 descriptor.Columns[i].Kind == pserv6::interaction::ColumnKind::Size ||
+                 descriptor.Columns[i].Kind == pserv6::interaction::ColumnKind::Time)
+                    ? TextAlignment::Right
+                    : TextAlignment::Left);
+            Grid::SetColumn(text, static_cast<int>(i));
+            rowGrid.Children().Append(text);
+        }
 
-        ListViewItem container;
-        container.Tag(winrt::box_value(winrt::hstring{ToWide(item.Id)}));
-        container.Content(rowBorder);
-        container.IsSelected(selected);
-        m_listView.Items().Append(container);
+        rowBorder.Tag(winrt::box_value(winrt::hstring{ToWide(item.Id)}));
+        rowBorder.Child(rowGrid);
+        m_listView.Items().Append(rowBorder);
     }
 }
 
@@ -443,8 +556,8 @@ void ExplorerPage::UpdateSelectionFromList()
     const auto selected = m_listView.SelectedItems();
     for (uint32_t i = 0; i < selected.Size(); ++i)
     {
-        const auto item = selected.GetAt(i).try_as<ListViewItem>();
-        if (item)
+        const auto item = selected.GetAt(i).try_as<Border>();
+        if (item && item.Tag())
         {
             m_state.SelectedItemIds.push_back(ToUtf8(winrt::unbox_value<winrt::hstring>(item.Tag()).c_str()));
         }
@@ -460,6 +573,7 @@ void ExplorerPage::UpdateSelectionFromList()
     }
 
     RenderActions();
+    RenderList();
 }
 
 void ExplorerPage::ExecuteAction(const std::string &actionId)

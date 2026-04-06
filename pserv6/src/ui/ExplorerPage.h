@@ -30,6 +30,7 @@ private:
     winrt::Microsoft::UI::Xaml::UIElement m_root{nullptr};
     StackPanel m_layout{nullptr};
     StackPanel m_actionsPanel{nullptr};
+    Grid m_headerGrid{nullptr};
     ListView m_listView{nullptr};
     TextBlock m_statusText{nullptr};
 
@@ -41,7 +42,9 @@ private:
     void BuildShell();
     void Refresh();
     void RenderActions();
+    void RenderHeader();
     void RenderList();
     void UpdateSelectionFromList();
     void ExecuteAction(const std::string &actionId);
+    static double GetColumnWidth(const pserv6::interaction::ColumnDescriptor &column, size_t index);
 };
