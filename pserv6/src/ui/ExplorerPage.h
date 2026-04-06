@@ -2,6 +2,8 @@
 
 #include "pch.h"
 
+#include <unordered_map>
+
 #include <interaction/services_adapter.h>
 
 class ExplorerPage : public pserv6::interaction::IActionExecutionHost
@@ -10,6 +12,7 @@ public:
     ExplorerPage();
 
     winrt::Microsoft::UI::Xaml::UIElement Root() const;
+    winrt::Windows::Foundation::IAsyncAction ShowPropertiesDialogAsync();
 
     bool Confirm(const pserv6::interaction::ConfirmationRequest &request) override;
     void ReportProgress(const pserv6::interaction::ActionProgress &progress) override;
@@ -22,12 +25,12 @@ private:
     using Grid = winrt::Microsoft::UI::Xaml::Controls::Grid;
     using Border = winrt::Microsoft::UI::Xaml::Controls::Border;
     using Button = winrt::Microsoft::UI::Xaml::Controls::Button;
+    using ListView = winrt::Microsoft::UI::Xaml::Controls::ListView;
 
     winrt::Microsoft::UI::Xaml::UIElement m_root{nullptr};
     StackPanel m_layout{nullptr};
     StackPanel m_actionsPanel{nullptr};
-    StackPanel m_listPanel{nullptr};
-    StackPanel m_detailsPanel{nullptr};
+    ListView m_listView{nullptr};
     TextBlock m_statusText{nullptr};
 
     pserv6::interaction::ExplorerViewState m_state;
@@ -39,7 +42,6 @@ private:
     void Refresh();
     void RenderActions();
     void RenderList();
-    void RenderDetails();
-    void SelectItem(const std::string &itemId);
+    void UpdateSelectionFromList();
     void ExecuteAction(const std::string &actionId);
 };

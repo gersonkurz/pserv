@@ -3,11 +3,13 @@
 
 #include <format>
 #include <ranges>
+#include <unordered_map>
 #include <type_traits>
 
 using namespace winrt::Microsoft::UI::Xaml;
 using namespace winrt::Microsoft::UI::Xaml::Controls;
 using namespace winrt::Microsoft::UI::Xaml::Media;
+using namespace winrt::Microsoft::UI::Xaml::Input;
 
 namespace
 {
@@ -67,6 +69,22 @@ namespace
         }
         return result;
     }
+
+    std::string ToUtf8(std::wstring_view text)
+    {
+        if (text.empty())
+        {
+            return {};
+        }
+
+        int size = WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0, nullptr, nullptr);
+        std::string result(static_cast<size_t>(size > 0 ? size : 0), '\0');
+        if (size > 0)
+        {
+            WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), result.data(), size, nullptr, nullptr);
+        }
+        return result;
+    }
 }
 
 ExplorerPage::ExplorerPage()
@@ -80,6 +98,160 @@ ExplorerPage::ExplorerPage()
 winrt::Microsoft::UI::Xaml::UIElement ExplorerPage::Root() const
 {
     return m_root;
+}
+
+winrt::Windows::Foundation::IAsyncAction ExplorerPage::ShowPropertiesDialogAsync()
+{
+    if (!m_state.FocusedItemId.has_value())
+    {
+        co_return;
+    }
+
+    auto details = m_adapter->GetDetails(*m_state.FocusedItemId);
+    if (!details.has_value())
+    {
+        co_return;
+    }
+
+    ContentDialog dialog;
+    dialog.Title(winrt::box_value(winrt::hstring{ToWide(std::format("Properties - {}", details->Title))}));
+    dialog.PrimaryButtonText(L"Apply");
+    dialog.CloseButtonText(L"Cancel");
+    dialog.DefaultButton(ContentDialogButton::Primary);
+    dialog.XamlRoot(m_root.XamlRoot());
+
+    ScrollViewer scroll;
+    scroll.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
+    scroll.MaxHeight(700);
+
+    StackPanel content;
+    content.Spacing(12);
+
+    std::unordered_map<std::string, TextBox> textFields;
+    std::unordered_map<std::string, ComboBox> comboFields;
+
+    for (const auto &section : details->Sections)
+    {
+        Border sectionBorder;
+        sectionBorder.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
+        sectionBorder.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
+        sectionBorder.Background(ThemeBrush(L"SubtleFillColorSecondaryBrush"));
+
+        StackPanel sectionPanel;
+        sectionPanel.Spacing(8);
+
+        auto sectionTitle = MakeText(ToWide(section.Title), 15.0, L"TextFillColorPrimaryBrush");
+        sectionTitle.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
+        sectionPanel.Children().Append(sectionTitle);
+
+        for (const auto &field : section.Fields)
+        {
+            StackPanel fieldPanel;
+            fieldPanel.Spacing(4);
+
+            auto label = MakeText(ToWide(field.Label), 12.0, L"TextFillColorSecondaryBrush");
+            fieldPanel.Children().Append(label);
+
+            const auto currentValue = winrt::hstring{ToWide(ValueToString(field.Value))};
+
+            if (field.Editable && field.Editor == pserv6::interaction::FieldEditor::Combo)
+            {
+                ComboBox combo;
+                combo.MinWidth(260);
+                for (const auto &option : field.Options)
+                {
+                    ComboBoxItem item;
+                    item.Content(winrt::box_value(winrt::hstring{ToWide(option.Label)}));
+                    item.Tag(winrt::box_value(winrt::hstring{ToWide(option.Id)}));
+                    combo.Items().Append(item);
+
+                    if (option.Label == ValueToString(field.Value))
+                    {
+                        combo.SelectedItem(item);
+                    }
+                }
+                fieldPanel.Children().Append(combo);
+                comboFields[field.Id] = combo;
+            }
+            else
+            {
+                TextBox box;
+                box.Text(currentValue);
+                box.IsReadOnly(!field.Editable);
+                if (field.Editor == pserv6::interaction::FieldEditor::MultilineText)
+                {
+                    box.AcceptsReturn(true);
+                    box.TextWrapping(TextWrapping::Wrap);
+                    box.MinHeight(96);
+                }
+                fieldPanel.Children().Append(box);
+                textFields[field.Id] = box;
+            }
+
+            sectionPanel.Children().Append(fieldPanel);
+        }
+
+        sectionBorder.Child(sectionPanel);
+        content.Children().Append(sectionBorder);
+    }
+
+    scroll.Content(content);
+    dialog.Content(scroll);
+
+    dialog.PrimaryButtonClick([this, &dialog, details, textFields, comboFields](
+                                  ContentDialog const &,
+                                  ContentDialogButtonClickEventArgs const &args) mutable
+    {
+        auto deferral = args.GetDeferral();
+
+        for (auto &section : details->Sections)
+        {
+            for (auto &field : section.Fields)
+            {
+                if (!field.Editable)
+                {
+                    continue;
+                }
+
+                if (field.Editor == pserv6::interaction::FieldEditor::Combo)
+                {
+                    const auto comboIt = comboFields.find(field.Id);
+                    if (comboIt != comboFields.end())
+                    {
+                        const auto selected = comboIt->second.SelectedItem().try_as<ComboBoxItem>();
+                            if (selected)
+                        {
+                            field.Value = ToUtf8(winrt::unbox_value<winrt::hstring>(selected.Content()).c_str());
+                        }
+                    }
+                }
+                else
+                {
+                    const auto textIt = textFields.find(field.Id);
+                    if (textIt != textFields.end())
+                    {
+                        field.Value = ToUtf8(textIt->second.Text().c_str());
+                    }
+                }
+            }
+        }
+
+        std::string errorMessage;
+        if (!m_adapter->ApplyDetailEdits(*m_state.FocusedItemId, *details, errorMessage))
+        {
+            args.Cancel(true);
+            ReportError(errorMessage);
+        }
+        else
+        {
+            m_statusText.Text(L"Properties updated.");
+            Refresh();
+        }
+
+        deferral.Complete();
+    });
+
+    co_await dialog.ShowAsync();
 }
 
 bool ExplorerPage::Confirm(const pserv6::interaction::ConfirmationRequest &request)
@@ -108,14 +280,14 @@ void ExplorerPage::BuildShell()
 {
     Grid root;
     root.Padding(ThicknessHelper::FromLengths(24, 24, 24, 24));
-    root.ColumnSpacing(20);
+    root.RowSpacing(12);
 
-    auto leftColumn = ColumnDefinition{};
-    leftColumn.Width(GridLengthHelper::FromValueAndType(2, GridUnitType::Star));
-    auto rightColumn = ColumnDefinition{};
-    rightColumn.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
-    root.ColumnDefinitions().Append(leftColumn);
-    root.ColumnDefinitions().Append(rightColumn);
+    auto contentRow = RowDefinition{};
+    contentRow.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+    auto statusRow = RowDefinition{};
+    statusRow.Height(GridLengthHelper::Auto());
+    root.RowDefinitions().Append(contentRow);
+    root.RowDefinitions().Append(statusRow);
 
     m_layout = StackPanel{};
     m_layout.Spacing(12);
@@ -135,30 +307,23 @@ void ExplorerPage::BuildShell()
     listHost.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
     listHost.Background(ThemeBrush(L"SubtleFillColorSecondaryBrush"));
 
-    m_listPanel = StackPanel{};
-    m_listPanel.Spacing(6);
-    listHost.Child(m_listPanel);
+    m_listView = ListView{};
+    m_listView.SelectionMode(ListViewSelectionMode::Extended);
+    m_listView.IsItemClickEnabled(true);
+    m_listView.ItemClick([this](auto &&, auto &&) { UpdateSelectionFromList(); });
+    m_listView.SelectionChanged([this](auto &&, auto &&) { UpdateSelectionFromList(); });
+    listHost.Child(m_listView);
 
     m_layout.Children().Append(title);
     m_layout.Children().Append(subtitle);
     m_layout.Children().Append(m_actionsPanel);
-    m_layout.Children().Append(m_statusText);
     m_layout.Children().Append(listHost);
 
-    Grid::SetColumn(m_layout, 0);
+    Grid::SetRow(m_layout, 0);
     root.Children().Append(m_layout);
 
-    auto detailsHost = Border{};
-    detailsHost.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
-    detailsHost.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
-    detailsHost.Background(ThemeBrush(L"SubtleFillColorSecondaryBrush"));
-
-    m_detailsPanel = StackPanel{};
-    m_detailsPanel.Spacing(8);
-    detailsHost.Child(m_detailsPanel);
-
-    Grid::SetColumn(detailsHost, 1);
-    root.Children().Append(detailsHost);
+    Grid::SetRow(m_statusText, 1);
+    root.Children().Append(m_statusText);
 
     m_root = root;
 }
@@ -185,7 +350,6 @@ void ExplorerPage::Refresh()
 
     RenderActions();
     RenderList();
-    RenderDetails();
 }
 
 void ExplorerPage::RenderActions()
@@ -197,8 +361,19 @@ void ExplorerPage::RenderActions()
     refreshButton.Click([this](auto &&, auto &&) { Refresh(); });
     m_actionsPanel.Children().Append(refreshButton);
 
+    auto propertiesButton = Button{};
+    propertiesButton.Content(winrt::box_value(L"Properties"));
+    propertiesButton.IsEnabled(m_state.FocusedItemId.has_value());
+    propertiesButton.Click([this](auto &&, auto &&) { ShowPropertiesDialogAsync(); });
+    m_actionsPanel.Children().Append(propertiesButton);
+
     for (const auto &action : m_adapter->GetActions(m_state))
     {
+        if (action.Id == "properties")
+        {
+            continue;
+        }
+
         auto button = Button{};
         button.Content(winrt::box_value(winrt::hstring{ToWide(action.Label)}));
         button.IsEnabled(action.Enabled);
@@ -209,20 +384,15 @@ void ExplorerPage::RenderActions()
 
 void ExplorerPage::RenderList()
 {
-    m_listPanel.Children().Clear();
-
-    const auto &descriptor = m_adapter->Describe();
-
-    auto header = MakeText(ToWide(descriptor.Title), 20.0, L"TextFillColorPrimaryBrush");
-    header.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
-    m_listPanel.Children().Append(header);
+    m_listView.Items().Clear();
 
     for (const auto &item : m_items)
     {
+        const auto &descriptor = m_adapter->Describe();
         auto rowBorder = Border{};
         rowBorder.Padding(ThicknessHelper::FromLengths(10, 8, 10, 8));
         rowBorder.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
-        rowBorder.Margin(ThicknessHelper::FromLengths(0, 0, 0, 4));
+        rowBorder.Margin(ThicknessHelper::FromLengths(0, 0, 0, 2));
 
         const bool selected = std::ranges::find(m_state.SelectedItemIds, item.Id) != m_state.SelectedItemIds.end();
         if (selected)
@@ -258,69 +428,38 @@ void ExplorerPage::RenderList()
         row.Children().Append(stateText);
 
         rowBorder.Child(row);
-        rowBorder.Tapped([this, itemId = item.Id](auto &&, auto &&) { SelectItem(itemId); });
 
-        m_listPanel.Children().Append(rowBorder);
+        ListViewItem container;
+        container.Tag(winrt::box_value(winrt::hstring{ToWide(item.Id)}));
+        container.Content(rowBorder);
+        container.IsSelected(selected);
+        m_listView.Items().Append(container);
     }
 }
 
-void ExplorerPage::RenderDetails()
+void ExplorerPage::UpdateSelectionFromList()
 {
-    m_detailsPanel.Children().Clear();
-
-    auto title = MakeText(L"Details", 20.0, L"TextFillColorPrimaryBrush");
-    title.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
-    m_detailsPanel.Children().Append(title);
-
-    if (!m_state.FocusedItemId.has_value())
+    m_state.SelectedItemIds.clear();
+    const auto selected = m_listView.SelectedItems();
+    for (uint32_t i = 0; i < selected.Size(); ++i)
     {
-        m_detailsPanel.Children().Append(MakeText(L"No selection.", 13.0, L"TextFillColorSecondaryBrush"));
-        return;
-    }
-
-    const auto details = m_adapter->GetDetails(*m_state.FocusedItemId);
-    if (!details.has_value())
-    {
-        m_detailsPanel.Children().Append(MakeText(L"No details available.", 13.0, L"TextFillColorSecondaryBrush"));
-        return;
-    }
-
-    m_detailsPanel.Children().Append(MakeText(ToWide(details->Title), 16.0, L"TextFillColorPrimaryBrush"));
-
-    for (const auto &section : details->Sections)
-    {
-        auto sectionBorder = Border{};
-        sectionBorder.Padding(ThicknessHelper::FromLengths(10, 10, 10, 10));
-        sectionBorder.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
-        sectionBorder.Background(ThemeBrush(L"ControlFillColorDefaultBrush"));
-        sectionBorder.Margin(ThicknessHelper::FromLengths(0, 0, 0, 8));
-
-        auto sectionPanel = StackPanel{};
-        sectionPanel.Spacing(4);
-
-        auto sectionTitle = MakeText(ToWide(section.Title), 14.0, L"TextFillColorPrimaryBrush");
-        sectionTitle.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
-        sectionPanel.Children().Append(sectionTitle);
-
-        for (const auto &field : section.Fields)
+        const auto item = selected.GetAt(i).try_as<ListViewItem>();
+        if (item)
         {
-            const auto line = std::format("{}: {}", field.Label, ValueToString(field.Value));
-            auto fieldText = MakeText(ToWide(line), 12.5, field.Editable ? L"TextFillColorPrimaryBrush" : L"TextFillColorSecondaryBrush");
-            sectionPanel.Children().Append(fieldText);
+            m_state.SelectedItemIds.push_back(ToUtf8(winrt::unbox_value<winrt::hstring>(item.Tag()).c_str()));
         }
-
-        sectionBorder.Child(sectionPanel);
-        m_detailsPanel.Children().Append(sectionBorder);
     }
-}
 
-void ExplorerPage::SelectItem(const std::string &itemId)
-{
-    m_state.SelectedItemIds = {itemId};
-    m_state.FocusedItemId = itemId;
+    if (!m_state.SelectedItemIds.empty())
+    {
+        m_state.FocusedItemId = m_state.SelectedItemIds.front();
+    }
+    else
+    {
+        m_state.FocusedItemId.reset();
+    }
+
     RenderActions();
-    RenderList();
-    RenderDetails();
 }
 
 void ExplorerPage::ExecuteAction(const std::string &actionId)
