@@ -26,12 +26,16 @@ private:
     using Border = winrt::Microsoft::UI::Xaml::Controls::Border;
     using Button = winrt::Microsoft::UI::Xaml::Controls::Button;
     using ListView = winrt::Microsoft::UI::Xaml::Controls::ListView;
+    using TextBox = winrt::Microsoft::UI::Xaml::Controls::TextBox;
 
     winrt::Microsoft::UI::Xaml::UIElement m_root{nullptr};
     StackPanel m_layout{nullptr};
     StackPanel m_actionsPanel{nullptr};
+    Grid m_toolbarGrid{nullptr};
     Grid m_headerGrid{nullptr};
     ListView m_listView{nullptr};
+    TextBox m_filterBox{nullptr};
+    TextBlock m_resultsText{nullptr};
     TextBlock m_statusText{nullptr};
 
     pserv6::interaction::ExplorerViewState m_state;
@@ -44,7 +48,9 @@ private:
     void RenderActions();
     void RenderHeader();
     void RenderList();
+    void RenderResultsSummary();
     void UpdateSelectionFromList();
     void ExecuteAction(const std::string &actionId);
+    std::vector<size_t> GetVisibleColumnIndexes() const;
     static double GetColumnWidth(const pserv6::interaction::ColumnDescriptor &column, size_t index);
 };

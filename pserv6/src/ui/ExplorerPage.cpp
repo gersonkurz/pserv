@@ -297,9 +297,41 @@ void ExplorerPage::BuildShell()
     title.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
     auto subtitle = MakeText(L"Generic explorer surface driven by the interaction contracts.", 14.0, L"TextFillColorSecondaryBrush");
 
+    m_toolbarGrid = Grid{};
+    m_toolbarGrid.ColumnSpacing(12);
+    {
+        auto actionsColumn = ColumnDefinition{};
+        actionsColumn.Width(GridLengthHelper::Auto());
+        auto filterColumn = ColumnDefinition{};
+        filterColumn.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+        auto resultsColumn = ColumnDefinition{};
+        resultsColumn.Width(GridLengthHelper::Auto());
+        m_toolbarGrid.ColumnDefinitions().Append(actionsColumn);
+        m_toolbarGrid.ColumnDefinitions().Append(filterColumn);
+        m_toolbarGrid.ColumnDefinitions().Append(resultsColumn);
+    }
+
     m_actionsPanel = StackPanel{};
     m_actionsPanel.Orientation(Orientation::Horizontal);
     m_actionsPanel.Spacing(8);
+    Grid::SetColumn(m_actionsPanel, 0);
+    m_toolbarGrid.Children().Append(m_actionsPanel);
+
+    m_filterBox = TextBox{};
+    m_filterBox.PlaceholderText(L"Filter services");
+    m_filterBox.MinWidth(260);
+    m_filterBox.TextChanged([this](auto &&, auto &&)
+    {
+        m_state.Filter.GlobalText = ToUtf8(m_filterBox.Text().c_str());
+        Refresh();
+    });
+    Grid::SetColumn(m_filterBox, 1);
+    m_toolbarGrid.Children().Append(m_filterBox);
+
+    m_resultsText = MakeText(L"", 13.0, L"TextFillColorSecondaryBrush");
+    m_resultsText.VerticalAlignment(VerticalAlignment::Center);
+    Grid::SetColumn(m_resultsText, 2);
+    m_toolbarGrid.Children().Append(m_resultsText);
 
     m_statusText = MakeText(L"Ready.", 13.0, L"TextFillColorSecondaryBrush");
 
@@ -347,7 +379,7 @@ void ExplorerPage::BuildShell()
 
     m_layout.Children().Append(title);
     m_layout.Children().Append(subtitle);
-    m_layout.Children().Append(m_actionsPanel);
+    m_layout.Children().Append(m_toolbarGrid);
     m_layout.Children().Append(listHost);
 
     Grid::SetRow(m_layout, 0);
@@ -373,15 +405,40 @@ void ExplorerPage::Refresh()
         m_statusText.Text(L"Loaded view.");
     }
 
+    std::vector<std::string> validSelection;
+    for (const auto &selectedId : m_state.SelectedItemIds)
+    {
+        const auto itemIt = std::ranges::find_if(
+            m_items,
+            [&selectedId](const auto &item)
+            {
+                return item.Id == selectedId;
+            });
+        if (itemIt != m_items.end())
+        {
+            validSelection.push_back(selectedId);
+        }
+    }
+    m_state.SelectedItemIds = std::move(validSelection);
+
     if (m_state.SelectedItemIds.empty() && !m_items.empty())
     {
         m_state.SelectedItemIds = {m_items.front().Id};
         m_state.FocusedItemId = m_items.front().Id;
     }
+    else if (!m_state.SelectedItemIds.empty())
+    {
+        m_state.FocusedItemId = m_state.SelectedItemIds.front();
+    }
+    else
+    {
+        m_state.FocusedItemId.reset();
+    }
 
     RenderActions();
     RenderHeader();
     RenderList();
+    RenderResultsSummary();
 }
 
 void ExplorerPage::RenderActions()
@@ -392,6 +449,17 @@ void ExplorerPage::RenderActions()
     refreshButton.Content(winrt::box_value(L"Refresh"));
     refreshButton.Click([this](auto &&, auto &&) { Refresh(); });
     m_actionsPanel.Children().Append(refreshButton);
+
+    auto clearFilterButton = Button{};
+    clearFilterButton.Content(winrt::box_value(L"Clear Filter"));
+    clearFilterButton.IsEnabled(!m_state.Filter.GlobalText.empty());
+    clearFilterButton.Click([this](auto &&, auto &&)
+    {
+        m_state.Filter.GlobalText.clear();
+        m_filterBox.Text(L"");
+        Refresh();
+    });
+    m_actionsPanel.Children().Append(clearFilterButton);
 
     auto propertiesButton = Button{};
     propertiesButton.Content(winrt::box_value(L"Properties"));
@@ -416,13 +484,21 @@ void ExplorerPage::RenderActions()
 
 double ExplorerPage::GetColumnWidth(const pserv6::interaction::ColumnDescriptor &column, size_t index)
 {
-    if (index == 0)
+    if (column.Id == "Name")
     {
         return 190.0;
     }
-    if (column.Id == "display_name")
+    if (column.Id == "DisplayName")
     {
-        return 280.0;
+        return 300.0;
+    }
+    if (column.Id == "User")
+    {
+        return 180.0;
+    }
+    if (column.Id == "Status" || column.Id == "StartType")
+    {
+        return 140.0;
     }
     if (column.Kind == pserv6::interaction::ColumnKind::Integer ||
         column.Kind == pserv6::interaction::ColumnKind::UnsignedInteger ||
@@ -434,6 +510,29 @@ double ExplorerPage::GetColumnWidth(const pserv6::interaction::ColumnDescriptor 
     return 150.0;
 }
 
+std::vector<size_t> ExplorerPage::GetVisibleColumnIndexes() const
+{
+    std::vector<size_t> indexes;
+    const auto &columns = m_adapter->Describe().Columns;
+    for (size_t i = 0; i < columns.size(); ++i)
+    {
+        if (columns[i].VisibleByDefault)
+        {
+            indexes.push_back(i);
+        }
+    }
+
+    if (indexes.empty())
+    {
+        for (size_t i = 0; i < columns.size(); ++i)
+        {
+            indexes.push_back(i);
+        }
+    }
+
+    return indexes;
+}
+
 void ExplorerPage::RenderHeader()
 {
     m_headerGrid.Children().Clear();
@@ -442,11 +541,13 @@ void ExplorerPage::RenderHeader()
     m_headerGrid.ColumnSpacing(8);
 
     const auto &columns = m_adapter->Describe().Columns;
-    for (size_t i = 0; i < columns.size(); ++i)
+    const auto visibleIndexes = GetVisibleColumnIndexes();
+    for (size_t visibleIndex = 0; visibleIndex < visibleIndexes.size(); ++visibleIndex)
     {
-        const auto &column = columns[i];
+        const auto index = visibleIndexes[visibleIndex];
+        const auto &column = columns[index];
         auto definition = ColumnDefinition{};
-        definition.Width(GridLengthHelper::FromPixels(GetColumnWidth(column, i)));
+        definition.Width(GridLengthHelper::FromPixels(GetColumnWidth(column, index)));
         m_headerGrid.ColumnDefinitions().Append(definition);
 
         std::string title = column.Title;
@@ -479,7 +580,7 @@ void ExplorerPage::RenderHeader()
             Refresh();
         });
 
-        Grid::SetColumn(button, static_cast<int>(i));
+        Grid::SetColumn(button, static_cast<int>(visibleIndex));
         m_headerGrid.Children().Append(button);
     }
 }
@@ -487,10 +588,11 @@ void ExplorerPage::RenderHeader()
 void ExplorerPage::RenderList()
 {
     m_listView.Items().Clear();
+    const auto &descriptor = m_adapter->Describe();
+    const auto visibleIndexes = GetVisibleColumnIndexes();
 
     for (const auto &item : m_items)
     {
-        const auto &descriptor = m_adapter->Describe();
         auto rowBorder = Border{};
         rowBorder.Padding(ThicknessHelper::FromLengths(6, 6, 6, 6));
         rowBorder.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
@@ -521,26 +623,27 @@ void ExplorerPage::RenderList()
         auto rowGrid = Grid{};
         rowGrid.ColumnSpacing(8);
 
-        for (size_t i = 0; i < descriptor.Columns.size(); ++i)
+        for (size_t visibleIndex = 0; visibleIndex < visibleIndexes.size(); ++visibleIndex)
         {
+            const auto index = visibleIndexes[visibleIndex];
             auto definition = ColumnDefinition{};
-            definition.Width(GridLengthHelper::FromPixels(GetColumnWidth(descriptor.Columns[i], i)));
+            definition.Width(GridLengthHelper::FromPixels(GetColumnWidth(descriptor.Columns[index], index)));
             rowGrid.ColumnDefinitions().Append(definition);
 
-            const auto value = i < item.Values.size() ? ValueToString(item.Values[i]) : std::string{};
+            const auto value = index < item.Values.size() ? ValueToString(item.Values[index]) : std::string{};
             auto text = MakeText(ToWide(value), 13.0,
                 item.State == pserv6::interaction::VisualState::Disabled
                     ? L"TextFillColorSecondaryBrush"
                     : L"TextFillColorPrimaryBrush");
             text.VerticalAlignment(VerticalAlignment::Center);
             text.TextAlignment(
-                (descriptor.Columns[i].Kind == pserv6::interaction::ColumnKind::Integer ||
-                 descriptor.Columns[i].Kind == pserv6::interaction::ColumnKind::UnsignedInteger ||
-                 descriptor.Columns[i].Kind == pserv6::interaction::ColumnKind::Size ||
-                 descriptor.Columns[i].Kind == pserv6::interaction::ColumnKind::Time)
+                (descriptor.Columns[index].Kind == pserv6::interaction::ColumnKind::Integer ||
+                 descriptor.Columns[index].Kind == pserv6::interaction::ColumnKind::UnsignedInteger ||
+                 descriptor.Columns[index].Kind == pserv6::interaction::ColumnKind::Size ||
+                 descriptor.Columns[index].Kind == pserv6::interaction::ColumnKind::Time)
                     ? TextAlignment::Right
                     : TextAlignment::Left);
-            Grid::SetColumn(text, static_cast<int>(i));
+            Grid::SetColumn(text, static_cast<int>(visibleIndex));
             rowGrid.Children().Append(text);
         }
 
@@ -548,6 +651,25 @@ void ExplorerPage::RenderList()
         rowBorder.Child(rowGrid);
         m_listView.Items().Append(rowBorder);
     }
+}
+
+void ExplorerPage::RenderResultsSummary()
+{
+    const auto &descriptor = m_adapter->Describe();
+    const auto noun = m_items.size() == 1 ? descriptor.ItemNameSingular : descriptor.ItemNamePlural;
+    const auto selectedCount = m_state.SelectedItemIds.size();
+
+    std::string summary = std::format("{} {}", m_items.size(), noun);
+    if (!m_state.Filter.GlobalText.empty())
+    {
+        summary += std::format(" matching \"{}\"", m_state.Filter.GlobalText);
+    }
+    if (selectedCount > 0)
+    {
+        summary += std::format("  |  {} selected", selectedCount);
+    }
+
+    m_resultsText.Text(winrt::hstring{ToWide(summary)});
 }
 
 void ExplorerPage::UpdateSelectionFromList()

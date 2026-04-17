@@ -174,6 +174,16 @@ namespace pserv6::interaction
         ExplorerViewDescriptor Descriptor;
         RemoteContext Context;
 
+        static bool IsDefaultVisibleColumn(std::string_view columnId)
+        {
+            return columnId == "Name" ||
+                   columnId == "DisplayName" ||
+                   columnId == "Status" ||
+                   columnId == "StartType" ||
+                   columnId == "ProcessId" ||
+                   columnId == "User";
+        }
+
         Impl()
             : Controller{std::unique_ptr<pserv::DataController>(new pserv::ServicesDataController{})}
         {
@@ -194,7 +204,7 @@ namespace pserv6::interaction
                     ToColumnKind(column.DataType),
                     true,
                     true,
-                    true,
+                    IsDefaultVisibleColumn(column.BindingName),
                     column.Editable,
                     ToFieldEditor(column.EditType)});
             }
