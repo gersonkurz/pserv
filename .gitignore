@@ -60,6 +60,11 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 
+# MSIS / WiX generated output (msis deletes .wxs on success; ignore stragglers).
+# The bundle .exe and per-arch .msi are already covered by *.exe / *.msi above.
+*.wxs
+/dist/
+
 # Windows shortcuts
 *.lnk
 

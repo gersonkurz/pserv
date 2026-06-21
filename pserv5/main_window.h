@@ -3,6 +3,8 @@
 #ifndef PSERV_CONSOLE_BUILD
 #include <core/data_controller_library.h>
 #include <core/data_action_dispatch_context.h>
+#include <theme/base16_theme.h>
+#include <dialogs/theme_selection_dialog.h>
 
 struct ImGuiTable; // Forward declaration
 
@@ -43,16 +45,7 @@ namespace pserv
             Ready        // Normal operation
         };
 
-        enum class Theme
-        {
-            Dark,
-            Light,
-            TomorrowNightBlue,
-            SunnyDay
-        };
-
         AppState m_appState{AppState::Splash};
-        Theme m_currentTheme{Theme::Dark};
         std::thread m_loadThread;
         std::atomic<bool> m_loadingComplete{false};
         static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -61,11 +54,8 @@ namespace pserv
         void CleanupDirectX();
         bool InitializeImGui();
         void CleanupImGui();
-        void ApplyTheme(Theme theme);
-        void ApplyDarkTheme();
-        void ApplyLightTheme();
-        void ApplyTomorrowNightBlueTheme();
-        void ApplySunnyDayTheme();
+        void ApplyTheme(const std::string &name);
+        std::wstring GetThemesDirectory() const;
         void RebuildFontAtlas(float fontSize);
         void CreateRenderTarget();
         void CleanupRenderTarget();
@@ -104,6 +94,10 @@ namespace pserv
         float m_pendingFontSize{0.0f};                  // Pending font size change (0 = no change pending)
         bool m_bWindowFocused{true};                    // Track window focus state for title bar styling
         COLORREF m_accentColor{0};                      // Windows accent color
+
+        // Theming: Base16 schemes loaded from themes/ beside the exe, plus the picker.
+        theme::ThemeSet m_themeSet;
+        std::unique_ptr<ThemeSelectionDialog> m_pThemeDialog;
 
         // Auto-refresh state
         std::chrono::steady_clock::time_point m_lastAutoRefreshTime;

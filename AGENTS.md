@@ -18,4 +18,4 @@ Primary Objective: Engage in honest, insight-driven dialogue that advances under
 The only currency that matters: Does this advance or halt productive thinking? If we're heading down an unproductive path, point it out directly.
 
 ## Build Process
-**IMPORTANT**: DO NOT attempt to build the project yourself. MSBuild has issues with the command-line interface that make automated builds unreliable. After making code changes, inform me that changes are ready for testing, and I will build the project manually.
+Build with `just` from a Visual Studio 2026 Developer shell — `just build` (Debug) or `just build-release`. Recipes live in the repo-root `justfile` and drive MSBuild against `pserv5/pserv5.slnx`. Verify your changes compile before handing off.

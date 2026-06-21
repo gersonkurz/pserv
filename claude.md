@@ -10,10 +10,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Instructions
 
-**DO NOT attempt automated builds**. MSBuild has CLI issues. After code changes, inform the user that changes are ready for testing - they will build manually in Visual Studio 2022.
+Build with `just` (recipes in the repo-root `justfile`) from a **Visual Studio 2026** Developer shell (the `_msbuild` recipe guards on `VisualStudioVersion=18.0`):
 
-Solution: `pserv5.slnx`
-Output: `pserv5/bin/x64/Release/pserv5.exe` (GUI), `pservc.exe` (CLI)
+- `just build` — Debug, native arch (builds both `pserv5.exe` and `pservc.exe`)
+- `just build-release` — Release, native arch
+- `just build-all` — Debug+Release across x64, x86, ARM64
+- `just run` / `just run-cli [-- args]` — build Debug + launch GUI / CLI
+- `just clean`, `just rebuild`
+- `just release` — build x64+x86+ARM64 Release, then the 3 MSIs + multi-arch bundle `.exe`
+- `just version X.Y.Z` — stamp `pserv5/version.h` + `setup/*.msis` (the `.rc` reads `version.h`)
+
+Builds are solution-driven (`pserv5/pserv5.slnx`) so `$(SolutionDir)` resolves — building a bare `.vcxproj` leaves output paths undefined. The `CopyThemes` MSBuild target copies `pserv5/themes/*.yaml` into the output dir next to the exe.
+
+Solution: `pserv5/pserv5.slnx` (projects: `pserv5.vcxproj` GUI, `pservc/pservc.vcxproj` CLI)
+Output: `pserv5/bin/<Platform>/<Config>/` — e.g. `pserv5/bin/x64/Release/pserv5.exe` (GUI), `pservc.exe` (CLI). Note the x86 solution platform builds into `bin/Win32/`.
+Platforms: x64, x86, arm64.
+
+### Packaging (MSI via MSIS 3.x)
+
+Installers are built with [MSIS](https://github.com/gersonkurz/msis) (`msis` on PATH) from `.msis` scripts in `setup/`: per-arch `pserv5-{x64,x86,arm64}.msis` (share one product `UPGRADE_CODE`) and `setup-bundle.msis` (combines all three into one arch-selecting `.exe`). `just release` stages each Release payload — `pserv5.exe` + `pservc.exe` + `themes/` — into `dist/stage/<arch>/`, builds an MSI per arch (standalone, with vcredist launch conditions), then the bundle. Output lands in `setup/` (MSIs + `pserv5-<ver>.exe`); `dist/` and the generated `.msi`/`.exe` are gitignored. (Replaced the former NSIS `.nsi`/`rebuild-*.cmd` scripts.)
 
 ## Architecture
 

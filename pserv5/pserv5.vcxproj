@@ -108,7 +108,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -132,7 +132,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -154,7 +154,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -178,7 +178,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -200,7 +200,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -224,7 +224,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
@@ -260,6 +260,8 @@
     <ClInclude Include="core\data_controller_library.h" />
     <ClInclude Include="core\data_object_container.h" />
     <ClInclude Include="dialogs\data_properties_dialog.h" />
+    <ClInclude Include="dialogs\theme_selection_dialog.h" />
+    <ClInclude Include="theme\base16_theme.h" />
     <ClInclude Include="models\environment_variable_info.h" />
     <ClInclude Include="models\network_connection_info.h" />
     <ClInclude Include="models\scheduled_task_info.h" />
@@ -342,6 +344,8 @@
     <ClCompile Include="core\exporters\json_exporter.cpp" />
     <ClCompile Include="core\exporters\plaintext_exporter.cpp" />
     <ClCompile Include="dialogs\data_properties_dialog.cpp" />
+    <ClCompile Include="dialogs\theme_selection_dialog.cpp" />
+    <ClCompile Include="theme\base16_theme.cpp" />
     <ClCompile Include="models\environment_variable_info.cpp" />
     <ClCompile Include="models\network_connection_info.cpp" />
     <ClCompile Include="models\scheduled_task_info.cpp" />
@@ -449,4 +453,11 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="CopyThemes" AfterTargets="Build">
+    <ItemGroup>
+      <ThemeFiles Include="$(SolutionDir)themes\*.yaml" />
+    </ItemGroup>
+    <MakeDir Directories="$(OutDir)themes" />
+    <Copy SourceFiles="@(ThemeFiles)" DestinationFolder="$(OutDir)themes" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
