@@ -265,9 +265,11 @@ namespace pserv::theme
         c[ImGuiCol_ButtonHovered]         = Lerp(b[0x02], accent, 0.5f);
         c[ImGuiCol_ButtonActive]          = accent;
 
-        c[ImGuiCol_Header]                = accent;
-        c[ImGuiCol_HeaderHovered]         = accentHover;
-        c[ImGuiCol_HeaderActive]          = accentActive;
+        // Selection highlight (rows, selectables, tree nodes): muted base02/03 so
+        // base05 text stays readable — accent (base0D) clashes with base05 in most schemes.
+        c[ImGuiCol_Header]                = b[0x02];
+        c[ImGuiCol_HeaderHovered]         = Lerp(b[0x02], b[0x03], 0.5f);
+        c[ImGuiCol_HeaderActive]          = b[0x03];
 
         c[ImGuiCol_Separator]             = b[0x02];
         c[ImGuiCol_SeparatorHovered]      = accentHover;
