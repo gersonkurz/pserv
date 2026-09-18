@@ -1,6 +1,7 @@
 # pserv6 / `pnq::ui` — migration plan
 
-**Status:** proposal. Nothing implemented. Under review (revision 2).
+**Status:** revision 3. Plan approved by review 2026-09-18; O2, O3 and O7 closed by the
+owner as D7, D8, D9. Nothing implemented.
 **Date:** 2026-09-18
 **Scope:** three repositories — `pnq`, `environ`, `pserv`.
 
@@ -160,6 +161,10 @@ it is restated in section 10.
 | **D4** | **pserv6 is a branch on `pserv`, and becomes main at parity.** `pserv6.exe` builds alongside `pserv5.exe` and `pservc.exe` on that branch. | Side-by-side comparison of old and new frontend against one shared core. A separate repo forks the core. |
 | **D5** | **The grid is a rewrite, not a port.** | See 2.4. Calling it a port makes the schedule lie. |
 | **D6** | **The core is made frontend-agnostic before pserv6 integration**, as its own phase with its own review. | See 2.5. Doing it inside the pserv6 work would entangle a core refactor with a UI rewrite, and neither could be reviewed on its own merits. |
+| **D7** | **Migrate to D2D 1.1**: a device context on a flip-model DXGI swapchain, replacing environ's `CreateHwndRenderTarget`. *(closed 2026-09-18; was O2)* | pserv5 already runs DX11 + swapchain, and pserv6 has ten views with 2-second auto-refresh over thousands of rows. Far cheaper now than once two apps depend on the paint path. Sequenced as **implement** (Phase 1) → **move** (Phase 2a, existing path retained) → **activate** (Phase 2b), so the extraction and the renderer swap never land together. |
+| **D8** | **`pnq::ui` carries its own `.vcxproj` beside its `CMakeLists.txt`**; both app solutions consume it as a project reference. *(closed 2026-09-18; was O3)* | The alternative — listing every library `.cpp` in each consumer — costs five edits per new file and grows with each consumer, against `pserv5.vcxproj`'s 62 and `pservc.vcxproj`'s 53 hand-maintained entries plus three `.filters` files (`AGENTS.md`: "not discovered automatically"). A project reference costs three edits once and gives real incremental builds. CMake stays authoritative for pnq's own build and tests. **The residual cost is a configuration contract, not just a shared file list** — see D8a. |
+| **D8a** | **The `.vcxproj` and the `CMakeLists.txt` must agree on a stated configuration contract, and consumers must agree with it too.** | Source membership is not the whole interface, and a mismatch does **not** reliably fail at link time — an unreferenced missing translation unit links fine, and a definition mismatch can violate the ODR and may link without a diagnostic. The configuration difference below establishes the risk; no mixed-configuration executable has been built to characterise the outcome, and none should be assumed. Concretely, `pnq/CMakeLists.txt` supplies `cxx_std_23`, `UNICODE`/`_UNICODE`, `/W4 /WX` and the `PNQ_USE_QUILL` backend switch; **both apps additionally define `SPDLOG_USE_STD_FORMAT`, which pnq's CMake does not** — and that macro changes spdlog's types across the boundary. The contract must enumerate: language standard, compile definitions (including the spdlog/Quill selection), runtime library, character set, warning level, and the per-config/per-arch output layout. It is written down in Phase 1 and checked by Phase 1's consumer smoke test. |
+| **D9** | **x86 is retired.** pserv6 ships x64 and ARM64 only. *(closed 2026-09-18; was O7)* | Owner decision. Retired explicitly and early rather than left to rot through a test matrix that never covered it. Phase 0 removes it from the solution, the justfile and packaging so no later phase spends time building it. |
 
 ---
 
@@ -170,12 +175,9 @@ Each blocks a specific phase. None should be settled by drift.
 | # | Question | Blocks | Recommendation |
 |---|---|---|---|
 | **O1** | Grid's first consumer: pserv6's flat N-column case, or environ's tree-with-staging case? | Phase 6 | Build for pserv6 first; migrate environ's grid afterwards. Swallowing both from day one buys a tree model *and* a staging model the library may never otherwise need. Phase 5 exists so this consumer is real before the grid is written. |
-| **O2** | D2D generation: keep environ's `CreateHwndRenderTarget` (D2D 1.0), or move to a D2D 1.1 device context on a flip-model DXGI swapchain? | Phase 1 | Decide **now**; changing later is expensive. pserv5 already runs DX11 + swapchain, and pserv6 has ten views with 2-second auto-refresh over thousands of rows. Leaning 1.1. The backend is **implemented** in Phase 1 and **activated** in Phase 2b; Phase 2a keeps environ on the existing path, so the move and the renderer swap never land together. |
-| **O3** | How does an MSBuild app consume a compiled CMake target? | Phase 1 | **Source inclusion.** Add `pnq::ui`'s `.cpp` files to the app `.vcxproj` and the include dir to `IncludePath`. Precedent: environ already compiles `extern/sqlite3/src/sqlite3/sqlite3.c` into its own vcxproj (`environ.vcxproj:336`). CMake stays authoritative for pnq's own build and tests. Migrating the apps to CMake is a separate decision, not taken here. |
 | **O4** | Do the three repos unify their vendored `spdlog` / `tomlplusplus` / `fkYAML` revisions? | Phase 0 | Yes for `fkYAML` — theme loading moves into the library, so one version is forced. The others: pin when they collide, not before. |
 | **O5** | Does pserv6 keep the splash screen, remote-machine support, and the full ImGui-era properties dialog feature set? | Phase 7 | Enumerate before Phase 5. Parity is defined by a written list, not by memory. |
 | **O6** | **Settings and log compatibility.** pserv writes to `FOLDERID_LocalAppData` (`utils/logging.cpp:63`); `pnq::app_init` uses `path::get_roaming_app_data` (`app_init.h:49`). pserv's bootstrap also applies a configured log path and level; pnq's does not. Preserve pserv's behaviour, migrate existing users' files, or change location deliberately? | Phase 8 | Preserve location by passing pserv's path in rather than adopting pnq's default, unless the owner wants the move. Either way an existing 5.x config must load, save and reload unchanged — as an **executed** check, all three executables. |
-| **O7** | **x86.** The solution, `just build-all` and `just package-x86` all ship Win32/x86 today. Does pserv6 keep it? | Phase 0 | Keep it unless the owner retires it explicitly. Dropping it silently by inheriting pnq's x64+ARM64 test matrix would let every gate pass while a shipped architecture is broken. |
 
 ---
 
@@ -207,7 +209,11 @@ repo has approved it. Each phase names what must be **executed**, not merely rea
 - Fill the **Loop parameters** block in all three repos. All three are unusable today: pnq
   has no yaaadabi wiring; environ's and pserv's are the stock placeholder.
 - Add `pnq` as a submodule to `pserv`.
-- Decide **O2**, **O3**, **O4**, **O7**.
+- Decide **O4**.
+- **Retire x86 (D9)**, so no later phase builds an architecture that is being dropped:
+  remove the `x86` platform from `pserv5.slnx`, the two `x86` pairs from `just build-all`,
+  the `package-x86` recipe and its use in `package-all`, `setup/pserv5-x86.msis`, and the
+  `source_32bit` entry in `setup/setup-bundle.msis`.
 - Exit: three repos have a filled Loop block; builds green everywhere on their full
   architecture matrices.
 
@@ -215,9 +221,18 @@ repo has approved it. Each phase names what must be **executed**, not merely rea
 
 - `pnq::ui` STATIC target in pnq, `if(WIN32)`, headers under `include/pnq/ui/`, `/W4 /WX`,
   wired into the existing Catch2 suite.
-- O2's render-target decision is **implemented** here, once — the backend is written, and
-  is not yet the active path for any app. Activation is Phase 2b.
-- Exit: target builds and tests on x64 + ARM64; a throwaway MSBuild consumer proves O3.
+- D7's D2D 1.1 backend (device context on a flip-model DXGI swapchain) is **implemented**
+  here, once — written, and not yet the active path for any app. Activation is Phase 2b.
+- Ship D8's `.vcxproj` beside the `CMakeLists.txt`, and write down D8a's configuration
+  contract next to them.
+- Exit, and a library that merely *builds* does not satisfy this:
+  - builds and tests on x64 + ARM64 under CMake;
+  - a **throwaway executable** consumes it — includes a public header, calls an out-of-line
+    library API, links through `ProjectReference`, and runs a smoke check that executes;
+  - that consumer is built and **run** across Debug/Release × x64/ARM64, with a record of
+    which binaries actually ran;
+  - the consumer's own settings match D8a's contract, proving the contract can be written
+    down and followed before either real app depends on it.
 
 ### Phase 2a — mechanical extraction
 
@@ -227,8 +242,8 @@ repo has approved it. Each phase names what must be **executed**, not merely rea
 - `theme.*` is in this set because it is a **dependency of the set**, not an afterthought:
   `d2dwindow.h:3` and `view.h:10` include it, and the theme picker calls `ThemeSet` methods
   living in `theme.cpp`. Without it the extracted library would still depend on
-  application-owned code, which breaks both the upstream-first rule and O3's premise that
-  the library builds on its own.
+  application-owned code, which breaks both the upstream-first rule and D8's premise that
+  the library builds on its own as a referenced project.
 - **The existing rendering path is retained unchanged.** Phase 1's new backend exists but is
   not switched on here; that is what keeps this phase a pure move.
 - Exit: environ builds warning-free and behaves identically. Executed checks, not
@@ -239,7 +254,7 @@ repo has approved it. Each phase names what must be **executed**, not merely rea
 ### Phase 2b — adaptation
 
 - Merge pserv5's Base16 loader into the library's `theme.*` (already moved in 2a).
-- **Activate** O2's renderer under environ — the switch, not the implementation.
+- **Activate** D7's renderer under environ — the switch, not the implementation.
 - These *are* behaviour changes, which is why they are not in 2a. Splitting implement (1)
   from move (2a) from activate (2b) means a regression has exactly one candidate cause.
 - Exit: same executed check list as 2a, re-run; theme loading has headless tests in pnq;
@@ -267,7 +282,8 @@ Independent of the library; can run in parallel with Phases 1–3. On the `pserv
   ImGui.
 - Separate the ImGui PCH includes from the shared PCH.
 - Audit `data_action.h` / `data_action_dispatch_context.h` for GUI handles crossing the seam.
-- Exit: **pserv5 still builds and runs unchanged** on x64/x86/ARM64, `pservc` unchanged,
+- Exit: **pserv5 still builds and runs unchanged** on x64/ARM64 (x86 retired per D9),
+  `pservc` unchanged,
   and the core compiles against a null frontend. Executed: pserv5 exercised across all ten
   views; `pservc` listing commands run.
 
@@ -314,7 +330,7 @@ Independent of the library; can run in parallel with Phases 1–3. On the `pserv
   `pserv5.sln` and omits fkYAML; `instructions.md` claims "100% complete".
 - Merge `pserv6` to main. Version 6.0.0. MSIS scripts updated for the full arch matrix.
 - Exit: one GUI, one CLI, no ImGui in the tree; `just release` produces all shipped
-  architectures per O7.
+  architectures per D9 — x64 and ARM64, with the bundle no longer offering a 32-bit payload.
 
 ---
 
@@ -362,8 +378,8 @@ Loop parameters block (Phase 0). A change spanning two repos is two reviews, pnq
 
 - pnq: x64 + ARM64 (its existing ctest matrix).
 - environ: x64 + ARM64 (its existing build matrix).
-- **pserv: x64 + x86/Win32 + ARM64** — all three are built by `just build-all` and packaged
-  by `just package-all`. Subject to O7.
+- **pserv: x64 + ARM64.** x86 retired per D9 in Phase 0; until that lands, `just build-all`
+  and `just package-all` still carry it.
 
 **Quality gate.** `/W4 /WX` everywhere, including pserv6 — pnq already enforces it, environ
 declares it informally, pserv has no stated policy today.
@@ -393,7 +409,7 @@ separates the CLI from *the ImGui GUI*.
 | **R1** | Grid scope explosion — the generic grid grows a tree model, a staging model and a plugin system before it renders a row. | O1 picks one consumer first, and Phase 5 makes that consumer real before the grid is written. Tests defined before features. What the first consumer does not need is not built. |
 | **R2** | **Keyboard** and **accessibility** are two different exposures, and D1 forgoes native support for both. | **Must implement and verify:** full keyboard operation of menus, grid and forms (arrows, mnemonics, Tab, Esc), and real `EDIT` controls for text entry so IME and clipboard behave. **Accepted limitation, stated not hidden:** custom-drawn menus, grid and forms expose no UI Automation, so screen readers will not see them; pserv5's ImGui frontend does not either, so this is not a regression, but it is a ceiling. Revisit only if a user needs it. "Keyboard navigation works" must never be reported as accessibility done. |
 | **R3** | environ regresses during extraction and nobody notices — it has no tests. | Phase 2a is a pure move with an executed check list (launch, resize, DPI change, theme switch, font preview/cancel/accept, caption, scroll, inline edit). Behaviour-changing work is quarantined in 2b and re-runs the same list. Screenshots supplement the list; they do not replace it. |
-| **R4** | The CMake/MSBuild seam becomes a per-phase tax. | O3 settles it once in Phase 1, with an in-repo precedent and a throwaway consumer to prove it. |
+| **R4** | The CMake/MSBuild seam becomes a per-phase tax, **or drifts silently**. | D8 settles the mechanism once in Phase 1: one `.vcxproj` in the library, referenced by both solutions. Drift is the sharper risk and D8a is its mitigation: the two definitions must agree on a written configuration contract, not merely a file list, because a mismatch does **not** reliably fail at link time — `SPDLOG_USE_STD_FORMAT` differing across the boundary can violate the ODR and may link without a diagnostic. Phase 1's exit runs an actual consumer executable across Debug/Release × x64/ARM64 rather than only building the library. |
 | **R5** | Two frontends in one branch doubles maintenance during Phases 5–8. | Fixes go to the shared core, which both use. No pserv5-only UI fixes on the branch — it is scheduled for deletion. Phase 4's exit criterion keeps pserv5 working, so it stays a usable fallback. |
 | **R6** | The port rewrites everything driving the controllers, with no safety net. | Phase 4 lands first and keeps pserv5 runnable as the reference. `pservc` is the canary for core-side regressions. Phase 7's executed acceptance checks cover the GUI-only behaviour no headless test reaches. |
 | **R7** | Phase 8 silently changes where users' settings and logs live. | O6 must be answered before Phase 8 starts, and the phase's exit requires an executed old-config load/save/reload across all three executables. |
