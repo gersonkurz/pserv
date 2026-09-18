@@ -111,3 +111,12 @@ Console support is automatic - controllers register themselves in pservc.
 - `config/settings.h` - Global configuration
 - `utils/win32_error.h` - Error handling macros
 - `utils/string_utils.h` - UTF-8/UTF-16 conversion
+
+## Review loop
+
+@C:/Projects/yaaadabi/protocol.md
+
+Loop parameters:
+- Verify: <build command> && <test command>
+- Yardstick docs: <the docs that define "best" for this repo>
+- Review focus: <what this codebase is most at risk of>
