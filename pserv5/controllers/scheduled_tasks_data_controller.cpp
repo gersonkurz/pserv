@@ -10,13 +10,13 @@ namespace pserv
     ScheduledTasksDataController::ScheduledTasksDataController()
         : DataController{SCHEDULED_TASKS_DATA_CONTROLLER_NAME,
               "Scheduled Task",
-              {{"Name", "Name", ColumnDataType::String},
-                  {"Status", "Status", ColumnDataType::String},
-                  {"Trigger", "Trigger", ColumnDataType::String},
-                  {"Last Run", "LastRun", ColumnDataType::String},
-                  {"Next Run", "NextRun", ColumnDataType::String},
-                  {"Author", "Author", ColumnDataType::String},
-                  {"Enabled", "Enabled", ColumnDataType::String}}}
+              {{ScheduledTaskProperty::Name, "Name", "Name", ColumnDataType::String},
+                  {ScheduledTaskProperty::Status, "Status", "Status", ColumnDataType::String},
+                  {ScheduledTaskProperty::Trigger, "Trigger", "Trigger", ColumnDataType::String},
+                  {ScheduledTaskProperty::LastRun, "Last Run", "LastRun", ColumnDataType::String},
+                  {ScheduledTaskProperty::NextRun, "Next Run", "NextRun", ColumnDataType::String},
+                  {ScheduledTaskProperty::Author, "Author", "Author", ColumnDataType::String},
+                  {ScheduledTaskProperty::Enabled, "Enabled", "Enabled", ColumnDataType::String}}}
     {
     }
 

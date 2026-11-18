@@ -21,22 +21,23 @@ The only currency that matters: Does this advance or halt productive thinking? I
 
 pserv5 is a native Windows system administration tool. It has a Dear ImGui / DirectX 11 GUI (`pserv5.exe`) and a console application (`pservc.exe`) that compile shared controllers, models, actions, and Windows API wrappers. Views cover services, devices, processes, windows, modules, installed programs, startup programs, scheduled tasks, network connections, and environment variables.
 
-The code uses modern C++; both projects currently select MSVC `stdcpplatest` and toolset `v145`. Check the project files rather than relying on older C++20 or Visual Studio 2022 descriptions.
+The code uses modern C++; all projects currently select MSVC `stdcpplatest` and toolset `v145`. Check the project files rather than relying on older C++20 or Visual Studio 2022 descriptions.
 
 ## Build and Validation
 
 Run recipes from the repository root with `just` in a **Visual Studio 2026 Developer shell**. The build requires `VisualStudioVersion=18.0` and `msbuild` on PATH. Do not merely set that variable to bypass the guard; initialize the VS toolchain environment.
 
-- `just build` — Debug, native architecture; builds both executables.
+- `just build` — Debug, native architecture; builds every project in the solution.
+- `just test` — `just build`, then run `pserv_core_tests`.
 - `just build-release` — Release, native architecture.
 - `just build-all` — Debug and Release for x64, x86, and ARM64.
 - `just run` — build Debug and launch the GUI.
 - `just run-cli services` — build Debug and list services through the CLI.
 - `just --list` — current public recipes.
 
-The `justfile` drives MSBuild against `pserv5/pserv5.slnx`, containing `pserv5/pserv5.vcxproj` and `pserv5/pservc/pservc.vcxproj`. Build the solution: project paths depend on `$(SolutionDir)`. Output is `pserv5/bin/<Platform>/<Configuration>/`; the x86 solution platform uses `Win32` as the output directory name. Intermediates live under `pserv5/temp/`. Native recipes select ARM64 on ARM64 hosts and x64 otherwise.
+The `justfile` drives MSBuild against `pserv5/pserv5.slnx`, containing `pserv5/pserv5.vcxproj` (GUI), `pserv5/pservc/pservc.vcxproj` (CLI), `pserv5/pserv_core/pserv_core.vcxproj` (the shared core as a static library, linked by the CLI and the tests) and `pserv5/tests/pserv_core_tests.vcxproj`. Build the solution: project paths depend on `$(SolutionDir)`. Output is `pserv5/bin/<Platform>/<Configuration>/`; the x86 solution platform uses `Win32` as the output directory name. Intermediates live under `pserv5/temp/`. Native recipes select ARM64 on ARM64 hosts and x64 otherwise.
 
-Verify changes compile before handing off. There is currently no repository-owned automated test suite or `just test` recipe. For behavior changes, exercise the affected GUI or CLI path in addition to building and report what was actually checked. CLI help and listing commands provide read-only smoke checks, for example `pserv5/bin/x64/Debug/pservc.exe --help` (adjust for the built architecture). Build success alone does not verify UI behavior.
+Verify changes compile before handing off, and run `just test`: it builds Debug and runs `pserv_core_tests`, which checks every controller against live system data (column/property-id contract, typed values fit column types) and exits non-zero on any failure. It does not exercise the GUI or actions. For behavior changes, exercise the affected GUI or CLI path in addition to building and report what was actually checked. CLI help and listing commands provide read-only smoke checks, for example `pserv5/bin/x64/Debug/pservc.exe --help` (adjust for the built architecture). Build success alone does not verify UI behavior.
 
 `just clean` removes all of `pserv5/bin/`, `pserv5/temp/`, and `dist/`; `just rebuild` performs that cleanup before building Debug. Prefer incremental builds unless cleanup is needed.
 
@@ -77,7 +78,7 @@ When adding a view:
 1. Add the model, controller, Windows API wrapper, and actions as needed, following a comparable existing view.
 2. Register the controller in `core/data_controller_library.cpp`; add its name constant in `core/data_controller.h`.
 3. Add the per-view settings in `config/settings.h` and the lookup in `config/settings.cpp`.
-4. Add source/header entries to the relevant `.vcxproj` files and maintain their `.filters` files. Shared sources must be included in both projects; they are not discovered automatically.
+4. Add source/header entries to the relevant `.vcxproj` files and maintain their `.filters` files. Shared sources go into `pserv_core/pserv_core.vcxproj` (used by the CLI and the tests) and, until the GUI links that library too, into `pserv5.vcxproj`; they are not discovered automatically. List a controller's columns in its model's property-id order (`DataObjectColumn` takes the property enum first); `just test` fails otherwise.
 5. Check CLI argument/action registration and behavior. The CLI enumerates the shared controller library, but frontend-specific action handling may still be required.
 6. Update the relevant user manual when behavior or commands change.
 

@@ -10,11 +10,11 @@ namespace pserv
     StartupProgramsDataController::StartupProgramsDataController()
         : DataController{STARTUP_PROGRAMS_DATA_CONTROLLER_NAME,
               "Startup Program",
-              {{"Name", "Name", ColumnDataType::String},
-                  {"Command", "Command", ColumnDataType::String},
-                  {"Location", "Location", ColumnDataType::String},
-                  {"Type", "Type", ColumnDataType::String},
-                  {"Enabled", "Enabled", ColumnDataType::String}}}
+              {{StartupProgramProperty::Name, "Name", "Name", ColumnDataType::String},
+                  {StartupProgramProperty::Command, "Command", "Command", ColumnDataType::String},
+                  {StartupProgramProperty::Location, "Location", "Location", ColumnDataType::String},
+                  {StartupProgramProperty::Type, "Type", "Type", ColumnDataType::String},
+                  {StartupProgramProperty::Enabled, "Enabled", "Enabled", ColumnDataType::String}}}
     {
     }
 

@@ -10,14 +10,14 @@ namespace pserv
     NetworkConnectionsDataController::NetworkConnectionsDataController()
         : DataController{NETWORK_CONNECTIONS_DATA_CONTROLLER_NAME,
               "Network Connection",
-              {{"Protocol", "Protocol", ColumnDataType::String},
-                  {"Local Address", "LocalAddress", ColumnDataType::String},
-                  {"Local Port", "LocalPort", ColumnDataType::UnsignedInteger},
-                  {"Remote Address", "RemoteAddress", ColumnDataType::String},
-                  {"Remote Port", "RemotePort", ColumnDataType::UnsignedInteger},
-                  {"State", "State", ColumnDataType::String},
-                  {"PID", "ProcessId", ColumnDataType::UnsignedInteger},
-                  {"Process Name", "ProcessName", ColumnDataType::String}}}
+              {{NetworkConnectionProperty::Protocol, "Protocol", "Protocol", ColumnDataType::String},
+                  {NetworkConnectionProperty::LocalAddress, "Local Address", "LocalAddress", ColumnDataType::String},
+                  {NetworkConnectionProperty::LocalPort, "Local Port", "LocalPort", ColumnDataType::UnsignedInteger},
+                  {NetworkConnectionProperty::RemoteAddress, "Remote Address", "RemoteAddress", ColumnDataType::String},
+                  {NetworkConnectionProperty::RemotePort, "Remote Port", "RemotePort", ColumnDataType::UnsignedInteger},
+                  {NetworkConnectionProperty::State, "State", "State", ColumnDataType::String},
+                  {NetworkConnectionProperty::ProcessId, "PID", "ProcessId", ColumnDataType::UnsignedInteger},
+                  {NetworkConnectionProperty::ProcessName, "Process Name", "ProcessName", ColumnDataType::String}}}
     {
     }
 

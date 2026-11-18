@@ -12,16 +12,16 @@ namespace pserv
     UninstallerDataController::UninstallerDataController()
         : DataController{UNINSTALLER_DATA_CONTROLLER_NAME,
               "Program",
-              {{"Display Name", "DisplayName", ColumnDataType::String},
-                  {"Version", "Version", ColumnDataType::String},
-                  {"Publisher", "Publisher", ColumnDataType::String},
-                  {"Install Location", "InstallLocation", ColumnDataType::String},
-                  {"Uninstall String", "UninstallString", ColumnDataType::String},
-                  {"Install Date", "InstallDate", ColumnDataType::String},
-                  {"Estimated Size", "EstimatedSize", ColumnDataType::Size},
-                  {"Comments", "Comments", ColumnDataType::String},
-                  {"Help Link", "HelpLink", ColumnDataType::String},
-                  {"URL Info About", "URLInfoAbout", ColumnDataType::String}}}
+              {{ProgramProperty::DisplayName, "Display Name", "DisplayName", ColumnDataType::String},
+                  {ProgramProperty::Version, "Version", "Version", ColumnDataType::String},
+                  {ProgramProperty::Publisher, "Publisher", "Publisher", ColumnDataType::String},
+                  {ProgramProperty::InstallLocation, "Install Location", "InstallLocation", ColumnDataType::String},
+                  {ProgramProperty::UninstallString, "Uninstall String", "UninstallString", ColumnDataType::String},
+                  {ProgramProperty::InstallDate, "Install Date", "InstallDate", ColumnDataType::String},
+                  {ProgramProperty::EstimatedSize, "Estimated Size", "EstimatedSize", ColumnDataType::Size},
+                  {ProgramProperty::Comments, "Comments", "Comments", ColumnDataType::String},
+                  {ProgramProperty::HelpLink, "Help Link", "HelpLink", ColumnDataType::String},
+                  {ProgramProperty::URLInfoAbout, "URL Info About", "URLInfoAbout", ColumnDataType::String}}}
     {
     }
 

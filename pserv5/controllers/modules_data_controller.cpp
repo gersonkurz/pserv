@@ -13,11 +13,11 @@ namespace pserv
     ModulesDataController::ModulesDataController()
         : DataController{MODULES_DATA_CONTROLLER_NAME,
               "Module",
-              {{"Base Address", "Base Address", ColumnDataType::UnsignedInteger},
-                  {"Size", "Size", ColumnDataType::Size},
-                  {"Name", "Name", ColumnDataType::String},
-                  {"Path", "Path", ColumnDataType::String},
-                  {"Process ID", "ProcessID", ColumnDataType::UnsignedInteger}}}
+              {{ModuleProperty::BaseAddress, "Base Address", "Base Address", ColumnDataType::UnsignedInteger},
+                  {ModuleProperty::Size, "Size", "Size", ColumnDataType::Size},
+                  {ModuleProperty::Name, "Name", "Name", ColumnDataType::String},
+                  {ModuleProperty::Path, "Path", "Path", ColumnDataType::String},
+                  {ModuleProperty::ProcessId, "Process ID", "ProcessID", ColumnDataType::UnsignedInteger}}}
     {
     }
 

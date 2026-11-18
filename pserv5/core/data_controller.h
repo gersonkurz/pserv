@@ -100,6 +100,7 @@ namespace pserv
             , m_pPropertiesDialog{nullptr}
 #endif
         {
+            LogColumnPropertyIdMismatches();
         }
 
         virtual ~DataController();
@@ -135,6 +136,10 @@ namespace pserv
         /// Override to return complete action set regardless of object state.
         virtual std::vector<const DataAction *> GetAllActions() const { return {}; }
 #endif
+
+        /// @brief Index of the first column whose PropertyId differs from its index, or -1.
+        /// Every consumer reads properties by column index, so this must be -1.
+        int FindColumnPropertyIdMismatch() const;
 
         /// @brief Get read-only access to the data container.
         const DataObjectContainer &GetDataObjects() const { return m_objects; }
@@ -186,6 +191,9 @@ namespace pserv
         void ClearRefreshFlag() { m_bNeedsRefresh = false; }
         std::chrono::system_clock::time_point GetLastRefreshTime() const { return m_lastRefreshTime; }
         /// @}
+
+    private:
+        void LogColumnPropertyIdMismatches() const;
 
     protected:
         /// @brief Clear all data objects from the container.

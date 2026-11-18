@@ -8,7 +8,6 @@
     <set name="PLATFORM" value="x64"/>
     <set name="REPAIR_ENABLED" value="True"/>
     <set name="REMOVE_ENABLED" value="True"/>
-    <set name="REMOVE_FOLDERS_ON_UNINSTALL" value="True"/>
     <set name="BUILD_TARGET" value="pserv{{PRODUCT_VERSION}} x64.msi"/>
     <set name="UPGRADE_CODE" value="672E9734-DC0A-4FD9-B25E-8544C621B230"/>
     <set name="MANUFACTURER" value="https://github.com/gersonkurz/pserv"/>

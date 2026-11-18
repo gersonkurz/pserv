@@ -245,19 +245,30 @@ x64 is built in every phase. It is checked for function under emulation on the A
 and its performance is assumed to match ARM64 (owner, 2026-11-18; R4).
 
 ### Phase 0 — Groundwork (no UI change)
-- Fix **F1**. Add `pserv_core_tests` (a console exe, `just test`) with a **column/property
-  consistency check over all ten controllers**: for every column, the typed property's kind
-  matches `ColumnDataType`, and display and typed values agree for a live sample object.
-  Without this check, a fix for F1 only fixes the one instance we happened to see.
+- Fix **F1**, and make the contract behind it explicit: every `DataObjectColumn` names its model
+  property enum (`DataObjectColumn{ProcessProperty::HandleCount, "Handles", ...}`), and column
+  *i* must name property *i*, because every consumer reads properties by column index.
+  `DataController` logs violations at construction.
+- Add `pserv_core_tests` (a console exe, `just test`):
+  - the contract holds for all ten controllers;
+  - the contract check itself flags a deliberately misordered controller;
+  - on live data, typed values fit the column type, and string columns display their typed
+    value.
+
+  Value agreement alone would **not** catch F1: display and typed values both read through the
+  same misordered enum and agree with each other.
+- Introduce `pserv_core` as a static library already in Phase 0, in the CLI flavour, linked by
+  `pservc` and the tests; this avoids a third copy of the source list. Phase 1 removes the
+  flavour and links the GUI too.
 - Fill the **Loop parameters** block in `CLAUDE.md`. Verify: `just build-all && just test`.
   Yardstick: this plan plus `AGENTS.md`. Focus: core/UI threading, object lifetime, installer
   payload.
-- `justfile`: add `-restore` to `_msbuild`; fix **F8** (`USE_INSTALLER_HOOKS=True`, or drop the
-  setting).
-- Measure pserv5 (elevated) on the section 7 metrics where they apply, so the comparison is
-  honest.
-- **Exit:** `just build-all` and `just test` pass. The F1 check fails on the pre-fix tree and
-  passes after; this is demonstrated in the review handover.
+- `justfile`: add `-restore` to `_msbuild`; fix **F8** by dropping the no-op setting.
+- **Exit:** `just build-all` and `just test` pass. The contract check fails on the pre-fix enum
+  order and passes after; this is demonstrated in the review handover.
+- **Deferred to Phase 3:** measuring pserv5 on the section 7 metrics. pserv5 requires elevation
+  (an owner UAC click) and has no self-test mode; it will be measured alongside pserv6's first
+  elevated `--selftest`.
 
 ### Phase 1 — `pserv_core`, one flavour (D3, D4)
 - Introduce `IActionHost`, `GetConfirmationText` and `GetParameterRequests`; move every GUI

@@ -43,6 +43,25 @@ namespace pserv
     class DataObjectColumn final
     {
     public:
+        /// @brief Construct a column bound to a model property.
+        /// @param propertyId The model's property enum value this column shows. Every consumer
+        ///        addresses properties by column index, so a controller's columns must be listed
+        ///        in property-id order: column i must name property i. DataController checks this.
+        template <typename PropertyEnum>
+            requires std::is_enum_v<PropertyEnum>
+        DataObjectColumn(PropertyEnum propertyId, std::string displayName, std::string bindingName,
+            ColumnDataType dataType = ColumnDataType::String, bool editable = false,
+            ColumnEditType editType = ColumnEditType::None)
+            : PropertyId{static_cast<int>(propertyId)}
+            , DisplayName{std::move(displayName)}
+            , BindingName{std::move(bindingName)}
+            , DataType{dataType}
+            , Editable{editable}
+            , EditType{editType}
+        {
+        }
+
+        const int PropertyId;            ///< Model property this column shows (must equal its index).
         const std::string DisplayName;   ///< Header text shown in the grid.
         const std::string BindingName;   ///< Internal name for CLI/config reference.
         const ColumnDataType DataType = ColumnDataType::String; ///< Data type for sorting/alignment.

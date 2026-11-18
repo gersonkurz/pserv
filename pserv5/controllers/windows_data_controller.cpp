@@ -11,17 +11,17 @@ namespace pserv
     WindowsDataController::WindowsDataController()
         : DataController{WINDOWS_DATA_CONTROLLER_NAME,
               "Window",
-              {{"HWND", "HWND", ColumnDataType::UnsignedInteger},
-                  {"Title", "Title", ColumnDataType::String},
-                  {"Class", "Class", ColumnDataType::String},
-                  {"Size", "Size", ColumnDataType::String},
-                  {"Position", "Position", ColumnDataType::String},
-                  {"Style", "Style", ColumnDataType::UnsignedInteger},
-                  {"ExStyle", "ExStyle", ColumnDataType::UnsignedInteger},
-                  {"ID", "ID", ColumnDataType::UnsignedInteger},
-                  {"ProcessID", "ProcessID", ColumnDataType::UnsignedInteger},
-                  {"ThreadID", "ThreadID", ColumnDataType::UnsignedInteger},
-                  {"Process", "Process", ColumnDataType::String}}}
+              {{WindowProperty::InternalID, "HWND", "HWND", ColumnDataType::UnsignedInteger},
+                  {WindowProperty::Title, "Title", "Title", ColumnDataType::String},
+                  {WindowProperty::Class, "Class", "Class", ColumnDataType::String},
+                  {WindowProperty::Size, "Size", "Size", ColumnDataType::String},
+                  {WindowProperty::Position, "Position", "Position", ColumnDataType::String},
+                  {WindowProperty::Style, "Style", "Style", ColumnDataType::UnsignedInteger},
+                  {WindowProperty::ExStyle, "ExStyle", "ExStyle", ColumnDataType::UnsignedInteger},
+                  {WindowProperty::ID, "ID", "ID", ColumnDataType::UnsignedInteger},
+                  {WindowProperty::ProcessID, "ProcessID", "ProcessID", ColumnDataType::UnsignedInteger},
+                  {WindowProperty::ThreadID, "ThreadID", "ThreadID", ColumnDataType::UnsignedInteger},
+                  {WindowProperty::Process, "Process", "Process", ColumnDataType::String}}}
     {
     }
 

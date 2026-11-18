@@ -1,23 +1,10 @@
 #include "precomp.h"
-#include <core/exporters/exporter_registry.h>
 #include <core/exporters/json_exporter.h>
 #include <core/data_object.h>
 
 namespace pserv
 {
 
-    namespace
-    {
-        // Static registration - runs during static initialization
-        struct JsonExporterRegistration
-        {
-            JsonExporterRegistration()
-            {
-                ExporterRegistry::Instance().RegisterExporter(DBG_NEW JsonExporter());
-            }
-        };
-        static JsonExporterRegistration g_jsonExporterRegistration;
-    } // namespace
 
     std::string JsonExporter::ExportSingle(const DataObject *object, const std::vector<DataObjectColumn> &columns) const
     {

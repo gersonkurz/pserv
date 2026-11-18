@@ -1,10 +1,10 @@
-# Build automation for pserv5 — Windows system administration tool
-# C++20 + Dear ImGui + DirectX 11 (GUI: pserv5.exe) and a shared-core CLI (pservc.exe)
-# Requires: just, msbuild on PATH (VS 2026 Developer Command Prompt / pwsh).
+# Build automation for pserv — Windows system administration tool
+# GUI (pserv5.exe, Dear ImGui) and CLI (pservc.exe), both on the shared pserv_core library,
+# plus pserv_core_tests. Requires: just, msbuild on PATH (VS 2026 Developer shell).
 #
 # Builds drive off the solution so $(SolutionDir) resolves correctly — the
 # projects derive OutDir/IntDir from it. Output lands in pserv5\bin\<Platform>\<Config>\.
-# Packaging (MSI) is intentionally absent for now; it's a separate, later step.
+# Packaging: `just release` (needs MSIS 3.x on PATH). Direction: docs/pserv6-plan.md.
 
 set windows-shell := ["cmd.exe", "/c"]
 
@@ -28,9 +28,9 @@ _require-devshell:
 # Run MSBuild for one configuration/platform against the solution.
 [private]
 _msbuild configuration platform: _require-devshell
-    msbuild {{solution}} /p:Configuration={{configuration}} /p:Platform={{platform}} /m /nologo /v:minimal
+    msbuild {{solution}} /restore /p:Configuration={{configuration}} /p:Platform={{platform}} /m /nologo /v:minimal
 
-# Build Debug (native arch) — both pserv5.exe and pservc.exe
+# Build Debug (native arch) — every project in the solution
 build: (_msbuild "Debug" platform)
 
 # Build Release (native arch)
@@ -38,6 +38,10 @@ build-release: (_msbuild "Release" platform)
 
 # Build everything: Debug+Release across x64, x86, ARM64
 build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug" "x86") (_msbuild "Release" "x86") (_msbuild "Debug" "ARM64") (_msbuild "Release" "ARM64")
+
+# Build Debug (native arch) and run pserv_core_tests; exits non-zero if any check fails
+test: build
+    @pserv5\bin\tests\{{platform}}\Debug\pserv_core_tests.exe
 
 # Build Debug + launch the GUI (native arch)
 run: build

@@ -10,9 +10,9 @@ namespace pserv
     EnvironmentVariablesDataController::EnvironmentVariablesDataController()
         : DataController{ENVIRONMENT_VARIABLES_CONTROLLER_NAME,
               "Environment Variable",
-              {{"Name", "Name", ColumnDataType::String, true, ColumnEditType::Text},
-                  {"Value", "Value", ColumnDataType::String, true, ColumnEditType::Text},
-                  {"Scope", "Scope", ColumnDataType::String}}}
+              {{EnvironmentVariableProperty::Name, "Name", "Name", ColumnDataType::String, true, ColumnEditType::Text},
+                  {EnvironmentVariableProperty::Value, "Value", "Value", ColumnDataType::String, true, ColumnEditType::Text},
+                  {EnvironmentVariableProperty::Scope, "Scope", "Scope", ColumnDataType::String}}}
     {
     }
 

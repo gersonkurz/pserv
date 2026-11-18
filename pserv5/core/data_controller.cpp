@@ -10,6 +10,28 @@
 
 namespace pserv
 {
+    int DataController::FindColumnPropertyIdMismatch() const
+    {
+        for (size_t i = 0; i < m_columns.size(); ++i)
+        {
+            if (m_columns[i].PropertyId != static_cast<int>(i))
+                return static_cast<int>(i);
+        }
+        return -1;
+    }
+
+    void DataController::LogColumnPropertyIdMismatches() const
+    {
+        for (size_t i = 0; i < m_columns.size(); ++i)
+        {
+            if (m_columns[i].PropertyId != static_cast<int>(i))
+            {
+                spdlog::error("Controller '{}': column {} ('{}') shows property {}; columns must be in property-id order",
+                    m_controllerName, i, m_columns[i].DisplayName, m_columns[i].PropertyId);
+            }
+        }
+    }
+
     DataController::~DataController()
     {
 #ifndef PSERV_CONSOLE_BUILD

@@ -6,7 +6,7 @@ namespace pserv
 
     /**
      * Singleton registry for managing available IExporter implementations.
-     * Exporters register themselves during static initialization.
+     * The built-in exporters (JSON, Plain Text) are registered by the constructor.
      */
     class ExporterRegistry
     {
@@ -33,7 +33,7 @@ namespace pserv
         IExporter *FindExporter(const std::string &formatName) const;
 
     private:
-        ExporterRegistry() = default;
+        ExporterRegistry();
         ~ExporterRegistry();
         ExporterRegistry(const ExporterRegistry &) = delete;
         ExporterRegistry &operator=(const ExporterRegistry &) = delete;

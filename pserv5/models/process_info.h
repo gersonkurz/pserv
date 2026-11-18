@@ -8,7 +8,8 @@
 
 namespace pserv
 {
-    /// @brief Column indices for process properties.
+    /// @brief Process property ids. Values 0..16 are the columns of ProcessesDataController,
+    /// in column order (column index == property id); the rest are not shown as columns.
     enum class ProcessProperty
     {
         Name = 0,
@@ -20,20 +21,19 @@ namespace pserv
         PrivatePageCount,
         Path,
         CommandLine,
-        // Extras (not shown in default columns or hidden)
+        HandleCount,
+        StartTime,
+        TotalCPUTime,
+        KernelCPUTime,
+        UserCPUTime,
+        PagedPoolUsage,
+        NonPagedPoolUsage,
+        PageFaultCount,
+        // Not shown as columns
         ParentPID,
         PeakWorkingSetSize,
         VirtualSize,
-        HandleCount,
-        SessionId,
-        // New columns
-        StartTime,
-        TotalCPUTime,
-        UserCPUTime,
-        KernelCPUTime,
-        PagedPoolUsage,
-        NonPagedPoolUsage,
-        PageFaultCount
+        SessionId
     };
 
     /// @brief Data model representing a running process.
