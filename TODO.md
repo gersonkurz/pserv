@@ -12,3 +12,9 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
    and define rollback/failure handling, with an executed failure-path check. This predates
    the plan and is deferrable from this documentation change because fixing
    environment-variable mutation semantics is outside its scope.
+
+## From the pserv6 WinUI plan review (Codex, 2026-11-18, thread 01a1ef4f)
+
+5. **[task] Pre-existing service display-name editing uses the wrong column index.** [services_data_controller.cpp:149](/C:/Projects/pserv-claude/pserv5/controllers/services_data_controller.cpp:149) handles display-name edits at index 0, but the constructor declares `Name` at index 0 and editable `Display Name` at index 1. Editing the displayed editable field therefore reaches the default rejection path. Align the edit mapping with column metadata and verify a display-name edit against a disposable service. This predates the plan and is deferrable because fixing existing service-edit behavior is outside this documentation change.
+
+6. **[task] Pre-existing service property commits report success after API failure.** [services_data_controller.cpp:210](/C:/Projects/pserv-claude/pserv5/controllers/services_data_controller.cpp:210) ignores the Boolean result of `ServiceManager::ChangeServiceConfig`, updates the local object, and returns success. The manager returns `false` on failures, including access denial; the GUI can therefore show unapplied settings as successfully saved. Propagate failure, preserve truthful local state, and execute a failure-path check. This predates the plan and is deferrable because repairing service mutation semantics is outside this documentation change.
