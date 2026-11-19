@@ -134,6 +134,7 @@
     <ClInclude Include="..\utils\logging.h" />
     <ClInclude Include="..\utils\string_utils.h" />
     <ClInclude Include="..\utils\win32_error.h" />
+    <ClInclude Include="..\utils\com_scope.h" />
     <ClInclude Include="..\utils\file_dialogs.h" />
     <ClInclude Include="..\windows_api\*.h" />
   </ItemGroup>

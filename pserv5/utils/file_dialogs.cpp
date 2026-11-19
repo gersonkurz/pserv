@@ -1,4 +1,5 @@
 #include "precomp.h"
+#include <utils/com_scope.h>
 #include <utils/file_dialogs.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
@@ -18,14 +19,13 @@ namespace pserv
             outFilePath.clear();
 
             // Initialize COM (safe to call multiple times)
-            HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-            bool bComInitialized = SUCCEEDED(hr);
-
-            if (!bComInitialized && hr != RPC_E_CHANGED_MODE)
+            // Declared before every COM pointer, so they are released before COM is uninitialized.
+            utils::ComScope com{COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE};
+            if (!com.IsUsable())
             {
-                // Log error unless it's already initialized with different threading model (expected in some cases)
-                LogWin32ErrorCode("CoInitializeEx", hr);
+                LogWin32ErrorCode("CoInitializeEx", com.Result());
             }
+            HRESULT hr = S_OK;
 
             // Create IFileSaveDialog instance
             wil::com_ptr<IFileSaveDialog> pFileSave;
@@ -34,8 +34,6 @@ namespace pserv
             if (FAILED(hr))
             {
                 LogWin32ErrorCode("CoCreateInstance(FileSaveDialog)", hr);
-                if (bComInitialized)
-                    CoUninitialize();
                 return false;
             }
 
@@ -128,10 +126,6 @@ namespace pserv
                 LogWin32ErrorCode("IFileSaveDialog::Show", hr);
             }
 
-            if (bComInitialized)
-            {
-                CoUninitialize();
-            }
 
             return !outFilePath.empty();
         }

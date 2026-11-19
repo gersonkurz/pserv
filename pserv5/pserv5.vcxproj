@@ -272,6 +272,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="main_window.h" />
     <ClInclude Include="utils\base_app.h" />
+    <ClInclude Include="utils\com_scope.h" />
     <ClInclude Include="utils\file_dialogs.h" />
     <ClInclude Include="utils\logging.h" />
     <ClInclude Include="utils\string_utils.h" />

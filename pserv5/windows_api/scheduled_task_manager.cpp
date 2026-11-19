@@ -1,4 +1,5 @@
 #include "precomp.h"
+#include <utils/com_scope.h>
 #include <comdef.h>
 #include <taskschd.h>
 #include <utils/string_utils.h>
@@ -15,58 +16,44 @@ namespace pserv
 
     void ScheduledTaskManager::EnumerateTasks(DataObjectContainer* doc)
     {
-        // Initialize COM
-        HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-        bool bComInitialized = SUCCEEDED(hr);
-
-        if (!bComInitialized && hr != RPC_E_CHANGED_MODE)
+        // COM for this scope; declared before every COM pointer, so they are released first.
+        utils::ComScope com{COINIT_MULTITHREADED};
+        if (!com.IsUsable())
         {
-            LogWin32ErrorCode("CoInitializeEx", hr, "initializing COM for Task Scheduler");
+            LogWin32ErrorCode("CoInitializeEx", com.Result(), "initializing COM for Task Scheduler");
             return;
         }
-        else
+        HRESULT hr = S_OK;
+
+        // Create Task Service instance
+        wil::com_ptr<ITaskService> pService;
+        hr = CoCreateInstance(CLSID_TaskScheduler, nullptr, CLSCTX_INPROC_SERVER, IID_ITaskService, (void **)&pService);
+
+        if (FAILED(hr))
         {
-            // Create Task Service instance
-            wil::com_ptr<ITaskService> pService;
-            hr = CoCreateInstance(CLSID_TaskScheduler, nullptr, CLSCTX_INPROC_SERVER, IID_ITaskService, (void **)&pService);
-
-            if (FAILED(hr))
-            {
-                LogWin32ErrorCode("CoCreateInstance(TaskScheduler)", hr, "creating task service");
-                if (bComInitialized)
-                    CoUninitialize();
-                return;
-            }
-
-            // Connect to the Task Scheduler service
-            hr = pService->Connect(_variant_t(), _variant_t(), _variant_t(), _variant_t());
-            if (FAILED(hr))
-            {
-                LogWin32ErrorCode("ITaskService::Connect", hr, "connecting to task scheduler");
-                if (bComInitialized)
-                    CoUninitialize();
-                return;
-            }
-
-            // Get the root folder
-            wil::com_ptr<ITaskFolder> pRootFolder;
-            hr = pService->GetFolder(_bstr_t(L"\\"), &pRootFolder);
-            if (FAILED(hr))
-            {
-                LogWin32ErrorCode("ITaskService::GetFolder", hr, "getting root folder");
-                if (bComInitialized)
-                    CoUninitialize();
-                return;
-            }
-
-            // Recursively enumerate all tasks
-            EnumerateTasksInFolder(pRootFolder.get(), L"\\", doc);
+            LogWin32ErrorCode("CoCreateInstance(TaskScheduler)", hr, "creating task service");
+            return;
         }
 
-        if (bComInitialized)
-            CoUninitialize();
+        // Connect to the Task Scheduler service
+        hr = pService->Connect(_variant_t(), _variant_t(), _variant_t(), _variant_t());
+        if (FAILED(hr))
+        {
+            LogWin32ErrorCode("ITaskService::Connect", hr, "connecting to task scheduler");
+            return;
+        }
 
-        return;
+        // Get the root folder
+        wil::com_ptr<ITaskFolder> pRootFolder;
+        hr = pService->GetFolder(_bstr_t(L"\\"), &pRootFolder);
+        if (FAILED(hr))
+        {
+            LogWin32ErrorCode("ITaskService::GetFolder", hr, "getting root folder");
+            return;
+        }
+
+        // Recursively enumerate all tasks
+        EnumerateTasksInFolder(pRootFolder.get(), L"\\", doc);
     }
 
     void ScheduledTaskManager::EnumerateTasksInFolder(ITaskFolder *pFolder, const std::wstring &folderPath, DataObjectContainer* doc)
@@ -333,15 +320,14 @@ namespace pserv
         if (!task)
             return false;
 
-        // Initialize COM
-        HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-        bool bComInitialized = SUCCEEDED(hr);
-
-        if (!bComInitialized && hr != RPC_E_CHANGED_MODE)
+        // COM for this scope; declared before every COM pointer, so they are released first.
+        utils::ComScope com{COINIT_MULTITHREADED};
+        if (!com.IsUsable())
         {
-            LogWin32ErrorCode("CoInitializeEx", hr, "initializing COM for Task Scheduler");
+            LogWin32ErrorCode("CoInitializeEx", com.Result(), "initializing COM for Task Scheduler");
             return false;
         }
+        HRESULT hr = S_OK;
 
         bool success = false;
 
@@ -352,8 +338,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("CoCreateInstance(TaskScheduler)", hr, "creating task service");
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -362,8 +346,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("ITaskService::Connect", hr, "connecting to task scheduler");
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -373,8 +355,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("ITaskService::GetFolder", hr, "getting root folder");
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -385,8 +365,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("ITaskFolder::GetTask", hr, "task '{}'", task->GetPath());
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -402,8 +380,6 @@ namespace pserv
             LogWin32ErrorCode("IRegisteredTask::put_Enabled", hr, "task '{}'", task->GetPath());
         }
 
-        if (bComInitialized)
-            CoUninitialize();
 
         return success;
     }
@@ -413,15 +389,14 @@ namespace pserv
         if (!task)
             return false;
 
-        // Initialize COM
-        HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-        bool bComInitialized = SUCCEEDED(hr);
-
-        if (!bComInitialized && hr != RPC_E_CHANGED_MODE)
+        // COM for this scope; declared before every COM pointer, so they are released first.
+        utils::ComScope com{COINIT_MULTITHREADED};
+        if (!com.IsUsable())
         {
-            LogWin32ErrorCode("CoInitializeEx", hr, "initializing COM for Task Scheduler");
+            LogWin32ErrorCode("CoInitializeEx", com.Result(), "initializing COM for Task Scheduler");
             return false;
         }
+        HRESULT hr = S_OK;
 
         bool success = false;
 
@@ -432,8 +407,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("CoCreateInstance(TaskScheduler)", hr, "creating task service");
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -442,8 +415,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("ITaskService::Connect", hr, "connecting to task scheduler");
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -453,8 +424,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("ITaskService::GetFolder", hr, "getting root folder");
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -465,8 +434,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("ITaskFolder::GetTask", hr, "task '{}'", task->GetPath());
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -483,8 +450,6 @@ namespace pserv
             LogWin32ErrorCode("IRegisteredTask::Run", hr, "task '{}'", task->GetPath());
         }
 
-        if (bComInitialized)
-            CoUninitialize();
 
         return success;
     }
@@ -494,15 +459,14 @@ namespace pserv
         if (!task)
             return false;
 
-        // Initialize COM
-        HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-        bool bComInitialized = SUCCEEDED(hr);
-
-        if (!bComInitialized && hr != RPC_E_CHANGED_MODE)
+        // COM for this scope; declared before every COM pointer, so they are released first.
+        utils::ComScope com{COINIT_MULTITHREADED};
+        if (!com.IsUsable())
         {
-            LogWin32ErrorCode("CoInitializeEx", hr, "initializing COM for Task Scheduler");
+            LogWin32ErrorCode("CoInitializeEx", com.Result(), "initializing COM for Task Scheduler");
             return false;
         }
+        HRESULT hr = S_OK;
 
         bool success = false;
 
@@ -513,8 +477,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("CoCreateInstance(TaskScheduler)", hr, "creating task service");
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -523,8 +485,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("ITaskService::Connect", hr, "connecting to task scheduler");
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -534,8 +494,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("ITaskService::GetFolder", hr, "getting root folder");
-            if (bComInitialized)
-                CoUninitialize();
             return false;
         }
 
@@ -552,8 +510,6 @@ namespace pserv
             LogWin32ErrorCode("ITaskFolder::DeleteTask", hr, "task '{}'", task->GetPath());
         }
 
-        if (bComInitialized)
-            CoUninitialize();
 
         return success;
     }

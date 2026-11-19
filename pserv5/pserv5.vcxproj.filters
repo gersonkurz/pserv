@@ -199,6 +199,9 @@
     <ClInclude Include="actions\window_actions.h">
       <Filter>actions</Filter>
     </ClInclude>
+    <ClInclude Include="utils\com_scope.h">
+      <Filter>utils</Filter>
+    </ClInclude>
     <ClInclude Include="utils\file_dialogs.h">
       <Filter>utils</Filter>
     </ClInclude>

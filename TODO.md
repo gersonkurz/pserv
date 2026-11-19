@@ -22,3 +22,7 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 ## From the pserv6 Phase 0 review (Codex, 2026-11-18, thread 01a1ef7c)
 
 7. **[task] Pre-existing CLI parser indexing selects the wrong parser after Services.** [pservc.cpp:66](C:/Projects/pserv-claude/pserv5/pservc/pservc.cpp:66) indexes `subparsers` by controller ordinal, but [data_controller.cpp:124](C:/Projects/pserv-claude/pserv5/core/data_controller.cpp:124) inserts action parsers into that same vector between controller parsers. Consequently, later controllers read options and search for actions on an unrelated parser, explaining the ignored Processes format/filter options and potentially preventing action dispatch. Both implementations are present in HEAD. Associate each controller with its actual parser and verify listing options and read-only action dispatch. This is deferrable because repairing existing CLI dispatch is outside Phase 0.
+
+## Deferred checks (owner-accepted)
+
+8. **Execute the MSI major upgrade from an installed pserv5 5.2.0 to a 6.x package.** The 6.0.0 version stamp (2026-11-19) keeps the per-arch UpgradeCode `{672E9734-DC0A-4FD9-B25E-8544C621B230}`, and Windows Installer lists the installed 5.2.0 ARM64 product as related to it. So the lineage is as intended, but no upgrade has been executed. The owner declined running it on the dev box ("Do not update the install … focus on the actual app functionality at this point", 2026-11-19). Covered by the plan's Phase 3/7 installer exit criteria at the latest.

@@ -9,6 +9,10 @@
 #include <core/data_object.h>
 #include <core/data_object_column.h>
 #include <core/exporters/exporter_registry.h>
+#include <models/scheduled_task_info.h>
+#include <windows_api/scheduled_task_manager.h>
+#include <utils/logging.h>
+#include <spdlog/sinks/null_sink.h>
 
 namespace
 {
@@ -51,6 +55,90 @@ namespace
         VisualState GetVisualState(const DataObject *) const override { return VisualState::Normal; }
         std::vector<const DataAction *> GetActions(const DataObject *) const override { return {}; }
     };
+
+    // The Task Scheduler functions used to call CoUninitialize() on their error paths while COM
+    // pointers were still alive; the pointers' later Release() crashed with 0xC0000005. A task
+    // path that cannot exist forces exactly those error paths (GetTask / DeleteTask fail) without
+    // touching any real task. Must run on a thread where COM is not already initialized, so it
+    // runs first.
+    void TestComErrorPathsDoNotCrash()
+    {
+        std::cout << "[Task Scheduler error paths release COM objects before CoUninitialize]\n";
+        auto *task = DBG_NEW ScheduledTaskInfo{"pserv_core_tests"};
+        task->SetValues(R"(\pserv_core_tests\this-task-does-not-exist-4d1f0c2e)", "", "", "", "", "", false,
+            ScheduledTaskState::Unknown);
+        Check(!ScheduledTaskManager::RunTask(task), "RunTask reported success for a nonexistent task");
+        Check(!ScheduledTaskManager::SetTaskEnabled(task, false), "SetTaskEnabled reported success for a nonexistent task");
+        Check(!ScheduledTaskManager::DeleteTask(task), "DeleteTask reported success for a nonexistent task");
+        task->Release(REFCOUNT_DEBUG_ARGS);
+    }
+
+    std::string ReadWholeFile(const std::filesystem::path &p)
+    {
+        // Opened with full sharing, so it works while the test's "other instance" handle is open.
+        wil::unique_hfile f{CreateFileW(p.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+        if (!f)
+            return "<cannot open>";
+        std::string data;
+        char buf[65536];
+        DWORD n = 0;
+        while (ReadFile(f.get(), buf, sizeof(buf), &n, nullptr) && n > 0)
+            data.append(buf, n);
+        return data;
+    }
+
+    // Another pserv instance holding the log must neither crash this one nor lose its log. A
+    // rotating sink attached to a file someone else holds truncates it when its own rotation
+    // fails at the size limit (spdlog reopens the file truncated). So, while another handle holds
+    // the file, ReconfigureLoggingWithFile must attach no sink, and logging past the 10 MB
+    // threshold must leave the held file byte-for-byte unchanged. Once the handle is released, the
+    // same call must rotate and attach a sink (positive control). Uses a temp directory only.
+    void TestLogFileHeldByAnotherInstance()
+    {
+        std::cout << "[log file held by another instance: no sink, no truncation past 10 MB; positive control]\n";
+        const auto dir = std::filesystem::temp_directory_path() / std::format("pserv_core_tests_log_{}", GetCurrentProcessId());
+        std::filesystem::remove_all(dir);
+        std::filesystem::create_directories(dir);
+        const auto logPath = dir / "pserv5.log";
+        const std::string foreignContent = "{\"msg\":\"other instance's active log\"}\n";
+
+        auto previous = spdlog::default_logger();
+        auto testLogger = std::make_shared<spdlog::logger>("test", std::make_shared<spdlog::sinks::null_sink_mt>());
+        testLogger->set_level(spdlog::level::info);
+        spdlog::set_default_logger(testLogger);
+        {
+            // The "other instance": same sharing as spdlog's _SH_DENYNO (read/write, not delete).
+            wil::unique_hfile holder{CreateFileW(logPath.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr)};
+            Check(static_cast<bool>(holder), "could not create the held log file");
+            DWORD written = 0;
+            WriteFile(holder.get(), foreignContent.data(), static_cast<DWORD>(foreignContent.size()), &written, nullptr);
+
+            const size_t sinksBefore = testLogger->sinks().size();
+            utils::ReconfigureLoggingWithFile(logPath.string());
+            Check(testLogger->sinks().size() == sinksBefore, "a file sink was attached although another process holds the log");
+
+            const std::string line(1000, 'x');
+            for (int i = 0; i < 12 * 1024; ++i) // ~12 MB, beyond the sink's 10 MB rotation threshold
+                testLogger->info("{}", line);
+            testLogger->flush();
+
+            Check(ReadWholeFile(logPath) == foreignContent, "the held log file was modified or truncated");
+            Check(!std::filesystem::exists(dir / "pserv5.1.log"), "a rotation file appeared although the log is held");
+        }
+        {
+            // Positive control: nothing holds the file now, so rotation and a sink must happen.
+            const size_t sinksBefore = testLogger->sinks().size();
+            utils::ReconfigureLoggingWithFile(logPath.string());
+            Check(testLogger->sinks().size() == sinksBefore + 1, "no file sink was attached for a free log file");
+            Check(ReadWholeFile(dir / "pserv5.1.log") == foreignContent, "the free log file was not rotated to pserv5.1.log");
+        }
+        spdlog::set_default_logger(previous);
+        testLogger.reset(); // closes the file sink
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+    }
 
     void TestContractCheckDetectsMisorder()
     {
@@ -185,6 +273,8 @@ int main()
     spdlog::set_level(spdlog::level::off); // managers log access-denied noise when not elevated
     std::cout << "pserv_core_tests\n";
 
+    TestComErrorPathsDoNotCrash();
+    TestLogFileHeldByAnotherInstance();
     TestContractCheckDetectsMisorder();
 
     pserv::DataControllerLibrary library;

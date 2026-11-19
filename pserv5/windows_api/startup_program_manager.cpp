@@ -1,4 +1,5 @@
 #include "precomp.h"
+#include <utils/com_scope.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/startup_program_manager.h>
@@ -347,16 +348,16 @@ namespace pserv
 
     std::wstring StartupProgramManager::ResolveLnkTarget(const std::wstring &lnkPath)
     {
-        HRESULT hr = CoInitialize(NULL);
-        bool bComInitialized = SUCCEEDED(hr);
+        // COM for this scope (CoInitialize == apartment-threaded); declared before every COM
+        // pointer, so they are released first. Proceeds even if COM was already initialized.
+        utils::ComScope com{COINIT_APARTMENTTHREADED};
+        HRESULT hr = S_OK;
 
         wil::com_ptr<IShellLinkW> psl;
         hr = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&psl));
         if (FAILED(hr))
         {
             LogWin32ErrorCode("CoCreateInstance", hr, "creating IShellLink for .lnk resolution");
-            if (bComInitialized)
-                CoUninitialize();
             return L"";
         }
 
@@ -365,8 +366,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("QueryInterface", hr, "getting IPersistFile for .lnk resolution");
-            if (bComInitialized)
-                CoUninitialize();
             return L"";
         }
 
@@ -374,8 +373,6 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("IPersistFile::Load", hr, "loading .lnk file '{}'", utils::WideToUtf8(lnkPath));
-            if (bComInitialized)
-                CoUninitialize();
             return L"";
         }
 
@@ -384,13 +381,9 @@ namespace pserv
         if (FAILED(hr))
         {
             LogWin32ErrorCode("IShellLink::GetPath", hr, "resolving .lnk target");
-            if (bComInitialized)
-                CoUninitialize();
             return L"";
         }
 
-        if (bComInitialized)
-            CoUninitialize();
 
         return targetPath;
     }

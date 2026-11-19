@@ -150,47 +150,101 @@ namespace pserv::utils
         return logger;
     }
 
+    namespace
+    {
+        // True if another process has the file open. An exclusive open (no sharing) then fails with
+        // ERROR_SHARING_VIOLATION. A missing file, or any other error, is "not held".
+        bool IsHeldOpenByAnotherProcess(const std::filesystem::path &path)
+        {
+            wil::unique_hfile file{CreateFileW(path.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+            return !file && GetLastError() == ERROR_SHARING_VIOLATION;
+        }
+
+        // Shift pserv5.log -> pserv5.1.log -> ... -> pserv5.10.log, using only the std::error_code
+        // overloads. Returns false, after logging a warning, at the first failure.
+        bool RotateLogFiles(const std::filesystem::path &logPath, spdlog::logger &logger)
+        {
+            auto fail = [&](std::string_view what, const std::filesystem::path &p, const std::error_code &ec)
+            {
+                logger.warn("Log rotation failed: cannot {} '{}': {}", what, p.string(), ec.message());
+                return false;
+            };
+
+            std::error_code ec;
+            const bool bExists = std::filesystem::exists(logPath, ec);
+            if (ec)
+                return fail("check", logPath, ec);
+            if (!bExists)
+                return true;
+            const auto size = std::filesystem::file_size(logPath, ec);
+            if (ec)
+                return fail("size", logPath, ec);
+            if (size == 0)
+                return true;
+
+            const std::filesystem::path logDir = logPath.parent_path();
+            const std::string stem = logPath.stem().string();
+            const std::string ext = logPath.extension().string();
+            auto numbered = [&](int i) { return logDir / std::format("{}.{}{}", stem, i, ext); };
+
+            std::filesystem::remove(numbered(10), ec); // a missing file is not an error: returns false, clears ec
+            if (ec)
+                return fail("remove", numbered(10), ec);
+            for (int i = 9; i >= 1; --i)
+            {
+                const bool bBackupExists = std::filesystem::exists(numbered(i), ec);
+                if (ec)
+                    return fail("check", numbered(i), ec);
+                if (bBackupExists)
+                {
+                    std::filesystem::rename(numbered(i), numbered(i + 1), ec);
+                    if (ec)
+                        return fail("rename", numbered(i), ec);
+                }
+            }
+            std::filesystem::rename(logPath, numbered(1), ec);
+            if (ec)
+                return fail("rename", logPath, ec);
+            return true;
+        }
+    } // namespace
+
     void ReconfigureLoggingWithFile(const std::string& logFilePath)
     {
         // Get existing logger
         auto logger = spdlog::default_logger();
+        const std::filesystem::path logPath{logFilePath};
 
-        // Force rotation on startup to create new log file
-        std::filesystem::path log_path(logFilePath);
-        if (std::filesystem::exists(log_path) && std::filesystem::file_size(log_path) > 0)
+        // Logging must never stop the application, and must never damage another instance's log.
+        // - Another pserv instance (GUI or CLI) may hold the log file open. Renaming it then fails,
+        //   and the throwing std::filesystem overloads used to terminate the process before main()
+        //   did anything.
+        // - Attaching a rotating sink to a file another process holds is not safe either: when that
+        //   sink reaches its size limit, its rename fails and spdlog reopens the file truncated,
+        //   destroying the other instance's active log.
+        // So: if the file is held elsewhere, or rotation fails, this run logs without a file sink.
+        if (IsHeldOpenByAnotherProcess(logPath))
         {
-            std::filesystem::path log_dir = log_path.parent_path();
-            std::string log_stem = log_path.stem().string();
-            std::string log_ext = log_path.extension().string();
-
-            // Delete oldest log if it exists
-            std::filesystem::path oldest = log_dir / (log_stem + ".10" + log_ext);
-            if (std::filesystem::exists(oldest))
-            {
-                std::filesystem::remove(oldest);
-            }
-
-            // Shift all backup logs up (9 -> 10, 8 -> 9, etc.)
-            for (int i = 9; i >= 1; --i)
-            {
-                std::filesystem::path old_path = log_dir / std::format("{}.{}{}", log_stem, i, log_ext);
-                std::filesystem::path new_path = log_dir / std::format("{}.{}{}", log_stem, i + 1, log_ext);
-                if (std::filesystem::exists(old_path))
-                {
-                    std::filesystem::rename(old_path, new_path);
-                }
-            }
-
-            // Move current log to .1
-            std::filesystem::rename(log_path, log_dir / (log_stem + ".1" + log_ext));
+            logger->warn("File logging disabled for this run: '{}' is open in another process (another pserv instance?)", logFilePath);
+            return;
+        }
+        if (!RotateLogFiles(logPath, *logger))
+        {
+            logger->warn("File logging disabled for this run: log rotation failed");
+            return;
         }
 
-        // Add file sink with NDJSON format - 10MB max size, keep 10 backups
-        auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logFilePath, 1024 * 1024 * 10, 10);
-        file_sink->set_level(spdlog::level::debug);
-        file_sink->set_formatter(std::make_unique<NdjsonFormatter>());
-
-        // Add file sink to existing logger
-        logger->sinks().push_back(file_sink);
+        try
+        {
+            // NDJSON format - 10MB max size, keep 10 backups
+            auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logFilePath, 1024 * 1024 * 10, 10);
+            file_sink->set_level(spdlog::level::debug);
+            file_sink->set_formatter(std::make_unique<NdjsonFormatter>());
+            logger->sinks().push_back(file_sink);
+        }
+        catch (const std::exception &e)
+        {
+            logger->warn("File logging disabled: cannot open '{}': {}", logFilePath, e.what());
+        }
     }
 } // namespace pserv::utils
