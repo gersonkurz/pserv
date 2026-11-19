@@ -1,5 +1,15 @@
 # Release review — 2026-11-18
 
+## Round two performance checkpoint — 2026-11-19
+
+- Replaced nested per-row ItemsControl/cell bindings in the table with recycled Grid/TextBlock visuals created only for realized rows. Stable DataRow identities still retain immutable background snapshots; off-screen rows no longer allocate cell collections or format every displayed property.
+- Column resizing and appearance updates now visit realized containers. Unchanged refreshes no longer force UpdateLayout.
+- Large reorder operations replace differing collection slots instead of repeated linear searches and vector moves. Selection is restored by stable ID; unchanged snapshots still emit no collection notifications.
+- Native ARM64 Release built successfully. Reconciliation checks include a 10,000-row reversal and randomized reorder/deletion/reinsertion cases. The existing actual DataRow collection-interface check still passes.
+- GUI smoke checks verified service rendering, disabled/running colors, recycling while scrolling, scroll retention after F5, and selected service identity through a full reverse sort and subsequent Properties inspection.
+- Modules displayed roughly 9,500 rows; full reverse sorting and column resizing passed. A first-pass realized-container lookup missed existing cells during resizing; switching to ItemsStackPanel cache indices fixed it and the GUI recheck passed. All four regression checks passed for this checkpoint.
+- This is the first bounded round-two change, not a complete second release. No comparative end-to-end latency benchmark or refreshed installer bundle yet. Dependency trimming, typography/zoom, shared configuration/provider metadata, shortcuts and multi-object properties remain follow-up work. Existing installers still contain the previous build.
+
 ## Changes from the two UI reviews
 
 - Restored the original application icon and all 20 Base16 palette files. Themes now use a menu grouped by dark/light classification.

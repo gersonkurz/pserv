@@ -2,6 +2,8 @@
 #include <memory>
 #include <stdexcept>
 #include <iostream>
+#include <algorithm>
+#include <random>
 
 struct Row { std::string id; };
 using Item = std::shared_ptr<Row>;
@@ -13,6 +15,7 @@ struct Collection
     Item GetAt(uint32_t i) const { return items.at(i); }
     void RemoveAt(uint32_t i) const { items.erase(items.begin() + i); ++notifications; }
     void InsertAt(uint32_t i, Item row) const { items.insert(items.begin() + i, row); ++notifications; }
+    void SetAt(uint32_t i, Item row) const { items.at(i) = row; ++notifications; }
 };
 
 int main()
@@ -25,7 +28,7 @@ int main()
     {
         collection.notifications = 0;
         pserv::winui::ReconcileRows(collection, desired, [](auto const& row) { return row->id; });
-        if (collection.items != desired || collection.notifications != notifications)
+        if (collection.items != desired || (notifications >= 0 && collection.notifications != notifications))
             throw std::runtime_error("Incorrect row identity/order or collection notification count");
     };
     check({a, b, c}, 0); // A periodic unchanged snapshot must emit no collection events.
@@ -35,5 +38,20 @@ int main()
     check({}, 3);
     check({b}, 1);
     check({b}, 0);
+    std::vector<Item> many;
+    for (int i = 0; i < 10000; ++i) many.push_back(std::make_shared<Row>(std::to_string(i)));
+    collection.items = many;
+    std::reverse(many.begin(), many.end());
+    check(many, 10000); // One replacement per slot, no repeated search/remove/insert.
+    check(many, 0);
+    std::mt19937 random(42);
+    for (int trial = 0; trial < 40; ++trial)
+    {
+        std::shuffle(many.begin(), many.end(), random);
+        auto subset = many;
+        subset.resize(100 + random() % 9900);
+        check(subset, -1); // Mixed bulk reorder, deletion and reinsertion.
+        check(subset, 0);
+    }
     std::cout << "WinUI row reconciliation checks passed.\n";
 }

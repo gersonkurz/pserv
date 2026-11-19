@@ -351,8 +351,7 @@ namespace winrt::pserv6::implementation
     {
         Application::Current().Resources().Insert(box_value(L"ContentControlThemeFontFamily"), Media::FontFamily(m_fontFamily));
         ApplyFontTo(Root());
-        for (auto const& row : m_allRows)
-            for (auto const& cell : row.Cells()) { auto impl = get_self<implementation::DataCell>(cell); impl->SetFontName(hstring(m_fontFamily)); impl->SetFontStyle(m_fontWeight, m_fontItalic); }
+        RefreshRealizedRows();
         ApplyZoom();
     }
 

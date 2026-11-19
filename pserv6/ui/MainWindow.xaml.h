@@ -14,6 +14,7 @@ namespace winrt::pserv6::implementation
         ~MainWindow();
         void CommandClicked(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void RowsLoaded(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void RowContentChanging(Microsoft::UI::Xaml::Controls::ListViewBase const&, Microsoft::UI::Xaml::Controls::ContainerContentChangingEventArgs const&);
         void ProviderChanged(Microsoft::UI::Xaml::Controls::NavigationView const&, Microsoft::UI::Xaml::Controls::NavigationViewSelectionChangedEventArgs const&);
         void AddVariableClicked(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnLoaded(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -112,6 +113,8 @@ namespace winrt::pserv6::implementation
         void Refresh();
         void Tick();
         void RebuildRows();
+        void RenderRow(Microsoft::UI::Xaml::Controls::Grid const& grid, pserv6::DataRow const& row);
+        void RefreshRealizedRows();
         void ApplyFilter();
         void UpdateActions();
         void BuildHeaders();

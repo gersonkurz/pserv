@@ -16,10 +16,8 @@
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                 </Border>
             </DataTemplate>
-            <DataTemplate x:Key="RowTemplate" x:DataType="local:DataRow">
-                <ItemsControl ItemsSource="{x:Bind Cells}" ItemTemplate="{StaticResource CellTemplate}" IsTabStop="False">
-                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                </ItemsControl>
+            <DataTemplate x:Key="RowTemplate">
+                <Grid HorizontalAlignment="Left" Height="30"/>
             </DataTemplate>
         </Grid.Resources>
         <MenuBar x:Name="MainMenu">
@@ -90,7 +88,7 @@
                                       SelectionMode="Extended" IsMultiSelectCheckBoxEnabled="False"
                                       Loaded="RowsLoaded" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                       ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.VerticalScrollMode="Enabled"
-                                      SelectionChanged="SelectionChanged"
+                                      SelectionChanged="SelectionChanged" ContainerContentChanging="RowContentChanging"
                                       DoubleTapped="RowsDoubleTapped" RightTapped="RowsRightTapped" KeyDown="RowsKeyDown">
                                 <ListView.Resources>
                                     <!-- Reserve space for both bars instead of overlaying or hiding them. -->

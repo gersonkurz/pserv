@@ -11,7 +11,17 @@ namespace winrt::pserv6::implementation
     {
         DataRow() = default;
         ~DataRow();
-        Windows::Foundation::Collections::IVector<pserv6::DataCell> Cells() const { return m_cells; }
+        void SetObject(pserv::DataObject* object)
+        {
+            object->Retain(REFCOUNT_DEBUG_ARGS);
+            if (m_pObject) m_pObject->Release(REFCOUNT_DEBUG_ARGS);
+            m_pObject = object;
+        }
+        Windows::Foundation::Collections::IVector<pserv6::DataCell> Cells() const
+        {
+            if (!m_cells) m_cells = single_threaded_observable_vector<pserv6::DataCell>();
+            return m_cells;
+        }
         void Update(pserv::DataObject* object, std::vector<int> const& columns,
             std::vector<double> const& widths, std::vector<pserv::DataObjectColumn> const& metadata);
         void SetForeground(Microsoft::UI::Xaml::Media::Brush const& brush);
@@ -21,7 +31,7 @@ namespace winrt::pserv6::implementation
         pserv::DataObject* m_pObject{nullptr};
         // XAML ItemsSource queries IVector<IInspectable>, not IVector<DataCell>.
         // The observable factory exposes both interfaces; the plain typed vector does not.
-        Windows::Foundation::Collections::IVector<pserv6::DataCell> m_cells{single_threaded_observable_vector<pserv6::DataCell>()};
+        mutable Windows::Foundation::Collections::IVector<pserv6::DataCell> m_cells{nullptr};
     };
 }
 namespace winrt::pserv6::factory_implementation

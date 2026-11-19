@@ -12,6 +12,7 @@ namespace winrt::pserv6::implementation
     void DataRow::Update(pserv::DataObject* object, std::vector<int> const& columns,
         std::vector<double> const& widths, std::vector<pserv::DataObjectColumn> const& metadata)
     {
+        Cells();
         object->Retain(REFCOUNT_DEBUG_ARGS);
         if (m_pObject) m_pObject->Release(REFCOUNT_DEBUG_ARGS);
         m_pObject = object;

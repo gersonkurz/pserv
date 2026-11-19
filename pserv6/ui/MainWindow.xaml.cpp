@@ -72,12 +72,7 @@ namespace winrt::pserv6::implementation
             m_runningBrush = Media::SolidColorBrush(color(m_themes.Current().base[0x0B]));
         }
         if (!m_controller) return;
-        for (auto const& row : m_allRows)
-        {
-            auto state = m_controller->GetVisualState(Object(row));
-            get_self<implementation::DataRow>(row)->SetForeground(state == pserv::VisualState::Disabled ? m_disabledBrush :
-                state == pserv::VisualState::Highlighted ? m_runningBrush : m_normalBrush);
-        }
+        RefreshRealizedRows();
     }
 
     void MainWindow::ApplyZoom()
@@ -401,16 +396,70 @@ namespace winrt::pserv6::implementation
         {
             auto found = existing.find(object->GetStableID());
             auto row = found == existing.end() ? make<implementation::DataRow>() : found->second;
-            get_self<implementation::DataRow>(row)->Update(object, m_columns, m_widths, m_controller->GetColumns());
-            for (auto const& cell : row.Cells()) { auto impl = get_self<implementation::DataCell>(cell); impl->SetFontName(hstring(m_fontFamily)); impl->SetFontStyle(m_fontWeight, m_fontItalic); }
-            auto state = m_controller->GetVisualState(object);
-            get_self<implementation::DataRow>(row)->SetForeground(state == pserv::VisualState::Disabled ? m_disabledBrush :
-                state == pserv::VisualState::Highlighted ? m_runningBrush : m_normalBrush);
+            get_self<implementation::DataRow>(row)->SetObject(object);
             next.push_back(row);
         }
         m_allRows = std::move(next);
         UpdateCounts();
         ApplyFilter();
+    }
+
+    void MainWindow::RenderRow(Grid const& grid, pserv6::DataRow const& row)
+    {
+        if (!m_controller || !row) return;
+        // Only realized containers own cell visuals. The retained row is just a stable identity.
+        if (grid.Children().Size() != m_columns.size())
+        {
+            grid.Children().Clear();
+            grid.ColumnDefinitions().Clear();
+            for (uint32_t i = 0; i < m_columns.size(); ++i)
+            {
+                grid.ColumnDefinitions().Append(ColumnDefinition{});
+                TextBlock text;
+                text.Margin({10, 0, 10, 0});
+                text.VerticalAlignment(VerticalAlignment::Center);
+                text.TextTrimming(TextTrimming::CharacterEllipsis);
+                text.FontSize(13);
+                Grid::SetColumn(text, i);
+                grid.Children().Append(text);
+            }
+        }
+        auto object = Object(row);
+        auto state = m_controller->GetVisualState(object);
+        auto brush = state == pserv::VisualState::Disabled ? m_disabledBrush :
+            state == pserv::VisualState::Highlighted ? m_runningBrush : m_normalBrush;
+        auto const& metadata = m_controller->GetColumns();
+        for (uint32_t i = 0; i < m_columns.size(); ++i)
+        {
+            auto definition = grid.ColumnDefinitions().GetAt(i);
+            if (definition.Width().Value != m_widths[i] || definition.Width().GridUnitType != GridUnitType::Pixel)
+                definition.Width(GridLengthHelper::FromPixels(m_widths[i]));
+            auto text = grid.Children().GetAt(i).as<TextBlock>();
+            auto value = Wide(object->GetProperty(m_columns[i]));
+            if (text.Text() != value) text.Text(value);
+            if (text.Foreground() != brush) text.Foreground(brush);
+            if (text.FontFamily().Source() != m_fontFamily) text.FontFamily(Media::FontFamily(m_fontFamily));
+            text.FontWeight({m_fontWeight});
+            text.FontStyle(m_fontItalic ? Windows::UI::Text::FontStyle::Italic : Windows::UI::Text::FontStyle::Normal);
+            text.TextAlignment(metadata[m_columns[i]].GetAlignment() == pserv::ColumnAlignment::Right ? TextAlignment::Right : TextAlignment::Left);
+        }
+    }
+
+    void MainWindow::RowContentChanging(ListViewBase const&, ContainerContentChangingEventArgs const& args)
+    {
+        if (args.InRecycleQueue()) return;
+        auto row = args.Item().try_as<pserv6::DataRow>();
+        auto grid = args.ItemContainer().ContentTemplateRoot().try_as<Grid>();
+        if (row && grid) { RenderRow(grid, row); args.Handled(true); }
+    }
+
+    void MainWindow::RefreshRealizedRows()
+    {
+        if (auto panel = Rows().ItemsPanelRoot().try_as<ItemsStackPanel>())
+            for (int i = std::max(0, panel.FirstCacheIndex()); i <= panel.LastCacheIndex() && i < static_cast<int>(m_items.Size()); ++i)
+                if (auto item = Rows().ContainerFromIndex(i).try_as<ListViewItem>())
+                    if (auto grid = item.ContentTemplateRoot().try_as<Grid>())
+                        RenderRow(grid, m_items.GetAt(i).as<pserv6::DataRow>());
     }
 
     std::vector<pserv6::DataRow> MainWindow::SelectedRows()
@@ -438,10 +487,11 @@ namespace winrt::pserv6::implementation
             }
         }
         m_rebinding = true;
-        pserv::winui::ReconcileRows(m_items, visible, [](auto const& item)
+        bool structureChanged = pserv::winui::ReconcileRows(m_items, visible, [](auto const& item)
         {
             return Object(item.template as<pserv6::DataRow>())->GetStableID();
         });
+        if (structureChanged) Rows().SelectedItems().Clear();
         for (auto const& row : m_visibleRows)
         {
             uint32_t index;
@@ -451,7 +501,8 @@ namespace winrt::pserv6::implementation
         m_rebinding = false;
         // Collection reconciliation and selection changes must not bring the
         // focused/selected row back into view during periodic refresh.
-        Rows().UpdateLayout();
+        if (structureChanged) Rows().UpdateLayout();
+        RefreshRealizedRows();
         if (m_rowScroll) m_rowScroll.ChangeView(horizontal, vertical, nullptr, true);
         UpdateActions();
     }
@@ -505,8 +556,7 @@ namespace winrt::pserv6::implementation
                     double total = 0;
                     for (auto w : self->m_widths) total += w;
                     self->Headers().Width(total);
-                    for (auto const& row : self->m_allRows)
-                        get_self<implementation::DataRow>(row)->SetWidth(i, self->m_widths[i]);
+                    self->RefreshRealizedRows();
                 }
             });
             Grid::SetColumn(handle, i);
