@@ -21,25 +21,17 @@ namespace pserv
     {
     }
 
-    void ModulesDataController::Refresh(bool isAutoRefresh)
+    void ModulesDataController::Collect(DataObjectContainer &target, const RefreshRequest &request)
     {
-        spdlog::info("Refreshing modules...");
-
-        // Enumerate all processes to get their modules. Actually, this is more tricky than it seems, because
-        // m_objects creates BOTH modules AND processes.
-        // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
-        // update-in-place for existing objects and removes stale ones
+        // Modules are enumerated per process
         DataObjectContainer processes;
         ProcessManager::EnumerateProcesses(&processes);
-        m_objects.StartRefresh();
+        target.StartRefresh();
         for (auto proc : processes)
         {
-            // Enumerate modules for this process
-            ModuleManager::EnumerateModules(&m_objects, static_cast<ProcessInfo*>(proc)->GetPid());
+            ModuleManager::EnumerateModules(&target, static_cast<ProcessInfo *>(proc)->GetPid());
         }
-        m_objects.FinishRefresh();
-        spdlog::info("Refreshed {} modules from {} processes", m_objects.GetSize(), processes.GetSize());
-        SetLoaded();
+        target.FinishRefresh();
     }
 
     std::vector<const DataAction *> ModulesDataController::GetActions(const DataObject *dataObject) const

@@ -60,10 +60,35 @@ namespace pserv
         /// @return Display name (e.g., service name, process name).
         virtual std::string GetItemName() const = 0;
 
+        /// @brief A new object with the same values (and its own single reference).
+        /// Used when a background refresh publishes an object the live container does not have yet.
+        virtual DataObject *Clone() const = 0;
+
+        /// @brief Copy all values from `other`, which must be of the same type. The reference count
+        /// is not copied. Used to update a live object in place from a background refresh, so
+        /// pointers held by the UI stay valid.
+        virtual void AssignFrom(const DataObject &other) = 0;
+
         /// @brief Check if this item is in a "running" state.
         bool IsRunning() const { return m_bIsRunning; }
 
         /// @brief Check if this item is disabled.
         bool IsDisabled() const { return m_bIsDisabled; }
+    };
+
+    /// @brief Implements Clone()/AssignFrom() for a model through its copy constructor and copy
+    /// assignment. Derive models as `class X : public CloneableDataObject<X>`.
+    template <typename Derived> class CloneableDataObject : public DataObject
+    {
+    public:
+        DataObject *Clone() const override
+        {
+            return DBG_NEW Derived(static_cast<const Derived &>(*this));
+        }
+
+        void AssignFrom(const DataObject &other) override
+        {
+            static_cast<Derived &>(*this) = static_cast<const Derived &>(other);
+        }
     };
 } // namespace pserv

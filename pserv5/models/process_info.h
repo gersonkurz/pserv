@@ -42,7 +42,7 @@ namespace pserv
     /// - Identity: PID, name, path, command line, owning user
     /// - Resources: memory usage, handle/thread counts
     /// - Timing: start time, CPU time (user/kernel)
-    class ProcessInfo : public DataObject
+    class ProcessInfo : public CloneableDataObject<ProcessInfo>
     {
     private:
         DWORD m_pid{};

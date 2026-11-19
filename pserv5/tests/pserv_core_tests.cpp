@@ -20,6 +20,7 @@
 #include <core/data_action_dispatch_context.h>
 #include <models/process_info.h>
 #include <models/service_info.h>
+#include "test_support.h"
 
 namespace
 {
@@ -58,9 +59,11 @@ namespace
                   {{FakeProperty::A, "A", "A"}, {FakeProperty::C, "C", "C"}, {FakeProperty::B, "B", "B"}}}
         {
         }
-        void Refresh(bool) override {}
         VisualState GetVisualState(const DataObject *) const override { return VisualState::Normal; }
         std::vector<const DataAction *> GetActions(const DataObject *) const override { return {}; }
+
+    protected:
+        void Collect(DataObjectContainer &, const RefreshRequest &) override {}
     };
 
     // The Task Scheduler functions used to call CoUninitialize() on their error paths while COM
@@ -329,8 +332,23 @@ namespace
     }
 }
 
-int main()
+namespace pserv::tests
 {
+    void Check(bool bOk, std::string_view what)
+    {
+        ::Check(bOk, what);
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    // --stress N: refresh every controller N times on a RefreshWorker (default 1; plan Phase 2 uses 50)
+    int stressRounds = 1;
+    for (int i = 1; i + 1 < argc; ++i)
+    {
+        if (std::string_view{argv[i]} == "--stress")
+            stressRounds = std::max(1, std::atoi(argv[i + 1]));
+    }
     // Unbuffered: with stdout redirected, a crash would otherwise discard everything printed so far
     // and leave no hint of where it happened.
     std::cout << std::unitbuf;
@@ -347,6 +365,11 @@ int main()
     TestColumnPropertyIdsInOrder(controllers);
     TestLiveProperties(controllers);
     TestExportersRegistered(controllers);
+
+    pserv::tests::RunRefreshUnitTests();
+    // Fresh controllers: the stress run's first publish must be the initial population.
+    library.Clear();
+    pserv::tests::RunRefreshStress(library.GetDataControllers(), stressRounds);
 
     std::cout << std::format("{} checks, {} failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

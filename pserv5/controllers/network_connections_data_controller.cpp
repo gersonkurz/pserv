@@ -21,31 +21,11 @@ namespace pserv
     {
     }
 
-    void NetworkConnectionsDataController::Refresh(bool isAutoRefresh)
+    void NetworkConnectionsDataController::Collect(DataObjectContainer &target, const RefreshRequest &request)
     {
-        spdlog::info("Refreshing network connections...");
-
-        try
-        {
-            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
-            // update-in-place for existing objects and removes stale ones
-            m_objects.StartRefresh();
-            NetworkConnectionManager::EnumerateConnections(&m_objects);
-            m_objects.FinishRefresh();
-
-            // Re-apply last sort order if any
-            if (m_lastSortColumn >= 0)
-            {
-                Sort(m_lastSortColumn, m_lastSortAscending);
-            }
-
-            spdlog::info("Successfully refreshed {} network connections", m_objects.GetSize());
-            SetLoaded();
-        }
-        catch (const std::exception &e)
-        {
-            spdlog::error("Failed to refresh network connections: {}", e.what());
-        }
+        target.StartRefresh();
+        NetworkConnectionManager::EnumerateConnections(&target);
+        target.FinishRefresh();
     }
 
     std::vector<const DataAction *> NetworkConnectionsDataController::GetActions(const DataObject *dataObject) const

@@ -36,7 +36,7 @@ namespace pserv
     /// - Identity: name, path, author
     /// - Schedule: triggers, last/next run times
     /// - State: enabled, current execution state
-    class ScheduledTaskInfo : public DataObject
+    class ScheduledTaskInfo : public CloneableDataObject<ScheduledTaskInfo>
     {
     private:
         std::string m_name;

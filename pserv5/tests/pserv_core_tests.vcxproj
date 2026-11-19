@@ -35,8 +35,8 @@
   </ImportGroup>
   <PropertyGroup>
     <!-- Not next to the shipped executables: `just` stages bin\<Platform>\<Configuration> into the installers. -->
-    <OutDir>$(SolutionDir)bin\tests\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)bin\tests\$(Platform)\$(Configuration)$(PservBuildVariant)\</OutDir>
+    <IntDir>$(SolutionDir)temp\$(Platform)\$(Configuration)$(PservBuildVariant)\$(ProjectName)\</IntDir>
     <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -70,6 +70,10 @@
   <ItemGroup>
     <ClCompile Include="..\precomp.cpp"><PrecompiledHeader>Create</PrecompiledHeader></ClCompile>
     <ClCompile Include="pserv_core_tests.cpp" />
+    <ClCompile Include="refresh_tests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="test_support.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\pserv_core\pserv_core.vcxproj">

@@ -14,6 +14,7 @@ Build with `just` (recipes in the repo-root `justfile`) from a **Visual Studio 2
 
 - `just build` — Debug, native arch (builds every project in the solution)
 - `just test` — `just build`, then run `pserv_core_tests` (exit code 0 = all checks pass)
+- `just test-asan` — `pserv_core` + tests under AddressSanitizer (Debug, native arch, `-asan` output folders), with the 50-round background-refresh stress run. Native ARM64 on ARM64 hardware: the x64 ASan runtime does not start under emulation.
 - `just build-release` — Release, native arch
 - `just build-all` — Debug+Release across x64, x86, ARM64
 - `just run` / `just run-cli [-- args]` — build Debug + launch GUI / CLI

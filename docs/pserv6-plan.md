@@ -308,6 +308,15 @@ and its performance is assumed to match ARM64 (owner, 2026-11-18; R4).
     reads every property of every live object between publishes; ASan in Debug.
 - **Exit:** tests pass. The UI-thread cost of `Publish` for Modules (largest view) is measured
   and reported against section 7.
+- **As implemented:**
+  - The generation and epoch guards are one counter per controller
+    (`InvalidatePendingRefreshes()`), which the frontend bumps on a view switch as on a
+    mutation.
+  - The protocol lives in the core as `RefreshCoordinator` (requests, coalescing, pause while
+    dialogs are open), with a single-thread `RefreshWorker`. A frontend supplies only "run on
+    the worker" and "post to the UI thread", which is also what makes the interleaving tests
+    deterministic.
+  - ASan runs via `just test-asan`, native ARM64.
 
 ### Phase 3 — pserv6 skeleton **and installer** (D1, D2, D7, D9, D12)
 - Prerequisite: MSIS 3.0.9 installed on the build machine (F9).

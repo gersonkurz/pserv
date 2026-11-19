@@ -37,7 +37,7 @@ namespace pserv
     /// - Identity: name, display name, description
     /// - Configuration: start type, binary path, service account
     /// - Runtime status: current state, process ID, exit codes
-    class ServiceInfo : public DataObject
+    class ServiceInfo : public CloneableDataObject<ServiceInfo>
     {
     private:
         std::string m_name;

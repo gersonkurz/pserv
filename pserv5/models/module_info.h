@@ -24,7 +24,7 @@ namespace pserv
     /// - Identity: module name and full path
     /// - Memory: base address and size in memory
     /// - Context: owning process ID
-    class ModuleInfo : public DataObject
+    class ModuleInfo : public CloneableDataObject<ModuleInfo>
     {
     public:
         ModuleInfo(uint32_t processId, const std::string &name);

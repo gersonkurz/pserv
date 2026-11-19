@@ -10,9 +10,14 @@ set windows-shell := ["cmd.exe", "/c"]
 
 solution := "pserv5\\pserv5.slnx"
 
-# Map %PROCESSOR_ARCHITECTURE% to the native solution platform: AMD64 → x64, ARM64 → ARM64.
+# Native solution platform: ARM64 on ARM64 hardware, x64 otherwise. An x64 build of just itself
+# runs emulated on ARM64 and sees PROCESSOR_ARCHITECTURE=AMD64, so PROCESSOR_IDENTIFIER
+# ("ARMv8 ...") is checked as well.
 _arch := env_var_or_default("PROCESSOR_ARCHITECTURE", "AMD64")
-platform := if _arch == "ARM64" { "ARM64" } else { "x64" }
+_cpu := env_var_or_default("PROCESSOR_IDENTIFIER", "")
+platform := if _arch == "ARM64" { "ARM64" } else if _cpu =~ "^ARM" { "ARM64" } else { "x64" }
+# Folder (under %VCToolsInstallDir%bin) holding the AddressSanitizer runtime DLLs for that platform.
+_asan_bin := if platform == "ARM64" { "Hostarm64\\arm64" } else { "Hostx64\\x64" }
 
 # Default: show available recipes
 default:
@@ -42,6 +47,12 @@ build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug"
 # Build Debug (native arch) and run pserv_core_tests; exits non-zero if any check fails
 test: build
     @pserv5\bin\tests\{{platform}}\Debug\pserv_core_tests.exe
+
+# Build pserv_core + tests with AddressSanitizer (Debug, native arch, separate "-asan" output
+# folders) and run the tests with the 50-round background-refresh stress run
+test-asan: _require-devshell
+    msbuild {{solution}} /restore /t:pserv_core_tests /p:Configuration=Debug /p:Platform={{platform}} /p:EnableASAN=true /p:PservBuildVariant=-asan /m /nologo /v:minimal
+    @set "PATH=%VCToolsInstallDir%bin\{{_asan_bin}};%PATH%" && pserv5\bin\tests\{{platform}}\Debug-asan\pserv_core_tests.exe --stress 50
 
 # Build Debug + launch the GUI (native arch)
 run: build

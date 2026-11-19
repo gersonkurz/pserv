@@ -38,7 +38,7 @@ namespace pserv
     /// Stores startup entry information from:
     /// - Registry Run/RunOnce keys (HKLM and HKCU)
     /// - Startup folders (common and per-user)
-    class StartupProgramInfo : public DataObject
+    class StartupProgramInfo : public CloneableDataObject<StartupProgramInfo>
     {
     private:
         std::string m_name;

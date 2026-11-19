@@ -3,7 +3,7 @@
 #include <core/data_object.h>
 #include <core/data_object_container.h>
 #include <utils/string_utils.h>
-
+#include <utils/win32_error.h>
 
 namespace pserv
 {
@@ -12,87 +12,105 @@ namespace pserv
         Clear();
     }
 
-    void DataObjectContainer::Sort(int columnIndex, bool ascending, ColumnDataType dataType)
+    namespace
     {
-        std::sort(m_vector.begin(),
-            m_vector.end(),
-            [columnIndex, ascending, dataType](const DataObject *a, const DataObject *b)
+        // A byte string that orders exactly like CompareStringEx(LOCALE_NAME_USER_DEFAULT,
+        // LINGUISTIC_IGNORECASE) on the original text (LCMapStringEx with LCMAP_SORTKEY guarantees
+        // this), so a sort compares bytes instead of converting and comparing UTF-16 per comparison.
+        bool MakeSortKey(const std::string &utf8, std::string &key)
+        {
+            key.clear();
+            if (utf8.empty())
             {
-                PropertyValue valA = a->GetTypedProperty(columnIndex);
-                PropertyValue valB = b->GetTypedProperty(columnIndex);
+                // LCMapStringEx rejects empty input. The empty key orders before every non-empty
+                // one, as CompareStringEx orders "" before any non-empty string.
+                return true;
+            }
+            const std::wstring wide = utils::Utf8ToWide(utf8);
+            constexpr DWORD flags = LCMAP_SORTKEY | LINGUISTIC_IGNORECASE;
+            const int size = LCMapStringEx(LOCALE_NAME_USER_DEFAULT, flags, wide.c_str(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr, 0);
+            if (size <= 0)
+            {
+                LogWin32Error("LCMapStringEx", "sort key size, {} characters", wide.size());
+                return false;
+            }
+            key.resize(static_cast<size_t>(size));
+            // For LCMAP_SORTKEY the destination is a byte buffer and its size is given in bytes.
+            const int written = LCMapStringEx(LOCALE_NAME_USER_DEFAULT, flags, wide.c_str(), static_cast<int>(wide.size()),
+                reinterpret_cast<LPWSTR>(key.data()), size, nullptr, nullptr, 0);
+            if (written != size)
+            {
+                LogWin32Error("LCMapStringEx", "sort key, {} of {} bytes", written, size);
+                key.clear();
+                return false;
+            }
+            return true;
+        }
 
-                // Numeric comparison for Integer, UnsignedInteger, and Size types
-                if (dataType == ColumnDataType::Integer || dataType == ColumnDataType::UnsignedInteger || dataType == ColumnDataType::Size)
+        DataObjectContainer::SortKeyFunction g_pfnSortKey = &MakeSortKey;
+    } // namespace
+
+    void DataObjectContainer::SetSortKeyFunctionForTesting(SortKeyFunction pfn) noexcept
+    {
+        g_pfnSortKey = pfn ? pfn : &MakeSortKey;
+    }
+
+    bool DataObjectContainer::Sort(int columnIndex, bool ascending, ColumnDataType dataType)
+    {
+        // Keys are computed once per object, not once per comparison: the comparison-based version
+        // converted both strings to UTF-16 and called CompareStringEx ~n log n times, ~100 ms for
+        // the ~10,000 rows of the Modules view. The sort is stable, so rows with equal keys keep
+        // their (refresh-stable) order instead of shuffling in the grid on every refresh.
+        const bool bNumeric = dataType == ColumnDataType::Integer || dataType == ColumnDataType::UnsignedInteger || dataType == ColumnDataType::Size;
+
+        struct Entry
+        {
+            uint64_t number{0};
+            std::string key;
+            DataObject *object{nullptr};
+        };
+        std::vector<Entry> entries;
+        entries.reserve(m_vector.size());
+        for (auto *dataObject : m_vector)
+        {
+            Entry entry;
+            entry.object = dataObject;
+            const PropertyValue value = dataObject->GetTypedProperty(columnIndex);
+            if (bNumeric)
+            {
+                if (std::holds_alternative<uint64_t>(value))
+                    entry.number = std::get<uint64_t>(value);
+                else if (std::holds_alternative<int64_t>(value))
+                    entry.number = static_cast<uint64_t>(std::get<int64_t>(value));
+            }
+            else
+            {
+                // String and Time columns: the typed string, or the display text if not a string.
+                // One failed key would make the byte comparison meaningless for the whole sort, so
+                // a failure keeps the current order.
+                if (!g_pfnSortKey(std::holds_alternative<std::string>(value) ? std::get<std::string>(value) : dataObject->GetProperty(columnIndex), entry.key))
                 {
-
-                    uint64_t numA = 0, numB = 0;
-
-                    if (std::holds_alternative<uint64_t>(valA))
-                    {
-                        numA = std::get<uint64_t>(valA);
-                    }
-                    else if (std::holds_alternative<int64_t>(valA))
-                    {
-                        numA = static_cast<uint64_t>(std::get<int64_t>(valA));
-                    }
-
-                    if (std::holds_alternative<uint64_t>(valB))
-                    {
-                        numB = std::get<uint64_t>(valB);
-                    }
-                    else if (std::holds_alternative<int64_t>(valB))
-                    {
-                        numB = static_cast<uint64_t>(std::get<int64_t>(valB));
-                    }
-
-                    return ascending ? (numA < numB) : (numA > numB);
+                    spdlog::error("Sort: no sort key for column {}; order left unchanged", columnIndex);
+                    return false;
                 }
+            }
+            entries.push_back(std::move(entry));
+        }
 
-                // String comparison for String and Time types
-                std::string strA, strB;
-
-                if (std::holds_alternative<std::string>(valA))
-                {
-                    strA = std::get<std::string>(valA);
-                }
-                else
-                {
-                    strA = a->GetProperty(columnIndex);
-                }
-
-                if (std::holds_alternative<std::string>(valB))
-                {
-                    strB = std::get<std::string>(valB);
-                }
-                else
-                {
-                    strB = b->GetProperty(columnIndex);
-                }
-
-                // Case-insensitive comparison using Windows CompareStringEx
-                // This handles Unicode properly and is locale-aware
-                // Convert UTF-8 strings to wide strings first
-                std::wstring wideA = utils::Utf8ToWide(strA);
-                std::wstring wideB = utils::Utf8ToWide(strB);
-
-                int cmp = CompareStringEx(
-                    LOCALE_NAME_USER_DEFAULT,
-                    LINGUISTIC_IGNORECASE,
-                    wideA.c_str(), static_cast<int>(wideA.length()),
-                    wideB.c_str(), static_cast<int>(wideB.length()),
-                    nullptr, nullptr, 0);
-
-                // CompareStringEx returns: 1 (less), 2 (equal), 3 (greater), or 0 (error)
-                if (cmp == 0)
-                {
-                    // Error case - fall back to simple comparison
-                    cmp = strA.compare(strB);
-                    return ascending ? (cmp < 0) : (cmp > 0);
-                }
-
-                // Convert CompareStringEx result (1/2/3) to comparison result
-                return ascending ? (cmp == 1) : (cmp == 3);
+        std::stable_sort(entries.begin(), entries.end(),
+            [bNumeric, ascending](const Entry &a, const Entry &b)
+            {
+                if (bNumeric)
+                    return ascending ? a.number < b.number : a.number > b.number;
+                const int cmp = a.key.compare(b.key);
+                return ascending ? cmp < 0 : cmp > 0;
             });
+
+        for (size_t i = 0; i < entries.size(); ++i)
+        {
+            m_vector[i] = entries[i].object;
+        }
+        return true;
     }
 
     void DataObjectContainer::StartRefresh() noexcept
@@ -104,27 +122,102 @@ namespace pserv
         InterlockedIncrement(&m_LastSeenGeneration);
     }
 
+    // Both operations below run in two phases. Phase 1 does everything that can throw (allocating
+    // vectors, computing stable IDs, cloning, assigning) without changing the container's membership.
+    // Phase 2 only moves, erases and releases, none of which throws. An exception therefore never
+    // leaves a released object in m_vector or m_lookup, never loses an object, and never leaks a
+    // clone (a refresh catches the exception and the container lives on). This is an ownership
+    // guarantee, not a transactional one: MergeFrom assigns surviving objects in place during phase
+    // 1, so after a failure some of them may already hold new values.
+
     void DataObjectContainer::FinishRefresh()
     {
-        bool repeat = true;
-        while (repeat)
+        // Phase 1 (may throw): split into kept and removed. One pass; this used to restart the
+        // scan after every removal, which is quadratic when many objects disappear at once.
+        std::vector<DataObject *> kept;
+        std::vector<std::pair<std::string, DataObject *>> removed;
+        kept.reserve(m_vector.size());
+        for (auto *dataObject : m_vector)
         {
-            repeat = false;
-            uint32_t index = 0;
-            for (auto dataObject : m_vector)
+            if (dataObject->m_LastSeenGeneration == m_LastSeenGeneration)
+                kept.push_back(dataObject);
+            else
+                removed.emplace_back(dataObject->GetStableID(), dataObject);
+        }
+
+        // Phase 2 (no-throw)
+        m_vector = std::move(kept);
+        for (auto &[stableId, dataObject] : removed)
+        {
+            m_lookup.erase(stableId);
+            dataObject->Release(REFCOUNT_DEBUG_ARGS);
+        }
+    }
+
+    void DataObjectContainer::MergeFrom(const DataObjectContainer &source)
+    {
+        // Releases the clones made so far unless phase 1 completes. Each clone is owned by this
+        // guard from the instant Clone() returns: `created` is reserved for every possible clone
+        // before the loop, so recording one cannot throw.
+        struct CloneGuard
+        {
+            std::vector<DataObject *> created;
+            bool bCommitted{false};
+            ~CloneGuard()
             {
-                if (dataObject->m_LastSeenGeneration != m_LastSeenGeneration)
-                {
-                    // Not seen in this generation, remove it
-                    const auto stableId{dataObject->GetStableID()};
-                    m_lookup.erase(stableId);
-                    m_vector.erase(m_vector.begin() + index);
-                    dataObject->Release(REFCOUNT_DEBUG_ARGS);
-                    repeat = true;
-                    break;
-                }
-                ++index;
+                if (bCommitted)
+                    return;
+                for (auto *clone : created)
+                    clone->Release(REFCOUNT_DEBUG_ARGS);
             }
+        } guard;
+
+        std::vector<DataObject *> merged;
+        std::unordered_map<std::string, DataObject *> lookup;
+        std::vector<DataObject *> removed;
+        {
+            // Phase 1 (may throw). m_lookup and m_vector are only read. Surviving objects are
+            // assigned in place: if an assignment throws, that object keeps a mix of old and new
+            // values, but every object stays valid and owned exactly once.
+            guard.created.reserve(source.m_vector.size());
+            merged.reserve(source.m_vector.size());
+            lookup.reserve(source.m_vector.size());
+            for (const auto *src : source.m_vector)
+            {
+                std::string stableId{src->GetStableID()};
+                DataObject *live = nullptr;
+                const auto existing = m_lookup.find(stableId);
+                if (existing != m_lookup.end())
+                {
+                    live = existing->second;
+                    live->AssignFrom(*src);
+                }
+                else
+                {
+                    live = src->Clone();
+                    guard.created.push_back(live); // within reserved capacity: no-throw
+                }
+                merged.push_back(live);
+                lookup.emplace(std::move(stableId), live);
+            }
+            for (const auto &[stableId, old] : m_lookup)
+            {
+                if (!lookup.contains(stableId))
+                    removed.push_back(old);
+            }
+        }
+        guard.bCommitted = true; // the clones are now owned by `merged`
+
+        // Phase 2 (no-throw)
+        for (auto *live : merged)
+        {
+            live->m_LastSeenGeneration = m_LastSeenGeneration;
+        }
+        m_vector = std::move(merged);
+        m_lookup = std::move(lookup);
+        for (auto *old : removed)
+        {
+            old->Release(REFCOUNT_DEBUG_ARGS);
         }
     }
 

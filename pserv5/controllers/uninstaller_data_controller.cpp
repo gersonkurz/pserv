@@ -25,24 +25,11 @@ namespace pserv
     {
     }
 
-    void UninstallerDataController::Refresh(bool isAutoRefresh)
+    void UninstallerDataController::Collect(DataObjectContainer &target, const RefreshRequest &request)
     {
-        spdlog::info("Refreshing installed programs...");
-
-        // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
-        // update-in-place for existing objects and removes stale ones
-        m_objects.StartRefresh();
-        UninstallerManager::EnumerateInstalledPrograms(&m_objects);
-        m_objects.FinishRefresh();
-
-        // Re-apply last sort order if any
-        if (m_lastSortColumn >= 0)
-        {
-            Sort(m_lastSortColumn, m_lastSortAscending);
-        }
-
-        spdlog::info("Refreshed {} installed programs", m_objects.GetSize());
-        SetLoaded();
+        target.StartRefresh();
+        UninstallerManager::EnumerateInstalledPrograms(&target);
+        target.FinishRefresh();
     }
 
     std::vector<const DataAction *> UninstallerDataController::GetActions(const DataObject *dataObject) const

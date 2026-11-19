@@ -30,7 +30,7 @@ namespace pserv
     /// - Installation: location, date, size
     /// - Uninstall: uninstall command string
     /// - Links: help URL, about URL
-    class InstalledProgramInfo : public DataObject
+    class InstalledProgramInfo : public CloneableDataObject<InstalledProgramInfo>
     {
     public:
         InstalledProgramInfo(std::string displayName, std::string displayVersion, std::string uninstallString);

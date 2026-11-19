@@ -29,6 +29,7 @@ Run recipes from the repository root with `just` in a **Visual Studio 2026 Devel
 
 - `just build` — Debug, native architecture; builds every project in the solution.
 - `just test` — `just build`, then run `pserv_core_tests`.
+- `just test-asan` — the same tests under AddressSanitizer, with the 50-round background-refresh stress run.
 - `just build-release` — Release, native architecture.
 - `just build-all` — Debug and Release for x64, x86, and ARM64.
 - `just run` — build Debug and launch the GUI.
@@ -68,6 +69,7 @@ Paths below are relative to `pserv5/` unless stated otherwise.
 - `DataObject` supplies display properties, typed properties for sorting, filtering, and stable IDs. Keep column metadata and both property representations consistent when adding or changing columns.
 - `DataController` defines columns and actions and refreshes its objects. `DataAction` executes through `DataActionDispatchContext`; preserve availability, destructive-action, and confirmation semantics in both frontends.
 - Objects use intrusive `Retain`/`Release` reference counting. `DataObjectContainer::Append` takes the incoming reference; it does not retain it again. `GetByStableId` returns a borrowed pointer and marks the object seen in the current refresh generation. Preserve the `StartRefresh`/`FinishRefresh` lifecycle and check ownership when selections or async work outlive a refresh.
+- Data refresh: a controller implements only `Collect(target, request)`, which runs on the refresh worker and may read nothing but `request`, `target` and immutable state. `Refresh()` (synchronous) or `RefreshCoordinator` (worker plus UI-thread `Publish`) do the rest; call `InvalidatePendingRefreshes()` on anything an older enumeration must not overwrite (committed edit, action, target change, view switch). UI-side derived state belongs in `OnPublished()`.
 - Use `core/async_operation.h` for existing background-operation patterns, including progress, cancellation, and completion notification. Keep object and dispatch-context lifetimes valid until work completes.
 - Follow adjacent code: four-space indentation, braces on separate lines, `pserv` namespaces, and existing `m_` / `m_p` / `m_b` member conventions. Translation units generally include `precomp.h` first.
 - Use UTF-8 internally and the helpers in `utils/string_utils.h` for UTF-16 conversion at Windows API boundaries. Use existing WIL RAII types for Windows resources where appropriate.

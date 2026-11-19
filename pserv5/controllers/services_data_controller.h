@@ -51,7 +51,9 @@ namespace pserv
         const std::string& GetMachineName() const { return m_machineName; }
 
     private:
-        void Refresh(bool isAutoRefresh = false) override;
+        // Refresh() is the base class's; this controller only enumerates:
+        void Collect(DataObjectContainer &target, const RefreshRequest &request) override;
+        std::string GetRefreshTarget() const override { return m_machineName; }
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
 
         std::vector<const DataAction *> GetAllActions() const override;

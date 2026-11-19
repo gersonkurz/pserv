@@ -31,7 +31,7 @@ namespace pserv
     /// - Geometry: position and size
     /// - Style: window and extended style flags
     /// - Ownership: process ID, thread ID, process name
-    class WindowInfo : public DataObject
+    class WindowInfo : public CloneableDataObject<WindowInfo>
     {
     public:
         WindowInfo(HWND hwnd);

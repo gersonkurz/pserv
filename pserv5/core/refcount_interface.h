@@ -100,6 +100,18 @@ namespace pserv
         {
         }
 
+        /// A copy is a new object: it starts with its own single reference.
+        RefCountImpl(const RefCountImpl &)
+            : m_refCount{1}
+        {
+        }
+
+        /// Assignment copies values between objects, never the reference count.
+        RefCountImpl &operator=(const RefCountImpl &)
+        {
+            return *this;
+        }
+
         void Retain(REFCOUNT_DEBUG_SPEC) const override final
         {
             ++m_refCount;

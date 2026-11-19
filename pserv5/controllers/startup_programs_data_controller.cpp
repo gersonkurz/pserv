@@ -18,31 +18,11 @@ namespace pserv
     {
     }
 
-    void StartupProgramsDataController::Refresh(bool isAutoRefresh)
+    void StartupProgramsDataController::Collect(DataObjectContainer &target, const RefreshRequest &request)
     {
-        spdlog::info("Refreshing startup programs...");
-
-        try
-        {
-            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
-            // update-in-place for existing objects and removes stale ones
-            m_objects.StartRefresh();
-            StartupProgramManager::EnumerateStartupPrograms(&m_objects);
-            m_objects.FinishRefresh();
-
-            // Re-apply last sort order if any
-            if (m_lastSortColumn >= 0)
-            {
-                Sort(m_lastSortColumn, m_lastSortAscending);
-            }
-
-            spdlog::info("Successfully refreshed {} startup programs", m_objects.GetSize());
-            SetLoaded();
-        }
-        catch (const std::exception &e)
-        {
-            spdlog::error("Failed to refresh startup programs: {}", e.what());
-        }
+        target.StartRefresh();
+        StartupProgramManager::EnumerateStartupPrograms(&target);
+        target.FinishRefresh();
     }
 
     std::vector<const DataAction *> StartupProgramsDataController::GetActions(const DataObject *dataObject) const

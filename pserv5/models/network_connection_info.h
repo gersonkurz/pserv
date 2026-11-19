@@ -54,7 +54,7 @@ namespace pserv
     /// - Protocol: TCP, UDP, IPv4, IPv6
     /// - State: TCP connection state
     /// - Owner: process ID and name
-    class NetworkConnectionInfo : public DataObject
+    class NetworkConnectionInfo : public CloneableDataObject<NetworkConnectionInfo>
     {
     private:
         NetworkProtocol m_protocol;

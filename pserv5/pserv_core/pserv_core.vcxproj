@@ -40,8 +40,9 @@
   <PropertyGroup>
     <!-- Not bin\: `just` stages bin\<Platform>\<Configuration> (exes + *.pdb) into the installers, and MSBuild
          copies a static library's compiler PDB into OutDir. Consumers link it through ProjectReference. -->
-    <OutDir>$(SolutionDir)temp\$(Platform)\$(Configuration)\$(ProjectName)\out\</OutDir>
-    <IntDir>$(SolutionDir)temp\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)temp\$(Platform)\$(Configuration)$(PservBuildVariant)\$(ProjectName)\out\</OutDir>
+    <!-- $(PservBuildVariant) (e.g. "-asan", set by `just test-asan`) keeps instrumented builds apart. -->
+    <IntDir>$(SolutionDir)temp\$(Platform)\$(Configuration)$(PservBuildVariant)\$(ProjectName)\</IntDir>
     <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -97,6 +98,7 @@
     <ClCompile Include="..\core\data_controller.cpp" />
     <ClCompile Include="..\core\data_controller_library.cpp" />
     <ClCompile Include="..\core\data_object_container.cpp" />
+    <ClCompile Include="..\core\refresh_coordinator.cpp" />
     <ClCompile Include="..\core\exporters\exporter_registry.cpp" />
     <ClCompile Include="..\core\exporters\json_exporter.cpp" />
     <ClCompile Include="..\core\exporters\plaintext_exporter.cpp" />

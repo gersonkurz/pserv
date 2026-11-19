@@ -20,31 +20,11 @@ namespace pserv
     {
     }
 
-    void ScheduledTasksDataController::Refresh(bool isAutoRefresh)
+    void ScheduledTasksDataController::Collect(DataObjectContainer &target, const RefreshRequest &request)
     {
-        spdlog::info("Refreshing scheduled tasks...");
-
-        try
-        {
-            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
-            // update-in-place for existing objects and removes stale ones
-            m_objects.StartRefresh();
-            ScheduledTaskManager::EnumerateTasks(&m_objects);
-            m_objects.FinishRefresh();
-
-            // Re-apply last sort order if any
-            if (m_lastSortColumn >= 0)
-            {
-                Sort(m_lastSortColumn, m_lastSortAscending);
-            }
-
-            spdlog::info("Successfully refreshed {} scheduled tasks", m_objects.GetSize());
-            SetLoaded();
-        }
-        catch (const std::exception &e)
-        {
-            spdlog::error("Failed to refresh scheduled tasks: {}", e.what());
-        }
+        target.StartRefresh();
+        ScheduledTaskManager::EnumerateTasks(&target);
+        target.FinishRefresh();
     }
 
     std::vector<const DataAction *> ScheduledTasksDataController::GetActions(const DataObject *dataObject) const

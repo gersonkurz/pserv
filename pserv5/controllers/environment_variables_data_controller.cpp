@@ -16,31 +16,11 @@ namespace pserv
     {
     }
 
-    void EnvironmentVariablesDataController::Refresh(bool isAutoRefresh)
+    void EnvironmentVariablesDataController::Collect(DataObjectContainer &target, const RefreshRequest &request)
     {
-        spdlog::info("Refreshing environment variables...");
-
-        try
-        {
-            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
-            // update-in-place for existing objects and removes stale ones
-            m_objects.StartRefresh();
-            EnvironmentVariableManager::EnumerateEnvironmentVariables(&m_objects);
-            m_objects.FinishRefresh();
-
-            // Re-apply last sort order if any
-            if (m_lastSortColumn >= 0)
-            {
-                Sort(m_lastSortColumn, m_lastSortAscending);
-            }
-
-            spdlog::info("Successfully refreshed {} environment variables", m_objects.GetSize());
-            SetLoaded();
-        }
-        catch (const std::exception &e)
-        {
-            spdlog::error("Failed to refresh environment variables: {}", e.what());
-        }
+        target.StartRefresh();
+        EnvironmentVariableManager::EnumerateEnvironmentVariables(&target);
+        target.FinishRefresh();
     }
 
     std::vector<const DataAction *> EnvironmentVariablesDataController::GetActions(const DataObject *dataObject) const

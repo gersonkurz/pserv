@@ -25,16 +25,11 @@ namespace pserv
     {
     }
 
-    void WindowsDataController::Refresh(bool isAutoRefresh)
+    void WindowsDataController::Collect(DataObjectContainer &target, const RefreshRequest &request)
     {
-        spdlog::info("Refreshing windows...");
-
-        m_objects.StartRefresh();
-        WindowManager::EnumerateWindows(&m_objects);
-        m_objects.FinishRefresh();
-
-        spdlog::info("Refreshed {} windows", m_objects.GetSize());
-        SetLoaded();
+        target.StartRefresh();
+        WindowManager::EnumerateWindows(&target);
+        target.FinishRefresh();
     }
 
     std::vector<const DataAction *> WindowsDataController::GetActions(const DataObject *dataObject) const

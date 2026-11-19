@@ -117,11 +117,30 @@ namespace pserv
         /// and will be removed and Released.
         void FinishRefresh();
 
-        /// @brief Sort objects by a column value.
+        /// @brief Make this container's contents equal `source`'s, preserving the identity of
+        /// objects that survive. Objects whose stable ID exists here are updated in place
+        /// (AssignFrom), so pointers to them stay valid; new IDs are cloned in; objects whose ID is
+        /// absent from `source` are removed and released. The order becomes `source`'s order.
+        /// `source` is not modified. O(n). On an exception no object is added, removed, lost or
+        /// leaked, but surviving objects assigned before the failure keep their new values.
+        void MergeFrom(const DataObjectContainer &source);
+
+        /// @brief Sort objects by a column value (stable).
+        /// String and Time columns order like CompareStringEx(user locale, LINGUISTIC_IGNORECASE).
         /// @param columnIndex The column index to sort by.
         /// @param ascending True for ascending order, false for descending.
         /// @param dataType The column's data type for type-aware comparison.
-        void Sort(int columnIndex, bool ascending, ColumnDataType dataType);
+        /// @return false if a sort key could not be computed; the order is then left unchanged
+        ///         (and the failure logged) rather than mixing valid and invalid keys.
+        bool Sort(int columnIndex, bool ascending, ColumnDataType dataType);
+
+        /// @brief Computes a sort key; false on failure. See SetSortKeyFunctionForTesting.
+        using SortKeyFunction = bool (*)(const std::string &utf8, std::string &key);
+
+        /// @brief Test seam: replace the sort-key function (nullptr restores the LCMapStringEx one),
+        /// so the key-failure path can be executed. Not synchronized: only call it while no sort
+        /// can run on another thread.
+        static void SetSortKeyFunctionForTesting(SortKeyFunction pfn) noexcept;
 
     private:
         std::unordered_map<std::string, DataObject*> m_lookup; ///< O(1) lookup by stable ID.

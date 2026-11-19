@@ -33,10 +33,8 @@ namespace pserv
     {
     }
 
-    void ProcessesDataController::Refresh(bool isAutoRefresh)
+    void ProcessesDataController::OnPublished()
     {
-        spdlog::info("Refreshing processes...");
-
         // Query current user name (always, in case of user switch)
         m_currentUserName.clear();
         char buffer[256];
@@ -49,28 +47,13 @@ namespace pserv
         {
             LogExpectedWin32Error("GetUserNameA");
         }
+    }
 
-        try
-        {
-            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
-            // update-in-place for existing objects and removes stale ones
-            m_objects.StartRefresh();
-            ProcessManager::EnumerateProcesses(&m_objects);
-            m_objects.FinishRefresh();
-
-            // Re-apply sort
-            if (m_lastSortColumn >= 0)
-            {
-                Sort(m_lastSortColumn, m_lastSortAscending);
-            }
-
-            spdlog::info("Refreshed {} processes", m_objects.GetSize());
-            SetLoaded();
-        }
-        catch (const std::exception &e)
-        {
-            spdlog::error("Failed to refresh processes: {}", e.what());
-        }
+    void ProcessesDataController::Collect(DataObjectContainer &target, const RefreshRequest &request)
+    {
+        target.StartRefresh();
+        ProcessManager::EnumerateProcesses(&target);
+        target.FinishRefresh();
     }
 
     std::vector<const DataAction *> ProcessesDataController::GetActions(const DataObject *dataObject) const

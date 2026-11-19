@@ -28,6 +28,26 @@ namespace pserv
     class DataObject;
     class DataActionDispatchContext;
 
+    /// @brief Everything a background refresh may read: a value copy taken on the UI thread, so the
+    /// worker never reads controller state the UI can change while it runs (plan section 5.1).
+    /// @brief Outcome of DataController::Publish().
+    enum class PublishResult
+    {
+        Published, ///< The live objects now reflect this refresh.
+        Stale,     ///< The request was invalidated meanwhile; nothing changed. Refresh again.
+        Failed     ///< The enumeration or the merge failed. No live object was added or removed; if
+                   ///< the merge failed, some surviving objects may already hold new values.
+    };
+
+    struct RefreshRequest
+    {
+        bool bAutoRefresh{false};
+        uint64_t epoch{0};   ///< DataController's refresh epoch when the request was made.
+        std::string target;  ///< What to enumerate (e.g. a remote machine name); empty = default.
+        int sortColumn{-1};  ///< The sort to apply on the worker (-1 = none), so publishing need not sort.
+        bool bSortAscending{true};
+    };
+
     /// @brief Visual rendering state for a data object row.
     enum class VisualState
     {
@@ -97,9 +117,40 @@ namespace pserv
         /// @name Core Abstract Methods
         /// @{
 
-        /// @brief Load or reload data from the system.
+        /// @brief Load or reload data from the system, synchronously on the calling thread:
+        /// RefreshShadow() followed by Publish(). Used by frontends without a refresh worker.
         /// @param isAutoRefresh True if called by auto-refresh timer (may optimize behavior).
-        virtual void Refresh(bool isAutoRefresh = false) = 0;
+        void Refresh(bool isAutoRefresh = false);
+
+        /// @name Background refresh (plan D5, section 5.1)
+        /// The UI thread creates a request, a single refresh worker fills the controller's private
+        /// shadow container with RefreshShadow(), and the UI thread publishes it with Publish(),
+        /// which merges the shadow into the live objects. Only the UI thread touches the live
+        /// objects; only the worker touches the shadow. RefreshCoordinator implements the protocol.
+        /// @{
+
+        /// @brief UI thread: capture the inputs of a refresh.
+        RefreshRequest CreateRefreshRequest(bool isAutoRefresh) const
+        {
+            return RefreshRequest{isAutoRefresh, m_refreshEpoch, GetRefreshTarget(), m_lastSortColumn, m_lastSortAscending};
+        }
+
+        /// @brief Worker thread: enumerate into the shadow container. Reads only `request`, the
+        /// shadow and immutable controller state. Errors are logged; Publish() then keeps the
+        /// live objects unchanged.
+        void RefreshShadow(const RefreshRequest &request);
+
+        /// @brief UI thread: merge the shadow into the live objects, re-sort, mark loaded.
+        /// @return Published; Stale if InvalidatePendingRefreshes() was called since the request
+        ///         was created (nothing changed; request again); Failed if the enumeration or the
+        ///         merge failed (no object added or removed; do not retry at once).
+        PublishResult Publish(const RefreshRequest &request);
+
+        /// @brief UI thread: make every refresh requested so far stale. Call on anything that
+        /// must not be overwritten by an older enumeration: a committed edit, an action, a target
+        /// change, a view switch.
+        void InvalidatePendingRefreshes() { ++m_refreshEpoch; }
+        /// @}
 
         /// @brief Determine the visual rendering state for an object.
         /// @param service The DataObject to evaluate.
@@ -131,6 +182,10 @@ namespace pserv
         /// @param columnIndex Column index to sort by.
         /// @param ascending True for ascending, false for descending.
         void Sort(int columnIndex, bool ascending);
+
+        /// @brief The column of the last Sort() (-1 = unsorted) and its direction.
+        int GetLastSortColumn() const { return m_lastSortColumn; }
+        bool IsLastSortAscending() const { return m_lastSortAscending; }
 
         /// @name Property Editing Transaction
         /// Override these methods to support in-place editing in the properties dialog.
@@ -166,6 +221,17 @@ namespace pserv
         void LogColumnPropertyIdMismatches() const;
 
     protected:
+        /// @brief Enumerate this controller's objects into `target` (StartRefresh, enumerate,
+        /// FinishRefresh). Runs on the refresh worker: it may read only `request`, `target` and
+        /// state that never changes after construction. May throw.
+        virtual void Collect(DataObjectContainer &target, const RefreshRequest &request) = 0;
+
+        /// @brief The enumeration target captured into each RefreshRequest (e.g. remote machine).
+        virtual std::string GetRefreshTarget() const { return {}; }
+
+        /// @brief UI thread, after a successful Publish(): update UI-side derived state.
+        virtual void OnPublished() {}
+
         /// @brief Clear all data objects from the container.
         void Clear();
 
@@ -188,5 +254,11 @@ namespace pserv
         bool m_lastSortAscending{true};                  ///< Last sort direction.
         std::chrono::system_clock::time_point m_lastRefreshTime{}; ///< Time of last successful refresh.
 
+    private:
+        uint64_t m_refreshEpoch{0};          ///< UI thread. See InvalidatePendingRefreshes().
+        DataObjectContainer m_shadow;        ///< Worker thread only (between request and publish).
+        std::string m_shadowTarget;          ///< Target the shadow currently holds objects for.
+        bool m_bShadowValid{false};          ///< The last RefreshShadow() completed without error.
+        bool m_bShadowSorted{false};         ///< ... and sorted the shadow by the request's sort.
     };
 } // namespace pserv

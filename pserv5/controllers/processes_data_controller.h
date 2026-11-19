@@ -22,7 +22,12 @@ namespace pserv
         ProcessesDataController();
 
     private:
-        void Refresh(bool isAutoRefresh = false) override;
+        // Refresh() is the base class's; this controller only enumerates:
+        void Collect(DataObjectContainer &target, const RefreshRequest &request) override;
+
+        /// The current user's name is UI-side state (it drives GetVisualState), so it is updated
+        /// on the UI thread after each publish rather than by the refresh worker.
+        void OnPublished() override;
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
 
         std::vector<const DataAction *> GetAllActions() const override;

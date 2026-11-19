@@ -23,7 +23,8 @@ namespace pserv
         WindowsDataController();
 
     private:
-        void Refresh(bool isAutoRefresh = false) override;
+        // Refresh() is the base class's; this controller only enumerates:
+        void Collect(DataObjectContainer &target, const RefreshRequest &request) override;
         VisualState GetVisualState(const DataObject *dataObject) const override;
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
 

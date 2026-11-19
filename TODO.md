@@ -42,3 +42,9 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 ## From the Debug-GUI Direct3D fallback review (Codex, 2026-11-19, thread 01a1f3fe)
 
 12. **[task]** [main_window.cpp:372](/C:/Projects/pserv-claude/pserv5/main_window.cpp:372): Pre-existing initialization defect: `CreateRenderTarget()` logs failures without propagating them, so `InitializeDirectX()` reports success with no render target. `Render()` then returns immediately at line 930, leaving a non-rendering window. Propagate initial render-target creation failure to initialization. Deferrable because this behavior predates the diff and is separate from the missing-debug-layer fallback.
+
+## From the pserv6 Phase 2 review (Codex, 2026-11-19, thread 01a1f410)
+
+13. **[task] Pre-existing: service edits report success after configuration failure.** [services_data_controller.cpp:187](/C:/Projects/pserv-claude/pserv5/controllers/services_data_controller.cpp:187) ignores the Boolean result of `ServiceManager::ChangeServiceConfig`, updates the live object, and returns success even when the API wrapper reports failure. Users can be shown settings that were never applied. Check the result and preserve failure reporting. Deferrable because this unchanged edit-transaction defect predates the off-thread refresh task. *(Same defect as item 6.)*
+
+14. **[task] Pre-existing: environment-variable rename can lose the original value.** [environment_variables_data_controller.cpp:115](/C:/Projects/pserv-claude/pserv5/controllers/environment_variables_data_controller.cpp:115) deletes the original variable before creating the replacement. If the subsequent write fails, it returns failure without restoring the deleted value. Make rename failure preserve the original data and verify with a throwaway variable and injected write failure. Deferrable because this unchanged mutation path is outside Phase 2. *(Same defect as item 8 in the first section.)*

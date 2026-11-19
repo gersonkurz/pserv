@@ -26,7 +26,8 @@ namespace pserv
     private:
         ~StartupProgramsDataController() override = default;
 
-        void Refresh(bool isAutoRefresh = false) override;
+        // Refresh() is the base class's; this controller only enumerates:
+        void Collect(DataObjectContainer &target, const RefreshRequest &request) override;
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
 
         std::vector<const DataAction *> GetAllActions() const override;

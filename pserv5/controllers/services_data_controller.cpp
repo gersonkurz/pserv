@@ -38,39 +38,18 @@ namespace pserv
     void ServicesDataController::SetMachineName(const std::string& machineName)
     {
         m_machineName = machineName;
+        // A refresh still running for the previous machine must never be published.
+        InvalidatePendingRefreshes();
         spdlog::info("Services view will connect to machine: {}", m_machineName.empty() ? "local" : m_machineName);
     }
 
-    void ServicesDataController::Refresh(bool isAutoRefresh)
+    void ServicesDataController::Collect(DataObjectContainer &target, const RefreshRequest &request)
     {
-        if (!isAutoRefresh)
-            spdlog::info("Refreshing services from machine '{}'...", m_machineName.empty() ? "local" : m_machineName);
-
-        try
-        {
-            // Enumerate services with the configured service type filter
-            // Note: We don't call Clear() here - StartRefresh/FinishRefresh handles
-            // update-in-place for existing objects and removes stale ones
-            ServiceManager sm(m_machineName);
-            m_objects.StartRefresh();
-            sm.EnumerateServices(&m_objects, m_serviceType, isAutoRefresh);
-            m_objects.FinishRefresh();
-
-            if (!isAutoRefresh)
-                spdlog::info("Successfully refreshed {} services", m_objects.GetSize());
-
-            // Re-apply last sort order if any
-            if (m_lastSortColumn >= 0)
-            {
-                Sort(m_lastSortColumn, m_lastSortAscending);
-            }
-
-            SetLoaded();
-        }
-        catch (const std::exception &e)
-        {
-            spdlog::error("Failed to refresh services: {}", e.what());
-        }
+        // request.target is the machine name captured on the UI thread (never m_machineName here)
+        ServiceManager sm(request.target);
+        target.StartRefresh();
+        sm.EnumerateServices(&target, m_serviceType, request.bAutoRefresh);
+        target.FinishRefresh();
     }
 
     std::vector<const DataAction *> ServicesDataController::GetActions(const DataObject *dataObject) const

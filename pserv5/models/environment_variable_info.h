@@ -28,7 +28,7 @@ namespace pserv
     /// Stores environment variable information from registry:
     /// - HKCU\\Environment for user variables
     /// - HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment for system variables
-    class EnvironmentVariableInfo : public DataObject
+    class EnvironmentVariableInfo : public CloneableDataObject<EnvironmentVariableInfo>
     {
     private:
         std::string m_name;
