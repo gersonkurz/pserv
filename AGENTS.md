@@ -19,7 +19,7 @@ The only currency that matters: Does this advance or halt productive thinking? I
 
 ## Project Overview
 
-pserv6 is the new native C++/WinRT / WinUI 3 frontend (`pserv5/pserv6/`, Windows App SDK 2.7.0). The original Dear ImGui / DirectX 11 GUI (`pserv5.exe`) and console application (`pservc.exe`) remain available. They compile shared controllers, models, actions, and Windows API wrappers. Views cover services, devices, processes, windows, modules, installed programs, startup programs, scheduled tasks, network connections, and environment variables.
+pserv6 is a native Windows administration tool with a C++/WinRT / WinUI 3 GUI (`ui/`, Windows App SDK 2.7.0) and a console frontend (`cli/`, `pserv6c.exe`). They share controllers, models, actions and Windows API wrappers for ten providers. The obsolete immediate-mode frontend has been removed.
 
 The code uses modern C++; both projects currently select MSVC `stdcpplatest` and toolset `v145`. Check the project files rather than relying on older C++20 or Visual Studio 2022 descriptions.
 
@@ -31,41 +31,38 @@ Run recipes from the repository root with `just` in a **Visual Studio 2026 Devel
 - `just build-release` — pserv6 Release, native architecture.
 - `just build-all` — Debug and Release for x64, x86, and ARM64.
 - `just run` — build Release and launch pserv6.
-- `just build-legacy` / `just build-legacy-release` — build the original ImGui GUI and CLI.
-- `just run-legacy` — build Debug and launch the original ImGui GUI.
-- `just run-cli services` — build Debug and list services through the CLI.
+- `just run-cli services` — build Release and list services through the CLI.
 - `just --list` — current public recipes.
 
-The default recipes drive MSBuild against `pserv5/pserv6.slnx`; legacy recipes use `pserv5/pserv5.slnx`, containing `pserv5/pserv5.vcxproj` and `pserv5/pservc/pservc.vcxproj`. Build the solution: project paths depend on `$(SolutionDir)`. Output is `pserv5/bin/<Platform>/<Configuration>/`, with pserv6 in its own `pserv6/` subdirectory; the x86 solution platform uses `Win32` as the output directory name. Intermediates live under `pserv5/temp/`. `scripts/native-platform.ps1` queries IsWow64Process2, selecting ARM64 on ARM64 hosts even under x64 emulation. Do not use PROCESSOR_ARCHITECTURE or .NET Framework OSArchitecture for this detection.
+Recipes build `pserv6/pserv6.slnx`, containing `ui/pserv6.vcxproj` and `cli/pserv6c.vcxproj`. Build the solution: projects depend on `$(SolutionDir)`. Output is `pserv6/bin/<Platform>/<Configuration>/`; x86 uses `Win32`. Intermediates live under `pserv6/temp/`. `scripts/native-platform.ps1` queries IsWow64Process2, selecting ARM64 on ARM64 hosts even under x64 emulation. Do not use PROCESSOR_ARCHITECTURE or .NET Framework OSArchitecture for this detection.
 
-Verify changes compile before handing off. There is currently no repository-owned automated test suite or `just test` recipe. For behavior changes, exercise the affected GUI or CLI path in addition to building and report what was actually checked. CLI help and listing commands provide read-only smoke checks, for example `pserv5/bin/x64/Debug/pservc.exe --help` (adjust for the built architecture). Build success alone does not verify UI behavior.
+Verify changes compile before handing off. `just test` runs service-edit, environment-edit, row-reconciliation and actual WinRT cell-collection regression checks; it requires a Developer shell targeting the native OS architecture. For behavior changes, exercise the affected GUI or CLI path in addition to building and report what was actually checked. CLI help and listing commands provide read-only smoke checks, for example `pserv6/bin/x64/Debug/pserv6c.exe --help` (adjust for the built architecture). Build success alone does not verify UI behavior.
 
-`just clean` removes all of `pserv5/bin/`, `pserv5/temp/`, and `dist/`; `just rebuild` performs that cleanup before building Debug. Prefer incremental builds unless cleanup is needed.
+`just clean` removes all of `pserv6/bin/`, `pserv6/temp/`, and `dist/`; `just rebuild` performs that cleanup before building Debug. Prefer incremental builds unless cleanup is needed.
 
 ## Repository Map
 
-Paths below are relative to `pserv5/` unless stated otherwise.
+Paths below are relative to `pserv6/` unless stated otherwise.
 
 | Location | Responsibility |
 | --- | --- |
-| `pserv5.cpp`, `main_window.h/.cpp` | GUI startup, main window, table rendering and interaction |
-| `pservc/` | CLI entry point, argument dispatch, console output |
+| `ui/` | WinUI startup, XAML, main window, table bindings and interaction |
+| `cli/` | CLI entry point, argument dispatch, console output |
 | `core/` | Shared object, container, controller and action abstractions; async operations |
 | `core/exporters/` | Export interfaces, registry, JSON and plain-text exporters |
 | `models/` | Data items and their display/typed properties |
 | `controllers/` | Enumeration, columns, filtering, sorting, available actions |
 | `actions/` | Commands operating on selected objects |
 | `windows_api/` | Windows resource enumeration and manipulation |
-| `dialogs/` | GUI properties and theme-selection dialogs |
 | `config/` | TOML-backed settings and per-view configuration |
 | `theme/`, `themes/` | Base16 theme loader and YAML theme files |
 | `utils/` | Logging, string conversions, Win32 errors, common app setup |
-| Repository `docs/pserv5.md`, `docs/pservc.md` | User-facing GUI and CLI manuals |
+| Repository `docs/pserv6.md`, `docs/pserv6c.md` | User-facing GUI and CLI manuals |
 | Repository `setup/`, `scripts/` | MSIS installers and version-stamping script |
 
 ## Architecture and Change Conventions
 
-- Keep shared behavior in the model/controller/action and Windows API layers so both frontends benefit. GUI-only code is excluded from the CLI with `PSERV_CONSOLE_BUILD`; do not introduce unconditional ImGui dependencies into shared code.
+- Keep shared behavior in the model/controller/action and Windows API layers so both frontends benefit. GUI-only code is excluded from the CLI with `PSERV_CONSOLE_BUILD`; keep XAML types out of shared code.
 - `DataObject` supplies display properties, typed properties for sorting, filtering, and stable IDs. Keep column metadata and both property representations consistent when adding or changing columns.
 - `DataController` defines columns and actions and refreshes its objects. `DataAction` executes through `DataActionDispatchContext`; preserve availability, destructive-action, and confirmation semantics in both frontends.
 - Objects use intrusive `Retain`/`Release` reference counting. `DataObjectContainer::Append` takes the incoming reference; it does not retain it again. `GetByStableId` returns a borrowed pointer and marks the object seen in the current refresh generation. Preserve the `StartRefresh`/`FinishRefresh` lifecycle and check ownership when selections or async work outlive a refresh.
@@ -85,16 +82,16 @@ When adding a view:
 
 ## Dependencies and Themes
 
-Dependencies are Git submodules: `imgui`, `spdlog`, `wil`, `tomlplusplus`, `rapidjson`, `argparse`, and `fkYAML`. Initialize or resynchronize them with `git submodule update --init --recursive` when needed, particularly after switching revisions. Avoid unrelated changes to vendored code or submodule revisions.
+Dependencies are Git submodules: `spdlog`, `wil`, `tomlplusplus`, `rapidjson`, `argparse`, and `fkYAML`. Initialize or resynchronize them with `git submodule update --init --recursive` when needed, particularly after switching revisions. Avoid unrelated changes to vendored code or submodule revisions.
 
-Configuration uses TOML; Base16 themes use YAML parsed with fkYAML. Edit theme sources in `pserv5/themes/`. The GUI project's `CopyThemes` target copies them to `themes/` beside the built executable; output copies are not source files.
+Configuration uses TOML; Base16 themes use YAML parsed with fkYAML. Edit theme sources in `pserv6/themes/`. The GUI project's `CopyThemes` target copies them to `themes/` beside the built executable; output copies are not source files.
 
 ## Versioning and Packaging
 
-- `just version X.Y.Z` updates `pserv5/version.h` and `setup/*.msis`; resources consume the version header.
+- `just version X.Y.Z` updates `pserv6/version.h` and `setup/*.msis`; resources consume the version header.
 - Packaging requires MSIS 3.x (`msis` on PATH) in addition to the VS build tools.
-- `just package-x64`, `just package-x86`, and `just package-arm64` build and stage the respective Release payload and symbols, then create an MSI. `just package-all` runs all three.
+- `just package-x64`, `just package-x86`, and `just package-arm64` build and stage the respective Release payload and symbols, then create an MSI. `just package-all` builds all three and the final bundle.
 - `just bundle` combines the existing per-architecture MSIs; `just release` builds all packages and the bundle.
 - Staging uses `dist/stage/<arch>/` and `dist/symbols/<arch>/`. Final MSI and bundle outputs land in `setup/`. Keep generated binaries and staging output out of commits.
 
-Treat the current `justfile`, solution, project files, and implementation as authoritative when older documentation disagrees. Existing packaging recipes target pserv5; pserv6 MSI integration is pending.
+Treat the current `justfile`, solution, project files, and implementation as authoritative when older documentation disagrees.

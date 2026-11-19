@@ -5,7 +5,7 @@ $output = Join-Path $root 'dist/environment-edit-checks'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 Push-Location $output
 try {
-    & cl.exe /nologo /std:c++latest /EHsc /MD /utf-8 ('/I' + (Join-Path $root 'pserv5')) (Join-Path $root 'tests/environment_edit_checks.cpp') /Fe:environment-edit-checks.exe
+    & cl.exe /nologo /std:c++latest /EHsc /MD /utf-8 ('/I' + (Join-Path $root 'pserv6')) (Join-Path $root 'tests/environment_edit_checks.cpp') /Fe:environment-edit-checks.exe
     if ($LASTEXITCODE) { throw 'Compilation failed' }
     & ./environment-edit-checks.exe
     if ($LASTEXITCODE) { throw 'Checks failed' }

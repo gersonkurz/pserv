@@ -2,17 +2,13 @@
   <img src="logo.jpg" alt="pserv logo" width="1024"/>
 </p>
 
-A Windows system administration tool for managing services, drivers, processes, and more. pserv6 uses native C++/WinRT and WinUI 3; the pserv5 ImGui frontend and shared-core CLI remain available.
+A Windows system administration tool for managing services, drivers, processes, and more. pserv6 uses native C++/WinRT and WinUI 3, with a shared-core command-line frontend, pserv6c.
 
 More than 10 years after the last iteration, I decided to rewrite an old tool of mine originally started in 1998. [Click here to find out more about the history of the product](https://p-nand-q.com/download/pserv_cpl/index.html).
 
 ## Manual
 
-[pserv6 WinUI manual](docs/pserv6.md), [pserv5 ImGui manual](docs/pserv5.md), and [command line interface](docs/pservc.md).
-
-## pserv5 screenshot
-
-![Screenshot of main application](docs/main.png)
+[GUI manual](docs/pserv6.md), [command-line manual](docs/pserv6c.md), and [release review](docs/release-review.md).
 
 ## Features
 
@@ -36,15 +32,17 @@ just build-release # Build pserv6 Release for the native OS architecture
 just run           # Build and launch pserv6 Release
 ```
 
-ARM64 hosts select ARM64 even from an emulated x64 shell. The executable is under `pserv5/bin/ARM64/Release/pserv6/` on ARM64, or the corresponding platform directory. `just build` builds Debug. Open `pserv5/pserv6.slnx` for the WinUI solution; `just run-legacy` builds and launches the old ImGui UI. Existing MSI recipes still package pserv5.
+ARM64 hosts select ARM64 even from an emulated x64 shell. Both executables and their runtime files are under `pserv6/bin/ARM64/Release/` on ARM64. Open `pserv6/pserv6.slnx` in Visual Studio. `just build` builds Debug; `just run-debug` launches Debug. `just test` runs the repository regression checks.
+
+`just package-all` builds x64, x86 and ARM64 Release installers **and the final bundle**, `setup/pserv6.0.0.exe` for the current version. Packaging requires MSIS 3.x. `just bundle` rebuilds only the bundle from existing MSIs. The Release payload includes the matching app-local v145 CRT and Windows App SDK runtime. Distribute the full output, not just the EXE.
 
 Dependencies are included as git submodules:
-- [ImGui](https://github.com/ocornut/imgui) - Immediate mode GUI
 - [spdlog](https://github.com/gabime/spdlog) - Logging
 - [WIL](https://github.com/microsoft/wil) - Windows Implementation Library
 - [toml++](https://github.com/marzer/tomlplusplus) - Configuration
 - [RapidJSON](https://github.com/Tencent/rapidjson) - JSON export
 - [argparse](https://github.com/p-ranav/argparse) - Command-line parsing
+- [fkYAML](https://github.com/fktn-k/fkYAML) - Base16 palette parsing
 
 If you `git checkout` a different commit, remember to update submodules:
 ```

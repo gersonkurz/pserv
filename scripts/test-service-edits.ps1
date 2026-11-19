@@ -7,12 +7,12 @@ $projectRoot = Split-Path $PSScriptRoot -Parent
 $testOutput = Join-Path $projectRoot 'dist\service-edit-checks'
 New-Item -ItemType Directory -Force -Path $testOutput | Out-Null
 $arguments = @('/nologo', '/std:c++latest', '/EHsc', '/MD', '/utf-8', '/DPSERV_WINUI_BUILD', '/DSPDLOG_USE_STD_FORMAT')
-foreach ($include in @('pserv5', 'spdlog\include', 'wil\include', 'rapidjson\include', 'tomlplusplus\include'))
+foreach ($include in @('pserv6', 'spdlog\include', 'wil\include', 'rapidjson\include', 'tomlplusplus\include'))
 {
     $arguments += '/I' + (Join-Path $projectRoot $include)
 }
-foreach ($source in @('tests\service_edit_checks.cpp', 'pserv5\controllers\services_data_controller.cpp',
-    'pserv5\models\service_info.cpp', 'pserv5\core\data_controller.cpp', 'pserv5\core\data_object_container.cpp'))
+foreach ($source in @('tests\service_edit_checks.cpp', 'pserv6\controllers\services_data_controller.cpp',
+    'pserv6\models\service_info.cpp', 'pserv6\core\data_controller.cpp', 'pserv6\core\data_object_container.cpp'))
 {
     $arguments += Join-Path $projectRoot $source
 }

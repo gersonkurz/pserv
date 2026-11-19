@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Force -Path $testOutput | Out-Null
 Push-Location $testOutput
 try
 {
-    & cl.exe /nologo /std:c++latest /EHsc /MD ('/I' + (Join-Path $projectRoot 'pserv5')) (Join-Path $projectRoot 'tests\winui_row_checks.cpp') /Fe:winui-row-checks.exe
+    & cl.exe /nologo /std:c++latest /EHsc /MD ('/I' + (Join-Path $projectRoot 'pserv6')) (Join-Path $projectRoot 'tests\winui_row_checks.cpp') /Fe:winui-row-checks.exe
     if ($LASTEXITCODE -ne 0) { throw "Check compilation failed: $LASTEXITCODE" }
     & .\winui-row-checks.exe
     if ($LASTEXITCODE -ne 0) { throw "WinUI row checks failed: $LASTEXITCODE" }
