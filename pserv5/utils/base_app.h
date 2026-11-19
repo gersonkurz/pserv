@@ -24,10 +24,22 @@ namespace pserv
         /// 3. Configuration from TOML file
         /// 4. File logging with configured path
         /// 5. Log level from configuration
+        /// Where an application keeps its configuration and log.
+        struct AppIdentity
+        {
+            std::string_view name{"pserv5"};          ///< Folder name and log tag.
+            KNOWNFOLDERID folder{FOLDERID_LocalAppData};
+            std::string_view configFileName{"pserv5.toml"};
+            std::string_view logFileName{"pserv5.log"};
+            /// Optional first-run import: when the config file does not exist yet and this one does,
+            /// it is loaded instead (plan D13). Values that must not carry over are reset by the caller.
+            std::filesystem::path importConfigFrom{};
+        };
+
         class BaseApp final
         {
         public:
-            BaseApp()
+            explicit BaseApp(const AppIdentity &identity = {})
             {
                 // setup memory leak detection
                 int flag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
@@ -41,25 +53,37 @@ namespace pserv
 
                 // Step 1: Initialize logging with console/debug output only
                 auto logger = InitializeLogging();
-                logger->info("pserv5 starting up");
+                logger->info("{} starting up", identity.name);
 
                 // Step 2: Get AppData path and determine config/log paths
-                m_appDataPath = utils::GetAppDataPath();
-                m_configPath = m_appDataPath / "pserv5.toml";
+                m_appDataPath = utils::GetAppDataPath(identity.folder, identity.name);
+                m_configPath = m_appDataPath / identity.configFileName;
                 logger->info("AppData path: {}", m_appDataPath.string());
-                logger->info("Loading configuration from: {}", m_configPath.string());
 
-                // Step 3: Load configuration
+                // Step 3: Load configuration (on first run, from the import source if there is one)
+                std::error_code ec;
+                if (!identity.importConfigFrom.empty() && !std::filesystem::exists(m_configPath, ec) &&
+                    std::filesystem::exists(identity.importConfigFrom, ec))
+                {
+                    logger->info("First run: importing configuration from {}", identity.importConfigFrom.string());
+                    config::TomlBackend importBackend{identity.importConfigFrom.string()};
+                    config::theSettings.load(importBackend);
+                    m_bImported = true;
+                }
+                logger->info("Loading configuration from: {}", m_configPath.string());
                 m_pBackend = new config::TomlBackend{m_configPath.string()};
-                config::theSettings.load(*m_pBackend);
+                if (!m_bImported)
+                {
+                    config::theSettings.load(*m_pBackend);
+                }
                 logger->info("Config loaded - activeView value: '{}'", config::theSettings.application.activeView.get());
 
                 // Step 4: Configure file logging
                 std::string logFilePath = config::theSettings.logging.logFilePath.get();
-                if (logFilePath.empty())
+                if (logFilePath.empty() || m_bImported)
                 {
-                    // Default: AppData/pserv5/pserv5.log
-                    logFilePath = (m_appDataPath / "pserv5.log").string();
+                    // Default: <AppData>/<name>/<logFileName>; an imported path is the other app's log
+                    logFilePath = (m_appDataPath / identity.logFileName).string();
                     config::theSettings.logging.logFilePath.set(logFilePath);
                 }
                 logger->info("Log file path: {}", logFilePath);
@@ -77,8 +101,9 @@ namespace pserv
             }
 
             config::TomlBackend *m_pBackend = nullptr; ///< Configuration backend.
-            std::filesystem::path m_appDataPath;        ///< %APPDATA%/pserv5 path.
-            std::filesystem::path m_configPath;         ///< Path to pserv5.toml.
+            std::filesystem::path m_appDataPath;        ///< The application's data folder.
+            std::filesystem::path m_configPath;         ///< Its configuration file.
+            bool m_bImported{false};                    ///< Settings came from AppIdentity::importConfigFrom.
         };
     } // namespace utils
 } // namespace pserv

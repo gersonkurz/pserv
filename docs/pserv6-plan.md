@@ -328,6 +328,15 @@ and its performance is assumed to match ARM64 (owner, 2026-11-18; R4).
   `setup/pserv6-{x64,arm64}.msis` and a bundle, using pserv5's UpgradeCodes (D12).
 - `just test` additionally extracts the embedded manifest of every built `pserv6.exe` and
   fails unless it says `requireAdministrator` (F6).
+- *As implemented, part 1 (app):*
+  - `pserv5/pserv6/` holds the shell, plus the grid's first cut from Phase 4: dynamic columns,
+    header-click sort, filter, `VisualState` colours. The views load through
+    `RefreshCoordinator` on one `RefreshWorker` (D5); auto-refresh and F5 work.
+  - Settings use `BaseApp`'s new `AppIdentity` (folder, file names, an import source).
+  - `just selftest` and `just run6` are added; the manifest check is part of `just test`.
+  - The installer (MSIS scripts, staging, bundle) is part 2. Per the owner (2026-11-19), the
+    app comes first, and no MSI is installed on the dev box. The exit's install/upgrade items
+    therefore stay open for the disposable environment.
 - **Exit**, in a disposable ARM64 environment (D12 consequence):
   - `just release` produces both MSIs and the bundle.
   - Installed **over an installed pserv5**: pserv5 is removed, pserv6 launches elevated and

@@ -54,22 +54,19 @@ namespace pserv::utils
         // Do NOT free hMem here; ownership transferred to clipboard.
     }
 
-    std::filesystem::path GetAppDataPath()
+    std::filesystem::path GetAppDataPath(REFKNOWNFOLDERID folder, std::string_view appName)
     {
-        // Get LOCALAPPDATA path
-        PWSTR localAppDataPath = nullptr;
-        HRESULT hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &localAppDataPath);
+        PWSTR knownFolderPath = nullptr;
+        HRESULT hr = SHGetKnownFolderPath(folder, 0, nullptr, &knownFolderPath);
         if (FAILED(hr))
         {
             return {};
         }
 
-        const std::wstring wpath{localAppDataPath};
-        CoTaskMemFree(localAppDataPath);
+        const std::wstring wpath{knownFolderPath};
+        CoTaskMemFree(knownFolderPath);
 
-        // Convert to UTF-8 and append pserv5 folder
-        const std::string appDataPath = utils::WideToUtf8(wpath);
-        const std::filesystem::path path = std::filesystem::path(appDataPath) / "pserv5";
+        const std::filesystem::path path = std::filesystem::path(wpath) / Utf8ToWide(std::string{appName});
 
         // Create directory if it doesn't exist
         if (!std::filesystem::exists(path))

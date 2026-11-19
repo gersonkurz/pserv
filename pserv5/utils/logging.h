@@ -4,14 +4,15 @@
 /// Provides spdlog-based logging setup with console, debug output,
 /// and file sinks. Supports NDJSON format for log aggregation.
 #pragma once
+#include <ShlObj.h> // KNOWNFOLDERID, FOLDERID_*
 
 namespace pserv
 {
     namespace utils
     {
-        /// @brief Get the application data directory path.
-        /// Creates %APPDATA%/pserv5 if it doesn't exist.
-        std::filesystem::path GetAppDataPath();
+        /// @brief Get (and create if missing) the application's data directory: @p appName below
+        /// the known folder @p folder. pserv5 uses %LOCALAPPDATA%\pserv5, pserv6 %APPDATA%\pserv6.
+        std::filesystem::path GetAppDataPath(REFKNOWNFOLDERID folder = FOLDERID_LocalAppData, std::string_view appName = "pserv5");
 
         /// @brief Initialize logging with console/debug output only.
         /// Call early in startup before config is loaded.

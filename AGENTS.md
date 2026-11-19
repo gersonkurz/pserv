@@ -28,15 +28,17 @@ The code uses modern C++; all projects currently select MSVC `stdcpplatest` and 
 Run recipes from the repository root with `just` in a **Visual Studio 2026 Developer shell**. The build requires `VisualStudioVersion=18.0` and `msbuild` on PATH. Do not merely set that variable to bypass the guard; initialize the VS toolchain environment.
 
 - `just build` — Debug, native architecture; builds every project in the solution.
-- `just test` — `just build`, then run `pserv_core_tests`.
+- `just test` — `just build`, then run `pserv_core_tests` and check every built `pserv6.exe` manifest for `requireAdministrator`.
 - `just test-asan` — the same tests under AddressSanitizer, with the 50-round background-refresh stress run.
 - `just build-release` — Release, native architecture.
 - `just build-all` — Debug and Release for x64, x86, and ARM64.
 - `just run` — build Debug and launch the GUI.
+- `just run6` — build Debug and launch pserv6 (elevated shell: it requires administrator).
+- `just selftest` — build Release and run `pserv6 --selftest`, which loads, scrolls and refreshes every view and prints a timing log; `-RunAsInvoker` measures unelevated.
 - `just run-cli services` — build Debug and list services through the CLI.
 - `just --list` — current public recipes.
 
-The `justfile` drives MSBuild against `pserv5/pserv5.slnx`, containing `pserv5/pserv5.vcxproj` (GUI), `pserv5/pservc/pservc.vcxproj` (CLI), `pserv5/pserv_core/pserv_core.vcxproj` (the shared core as a static library, linked by the GUI, the CLI and the tests) and `pserv5/tests/pserv_core_tests.vcxproj`. Build the solution: project paths depend on `$(SolutionDir)`. Output is `pserv5/bin/<Platform>/<Configuration>/`; the x86 solution platform uses `Win32` as the output directory name. Intermediates live under `pserv5/temp/`. Native recipes select ARM64 on ARM64 hosts and x64 otherwise.
+The `justfile` drives MSBuild against `pserv5/pserv5.slnx`, containing `pserv5/pserv6/pserv6.vcxproj` (the WinUI 3 GUI, x64 and ARM64 only, output `pserv5/bin/pserv6/<Platform>/<Configuration>/` with its self-contained WinAppSDK runtime; build recipe in Appendix A of `docs/pserv6-plan.md`), `pserv5/pserv5.vcxproj` (ImGui GUI), `pserv5/pservc/pservc.vcxproj` (CLI), `pserv5/pserv_core/pserv_core.vcxproj` (the shared core as a static library, linked by the GUI, the CLI and the tests) and `pserv5/tests/pserv_core_tests.vcxproj`. Build the solution: project paths depend on `$(SolutionDir)`. Output is `pserv5/bin/<Platform>/<Configuration>/`; the x86 solution platform uses `Win32` as the output directory name. Intermediates live under `pserv5/temp/`. Native recipes select ARM64 on ARM64 hosts and x64 otherwise.
 
 Verify changes compile before handing off, and run `just test`: it builds Debug and runs `pserv_core_tests`, which checks every controller against live system data (column/property-id contract, typed values fit column types) and exits non-zero on any failure. It does not exercise the GUI or actions. For behavior changes, exercise the affected GUI or CLI path in addition to building and report what was actually checked. CLI help and listing commands provide read-only smoke checks, for example `pserv5/bin/x64/Debug/pservc.exe --help` (adjust for the built architecture). Build success alone does not verify UI behavior.
 
@@ -48,6 +50,7 @@ Paths below are relative to `pserv5/` unless stated otherwise.
 
 | Location | Responsibility |
 | --- | --- |
+| `pserv6/` | WinUI 3 GUI: `MainWindow` (navigation, toolbar, refresh coordinator on a worker), `data_grid` (virtualized `ListView` grid fed by the controllers), `self_test` (`--selftest`) |
 | `pserv5.cpp`, `main_window.h/.cpp` | GUI startup, main window, table rendering and interaction |
 | `pservc/` | CLI entry point, argument dispatch, console output |
 | `core/` | Shared object, container, controller and action abstractions; async operations |

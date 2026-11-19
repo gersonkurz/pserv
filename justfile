@@ -1,9 +1,11 @@
 # Build automation for pserv — Windows system administration tool
-# GUI (pserv5.exe, Dear ImGui) and CLI (pservc.exe), both on the shared pserv_core library,
-# plus pserv_core_tests. Requires: just, msbuild on PATH (VS 2026 Developer shell).
+# GUIs pserv6.exe (WinUI 3; x64 and ARM64 only) and pserv5.exe (Dear ImGui, until Phase 7) and
+# the CLI pservc.exe, all on the shared pserv_core library, plus pserv_core_tests.
+# Requires: just, msbuild on PATH (VS 2026 Developer shell).
 #
 # Builds drive off the solution so $(SolutionDir) resolves correctly — the
-# projects derive OutDir/IntDir from it. Output lands in pserv5\bin\<Platform>\<Config>\.
+# projects derive OutDir/IntDir from it. Output lands in pserv5\bin\<Platform>\<Config>\
+# (pserv6: pserv5\bin\pserv6\<Platform>\<Config>\, beside its WinAppSDK runtime files).
 # Packaging: `just release` (needs MSIS 3.x on PATH). Direction: docs/pserv6-plan.md.
 
 set windows-shell := ["cmd.exe", "/c"]
@@ -44,9 +46,11 @@ build-release: (_msbuild "Release" platform)
 # Build everything: Debug+Release across x64, x86, ARM64
 build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug" "x86") (_msbuild "Release" "x86") (_msbuild "Debug" "ARM64") (_msbuild "Release" "ARM64")
 
-# Build Debug (native arch) and run pserv_core_tests; exits non-zero if any check fails
+# Build Debug (native arch), run pserv_core_tests, and check that every built pserv6.exe
+# requires administrator (plan F6); exits non-zero if any check fails
 test: build
     @pserv5\bin\tests\{{platform}}\Debug\pserv_core_tests.exe
+    @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-manifest.ps1
 
 # Build pserv_core + tests with AddressSanitizer (Debug, native arch, separate "-asan" output
 # folders) and run the tests with the 50-round background-refresh stress run
@@ -57,6 +61,16 @@ test-asan: _require-devshell
 # Build Debug + launch the GUI (native arch)
 run: build
     @pserv5\bin\{{platform}}\Debug\pserv5.exe
+
+# Build Debug + launch pserv6 (native arch; needs an elevated shell, it requires administrator)
+run6: build
+    @pserv5\bin\pserv6\{{platform}}\Debug\pserv6.exe
+
+# Build Release (native arch) and run `pserv6 --selftest`: every view loaded, scrolled and
+# refreshed, with timings against the plan's budgets. Elevated shell for the real figures;
+# `just selftest -RunAsInvoker` measures unelevated.
+selftest *ARGS: build-release
+    @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\selftest.ps1 -Exe pserv5\bin\pserv6\{{platform}}\Release\pserv6.exe {{ARGS}}
 
 # Build Debug + launch the CLI (native arch); pass args after `--`, e.g. `just run-cli -- services`
 run-cli *ARGS: build

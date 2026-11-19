@@ -7,5 +7,8 @@
   <Project Path="pserv5.vcxproj" Id="9ba2fb3d-3366-4576-b0ee-c2ffbddacd98" />
   <Project Path="pservc/pservc.vcxproj" Id="fff6295f-5877-4b5b-a65e-5d32080ff0da" />
   <Project Path="pserv_core/pserv_core.vcxproj" Id="3b7c2e41-9d5a-4f68-8e21-6a0c4d9b7f13" />
+  <Project Path="pserv6/pserv6.vcxproj" Id="8c4f2d1a-6e3b-4a7c-9d05-2b1e7f3a6c48">
+    <Build Solution="*|x86" Project="false" />
+  </Project>
   <Project Path="tests/pserv_core_tests.vcxproj" Id="5d1e8a72-3c4b-4b0f-9f2a-7e6d1c8b9a24" />
 </Solution>

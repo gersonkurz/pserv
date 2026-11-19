@@ -13,19 +13,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Build with `just` (recipes in the repo-root `justfile`) from a **Visual Studio 2026** Developer shell (the `_msbuild` recipe guards on `VisualStudioVersion=18.0`):
 
 - `just build` — Debug, native arch (builds every project in the solution)
-- `just test` — `just build`, then run `pserv_core_tests` (exit code 0 = all checks pass)
+- `just test` — `just build`, then run `pserv_core_tests` and check that every built `pserv6.exe` embeds `requireAdministrator` (exit code 0 = all checks pass)
 - `just test-asan` — `pserv_core` + tests under AddressSanitizer (Debug, native arch, `-asan` output folders), with the 50-round background-refresh stress run. Native ARM64 on ARM64 hardware: the x64 ASan runtime does not start under emulation.
 - `just build-release` — Release, native arch
 - `just build-all` — Debug+Release across x64, x86, ARM64
 - `just run` / `just run-cli [-- args]` — build Debug + launch GUI / CLI
+- `just run6` — build Debug + launch pserv6 (from an elevated shell: it requires administrator)
+- `just selftest [-RunAsInvoker]` — build Release + run `pserv6 --selftest` (every view loaded, scrolled, refreshed; timing log vs. the plan's section 7 budgets; exit 1 unless `RESULT: PASS`)
 - `just clean`, `just rebuild`
 - `just release` — build x64+x86+ARM64 Release, then the 3 MSIs + multi-arch bundle `.exe`
 - `just version X.Y.Z` — stamp `pserv5/version.h` + `setup/*.msis` (the `.rc` reads `version.h`)
 
 Builds are solution-driven (`pserv5/pserv5.slnx`) so `$(SolutionDir)` resolves — building a bare `.vcxproj` leaves output paths undefined. The `CopyThemes` MSBuild target copies `pserv5/themes/*.yaml` into the output dir next to the exe.
 
-Solution: `pserv5/pserv5.slnx` (projects: `pserv5.vcxproj` GUI, `pservc/pservc.vcxproj` CLI, `pserv_core/pserv_core.vcxproj` shared core static library linked by the GUI, the CLI and the tests, `tests/pserv_core_tests.vcxproj`). The core is frontend-neutral: one compiled library, no frontend macros (see AGENTS.md).
-Output: `pserv5/bin/<Platform>/<Config>/` — e.g. `pserv5/bin/x64/Release/pserv5.exe` (GUI), `pservc.exe` (CLI). Note the x86 solution platform builds into `bin/Win32/`. `pserv_core_tests.exe` builds into `pserv5/bin/tests/<Platform>/<Config>/`, outside the folder `just` stages into the installers.
+Solution: `pserv5/pserv5.slnx` (projects: `pserv6/pserv6.vcxproj` the WinUI 3 GUI (x64 and ARM64 only; the solution skips it for x86), `pserv5.vcxproj` the ImGui GUI (until Phase 7), `pservc/pservc.vcxproj` CLI, `pserv_core/pserv_core.vcxproj` shared core static library linked by the GUIs, the CLI and the tests, `tests/pserv_core_tests.vcxproj`). The core is frontend-neutral: one compiled library, no frontend macros (see AGENTS.md).
+Output: `pserv5/bin/<Platform>/<Config>/` — e.g. `pserv5/bin/x64/Release/pserv5.exe` (GUI), `pservc.exe` (CLI). Note the x86 solution platform builds into `bin/Win32/`. `pserv_core_tests.exe` builds into `pserv5/bin/tests/<Platform>/<Config>/`, outside the folder `just` stages into the installers. pserv6 builds into `pserv5/bin/pserv6/<Platform>/<Config>/` together with its self-contained WinAppSDK runtime (unpackaged; the WinUI build recipe and its pitfalls are Appendix A of `docs/pserv6-plan.md`). pserv6 keeps its settings in `%APPDATA%\pserv6\config.toml` and imports pserv5's on first run.
 Platforms: x64, x86, arm64.
 
 ### Packaging (MSI via MSIS 3.x)
