@@ -1,5 +1,6 @@
 #pragma once
 #include "MainWindow.g.h"
+#include "action_runner.h"
 #include "data_grid.h"
 #include <core/data_controller_library.h>
 #include <core/refresh_coordinator.h>
@@ -7,6 +8,7 @@
 namespace pserv6
 {
     class SelfTest;
+    class ActionTest;
 }
 
 namespace winrt::pserv6::implementation
@@ -21,6 +23,11 @@ namespace winrt::pserv6::implementation
         void OnAutoRefreshToggled(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnFilterChanged(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::Controls::TextChangedEventArgs const &);
         void OnContainerContentChanging(Microsoft::UI::Xaml::Controls::ListViewBase const &, Microsoft::UI::Xaml::Controls::ContainerContentChangingEventArgs const &);
+        void OnRowContextRequested(Microsoft::UI::Xaml::UIElement const &, Microsoft::UI::Xaml::Input::ContextRequestedEventArgs const &);
+        void OnRowDoubleTapped(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const &);
+        winrt::fire_and_forget OnConnectRemote(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
+        void OnConnectLocal(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
+        void OnExit(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
 
         // Also used by the self-test
         bool SelectView(std::string_view name);
@@ -29,7 +36,12 @@ namespace winrt::pserv6::implementation
         bool IsRefreshInFlight() const { return m_pCurrent && m_coordinator && m_coordinator->IsInFlight(m_pCurrent); }
         const std::vector<pserv::DataController *> &Controllers() { return m_library.GetDataControllers(); }
         ::pserv6::DataGrid &Grid() { return m_grid; }
-        bool IsSelfTesting() const { return m_selfTest != nullptr; }
+        bool IsSelfTesting() const { return m_selfTest != nullptr || m_actionTest != nullptr; }
+        ::pserv6::ActionRunner &Actions() { return *m_runner; }
+        /// Run an action on the selection as the UI would (confirmation, parameters, execution).
+        void RunAction(const pserv::DataAction *pAction, const std::vector<pserv::DataObject *> &selection);
+        /// Services and Devices on another machine (empty: this machine). Other views are disabled.
+        void SetRemoteMachine(const std::string &machineName);
 
     private:
         void ShowController(pserv::DataController *pController);
@@ -42,6 +54,15 @@ namespace winrt::pserv6::implementation
         void AddKeyboardShortcuts();
         void CopySelection();
         void RebuildSortMenu();
+        void ShowContextMenu(pserv::DataObject *pClicked, Microsoft::UI::Xaml::UIElement const &target, std::optional<winrt::Windows::Foundation::Point> position);
+        void RefreshAfterChange(pserv::DataController *pController);
+    public:
+        /// The controller's target or the rows it shows belong to another machine.
+        bool IsRemote(const pserv::DataController *pController) const;
+        uint64_t TargetGeneration() const { return m_targetGeneration; }
+
+    private:
+        static LRESULT CALLBACK SubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR id, DWORD_PTR data);
 
         // Lifetime: a worker task calls into the coordinator (and its controllers) after the
         // enumeration, so the worker must be joined first. Members are destroyed in reverse order:
@@ -56,6 +77,13 @@ namespace winrt::pserv6::implementation
         Microsoft::UI::Dispatching::DispatcherQueueTimer m_autoRefreshTimer{nullptr};
         bool m_bPublishedCurrent{false}; ///< Set by OnPublished during the UI task that published.
         std::unique_ptr<::pserv6::SelfTest> m_selfTest;
+        /// Runs actions and their dialogs. Destroyed before the coordinator and the library
+        /// (declared after them): a running operation is waited for in its destructor.
+        std::unique_ptr<::pserv6::ActionRunner> m_runner;
+        HWND m_hwnd{nullptr};
+        uint64_t m_connectGeneration{0}; ///< Bumped by every connect: a superseded probe result is dropped.
+        uint64_t m_targetGeneration{0};  ///< Bumped when the target machine changes (ActionRunner guard).
+        std::unique_ptr<::pserv6::ActionTest> m_actionTest; ///< Destroyed before m_runner, which it drives.
     };
 }
 

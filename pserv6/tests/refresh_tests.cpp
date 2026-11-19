@@ -457,6 +457,29 @@ namespace pserv::tests
             Check(TestItem::s_alive == aliveBefore, std::format("exception-safety tests leaked {} object(s)", TestItem::s_alive - aliveBefore));
         }
 
+        // GetPublishedTarget() names the target the live objects came from: after a target change
+        // it keeps naming the old one until the new target's objects are published (the GUI's
+        // remote-row guard relies on this), and a failed refresh does not change it.
+        void TestPublishedTarget()
+        {
+            std::cout << "[the published target changes only when the new target's objects are published]\n";
+            ScriptedController c;
+            c.m_script["remote"] = {{"a", "remote-a"}};
+            c.m_script[""] = {{"a", "local-a"}};
+            Check(c.GetPublishedTarget().empty(), "published target: empty before the first publish");
+            c.SetTarget("remote");
+            c.Refresh();
+            Check(c.GetPublishedTarget() == "remote" && c.ValueOf("a") == "remote-a", "published target: 'remote' after publishing remote objects");
+            c.SetTarget(""); // e.g. Connect to Local Machine: the rows on screen are still remote
+            Check(c.GetPublishedTarget() == "remote", "published target: still 'remote' after the target change, before a publish");
+            c.m_bThrowInCollect = true;
+            c.Refresh(); // a failed enumeration publishes nothing
+            Check(c.GetPublishedTarget() == "remote" && c.ValueOf("a") == "remote-a", "published target: unchanged by a failed refresh");
+            c.m_bThrowInCollect = false;
+            c.Refresh();
+            Check(c.GetPublishedTarget().empty() && c.ValueOf("a") == "local-a", "published target: empty once the local objects are published");
+        }
+
         void TestFailedRefreshIsNotPublished()
         {
             std::cout << "[a failing enumeration is reported as failed, never as published, and not retried in a loop]\n";
@@ -583,6 +606,7 @@ namespace pserv::tests
         TestExceptionSafety();
         TestFailedRefreshIsNotPublished();
         TestSortKeys();
+        TestPublishedTarget();
     }
 
     void RunRefreshStress(const std::vector<DataController *> &controllers, int rounds)

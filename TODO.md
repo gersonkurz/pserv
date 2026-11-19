@@ -64,3 +64,17 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 17. **GUI manual and screenshot.** `docs/pserv6.md` is to be written (Phase 6). `docs/main.png`, still referenced by the README, shows pserv5.
 
 18. **Installer exit criteria of Phase 3/7 still need a disposable environment:** install over pserv5, the pserv6-to-pserv6 upgrade, uninstall leaving nothing behind. On the dev box, MSIs are checked only by `just check-msi` (administrative extract plus a self-test of the extracted payload).
+
+## From the pserv6 Phase 5 review (Codex, 2026-11-19, thread 01a1f61a)
+
+19. **[task] Pre-existing service mutations ignore the remote target.**  
+   [service_manager.cpp:224](C:/Projects/pserv-claude/pserv6/windows_api/service_manager.cpp:224) opens the local SCM with `nullptr`; Stop and other mutation helpers do likewise. [Service property commits](C:/Projects/pserv-claude/pserv6/controllers/services_data_controller.cpp:187) also omit the target. Actions on remotely enumerated rows therefore modify the same-named **local** service; Delete Registry Key likewise uses local HKLM. Carry the target through mutation APIs and dispatch, or prevent unsupported remote mutations. This predates the diff and is deferred under the requested scope rule because repairing shared service targeting expands beyond frontend wiring.
+
+20. **[task] Pre-existing service Display Name editing uses the wrong property index.**  
+   [services_data_controller.cpp:126](C:/Projects/pserv-claude/pserv6/controllers/services_data_controller.cpp:126) handles Display Name as column `0`, while its metadata places it at `1`. The new properties dialog correctly passes `1`, so changing Display Name is rejected and prevents that object’s transaction from committing. Use the property enum and add a transaction check. This is deferrable because the incorrect controller mapping already exists in HEAD.
+
+## Phase 5 checks deferred with the owner's acceptance (2026-11-19: "Accept. I will do a manual review anyway.")
+
+21. **Service actions against a throwaway service, elevated.** Start, Stop, Restart, Pause and Resume need a service program that actually runs (and accepts pause), e.g. a tiny test service built for the purpose. Uninstall Service and Delete Registry Key need such a service too. `pserv6 --selftest-actions`, elevated, covers only Start (expected failure with cmd.exe) and Uninstall Service today; Close Connection needs a connection of its own.
+
+22. **Interactive checklist for the Phase 5 dialogs** (the owner's manual review): the context menu (right-click, Shift+F10, separators, "(N selected)", destructive colour), the confirmation dialog for each destructive action, the parameter dialog ("Add User/System Variable"), the save dialog (Export to JSON/Plain Text...), the progress dialog with Cancel (e.g. Stop on a slow service), the properties dialog (each editor type, multiple objects, an action button, OK and Cancel), Delete and Enter keys, double-click, and remote connect / connect local (with a reachable second machine). Automated so far: the dispatch of 32 actions without dialogs, and a keyboard probe of the Delete confirmation (default No, then Yes).

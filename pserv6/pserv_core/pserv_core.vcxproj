@@ -111,6 +111,7 @@
     <ClCompile Include="..\models\service_info.cpp" />
     <ClCompile Include="..\models\startup_program_info.cpp" />
     <ClCompile Include="..\models\window_info.cpp" />
+    <ClCompile Include="..\utils\file_dialogs.cpp" />
     <ClCompile Include="..\utils\logging.cpp" />
     <ClCompile Include="..\windows_api\environment_variable_manager.cpp" />
     <ClCompile Include="..\windows_api\module_manager.cpp" />

@@ -108,6 +108,7 @@ namespace pserv
         {
             Sort(m_lastSortColumn, m_lastSortAscending);
         }
+        m_publishedTarget = request.target;
         OnPublished();
         SetLoaded();
         return PublishResult::Published;
@@ -116,6 +117,7 @@ namespace pserv
     void DataController::Clear()
     {
         m_objects.Clear();
+        m_publishedTarget.clear();
         m_bLoaded = false;
     }
 

@@ -87,6 +87,7 @@ namespace pserv
         BYTE valueData[32768];
         DWORD valueDataSize;
 
+        std::vector<std::pair<std::string, std::string>> values; // value name, command
         while (true)
         {
             valueNameSize = sizeof(valueName) / sizeof(wchar_t);
@@ -109,18 +110,36 @@ namespace pserv
             {
                 continue;
             }
+            values.emplace_back(utils::WideToUtf8(valueName), utils::WideToUtf8(reinterpret_cast<wchar_t *>(valueData)));
+        }
 
-            std::string name = utils::WideToUtf8(valueName);
-            std::string command = utils::WideToUtf8(reinterpret_cast<wchar_t *>(valueData));
+        // SetEnabled(false) renames a value "X" to "Disabled_X". Such a value is listed as X,
+        // disabled, under X's identity, so it can be enabled again after a refresh (it used to show
+        // up as an enabled "Disabled_X"). If "X" exists as well, the disabled one keeps its own name.
+        constexpr std::string_view disabledPrefix{"Disabled_"};
+        std::set<std::string> names;
+        for (const auto &[name, command] : values)
+            names.insert(name);
+        for (const auto &[valueNameUtf8, command] : values)
+        {
+            std::string name = valueNameUtf8;
+            bool bEnabled = true;
+            if (name.starts_with(disabledPrefix) && name.size() > disabledPrefix.size())
+            {
+                bEnabled = false;
+                if (!names.contains(name.substr(disabledPrefix.size())))
+                    name = name.substr(disabledPrefix.size());
+            }
 
             const auto stableId{StartupProgramInfo::GetStableID(name, type, scope)};
             auto program = doc->GetByStableId<StartupProgramInfo>(stableId);
             if (program == nullptr)
             {
-                program = doc->Append<StartupProgramInfo>(DBG_NEW StartupProgramInfo{name, command, locationDesc, type, scope, true});
+                program = doc->Append<StartupProgramInfo>(DBG_NEW StartupProgramInfo{name, command, locationDesc, type, scope, bEnabled});
             }
+            program->SetEnabled(bEnabled);
             program->SetRegistryPath(utils::WideToUtf8(subKeyPath));
-            program->SetRegistryValueName(name);
+            program->SetRegistryValueName(valueNameUtf8);
         }
     }
 
@@ -204,6 +223,14 @@ namespace pserv
             std::wstring wOldName = utils::Utf8ToWide(valueName);
             std::wstring wNewName = L"Disabled_" + wOldName;
 
+            // Never overwrite another value (registry value names compare case-insensitively,
+            // and RegQueryValueExW does too)
+            if (RegQueryValueExW(hKey.get(), wNewName.c_str(), nullptr, nullptr, nullptr, nullptr) == ERROR_SUCCESS)
+            {
+                spdlog::error("Cannot disable '{}': a value '{}' already exists", valueName, utils::WideToUtf8(wNewName));
+                return false;
+            }
+
             // Read current value
             DWORD valueType;
             BYTE valueData[32768];
@@ -245,6 +272,13 @@ namespace pserv
                 std::string newName = valueName.substr(9); // Remove "Disabled_" prefix
                 std::wstring wOldName = utils::Utf8ToWide(valueName);
                 std::wstring wNewName = utils::Utf8ToWide(newName);
+
+                // Never overwrite the enabled twin "X" of "Disabled_X"
+                if (RegQueryValueExW(hKey.get(), wNewName.c_str(), nullptr, nullptr, nullptr, nullptr) == ERROR_SUCCESS)
+                {
+                    spdlog::error("Cannot enable '{}': a value '{}' already exists", valueName, newName);
+                    return false;
+                }
 
                 // Read current value
                 DWORD valueType;

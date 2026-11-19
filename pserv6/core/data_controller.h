@@ -185,6 +185,11 @@ namespace pserv
 
         /// @brief The column of the last Sort() (-1 = unsorted) and its direction.
         int GetLastSortColumn() const { return m_lastSortColumn; }
+
+        /// @brief The refresh target (e.g. remote machine) the live objects were enumerated for:
+        /// set by a successful Publish(), cleared by Clear(). After a target change it still names
+        /// the old target until the new objects are published.
+        const std::string &GetPublishedTarget() const { return m_publishedTarget; }
         bool IsLastSortAscending() const { return m_lastSortAscending; }
 
         /// @name Property Editing Transaction
@@ -260,5 +265,6 @@ namespace pserv
         std::string m_shadowTarget;          ///< Target the shadow currently holds objects for.
         bool m_bShadowValid{false};          ///< The last RefreshShadow() completed without error.
         bool m_bShadowSorted{false};         ///< ... and sorted the shadow by the request's sort.
+        std::string m_publishedTarget;       ///< UI thread. See GetPublishedTarget().
     };
 } // namespace pserv

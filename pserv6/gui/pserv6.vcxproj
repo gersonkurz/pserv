@@ -77,7 +77,7 @@
       <EnableUAC>true</EnableUAC>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <!-- F7: MinimalCoreWin drops the classic Win32 import libraries the core needs -->
-      <AdditionalDependencies>shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;user32.lib;iphlpapi.lib;ws2_32.lib;psapi.lib;taskschd.lib;comsuppw.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;user32.lib;iphlpapi.lib;ws2_32.lib;psapi.lib;taskschd.lib;comsuppw.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -103,7 +103,10 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="App.xaml.h"><DependentUpon>App.xaml</DependentUpon></ClInclude>
     <ClInclude Include="MainWindow.xaml.h"><DependentUpon>MainWindow.xaml</DependentUpon></ClInclude>
+    <ClInclude Include="action_runner.h" />
+    <ClInclude Include="action_test.h" />
     <ClInclude Include="data_grid.h" />
+    <ClInclude Include="properties_dialog.h" />
     <ClInclude Include="self_test.h" />
   </ItemGroup>
   <ItemGroup>
@@ -114,7 +117,10 @@
     <ClCompile Include="pch.cpp"><PrecompiledHeader>Create</PrecompiledHeader></ClCompile>
     <ClCompile Include="App.xaml.cpp"><DependentUpon>App.xaml</DependentUpon></ClCompile>
     <ClCompile Include="MainWindow.xaml.cpp"><DependentUpon>MainWindow.xaml</DependentUpon></ClCompile>
+    <ClCompile Include="action_runner.cpp" />
+    <ClCompile Include="action_test.cpp" />
     <ClCompile Include="data_grid.cpp" />
+    <ClCompile Include="properties_dialog.cpp" />
     <ClCompile Include="self_test.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
   </ItemGroup>

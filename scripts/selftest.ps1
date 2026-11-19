@@ -7,7 +7,8 @@ param(
     [Parameter(Mandatory = $true)][string]$Exe,
     [int]$Seconds = 3,
     [string]$Views = "",   # comma-separated view names, e.g. "Services,Scheduled Tasks"
-    [switch]$RunAsInvoker
+    [switch]$RunAsInvoker,
+    [switch]$Actions       # run --selftest-actions (the action self-test) instead
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,8 +17,8 @@ Remove-Item $log -ErrorAction SilentlyContinue
 if ($RunAsInvoker) { $env:__COMPAT_LAYER = "RunAsInvoker" }
 # Start-Process joins the list into one command line, so every value is quoted here (view names
 # contain spaces).
-$arguments = @("--selftest")
-if ($Views) { $arguments += "`"$Views`"" }
+$arguments = @($(if ($Actions) { "--selftest-actions" } else { "--selftest" }))
+if ($Views -and -not $Actions) { $arguments += "`"$Views`"" }
 $arguments += @("--seconds", $Seconds, "--log", "`"$log`"")
 $p = Start-Process -FilePath $Exe -ArgumentList $arguments -PassThru
 $handle = $p.Handle # keep the handle open, or ExitCode is unavailable after exit

@@ -31,5 +31,6 @@
 #include <winrt/Microsoft.UI.Xaml.Navigation.h>
 #include <winrt/Microsoft.UI.Xaml.Shapes.h>
 #include <microsoft.ui.xaml.window.h>
+#include <wil/cppwinrt_helpers.h> // wil::resume_foreground for Microsoft.UI.Dispatching
 
 #include <unordered_set>

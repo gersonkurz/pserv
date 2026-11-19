@@ -20,6 +20,9 @@
 #include <core/data_action_dispatch_context.h>
 #include <models/process_info.h>
 #include <models/service_info.h>
+#include <models/startup_program_info.h>
+#include <windows_api/startup_program_manager.h>
+#include <utils/string_utils.h>
 #include "test_support.h"
 
 namespace
@@ -340,6 +343,53 @@ namespace pserv::tests
     }
 }
 
+// Enable/Disable of a registry startup entry renames "X" <-> "Disabled_X". Neither direction may
+// overwrite an existing value (Phase 5 review). Runs on a scratch key under HKCU\Software, never on
+// a real Run key.
+void TestStartupEnableNeverOverwrites()
+{
+    std::cout << "[startup Enable/Disable never overwrite another value]\n";
+    const std::wstring key = std::format(L"Software\\pserv6-tests\\StartupCollision-{}", GetCurrentProcessId());
+    auto set = [&](const wchar_t *name, const wchar_t *value)
+    { return RegSetKeyValueW(HKEY_CURRENT_USER, key.c_str(), name, REG_SZ, value, static_cast<DWORD>((wcslen(value) + 1) * sizeof(wchar_t))) == ERROR_SUCCESS; };
+    auto get = [&](const wchar_t *name) -> std::wstring
+    {
+        wchar_t buffer[256]{};
+        DWORD size = sizeof(buffer);
+        return RegGetValueW(HKEY_CURRENT_USER, key.c_str(), name, RRF_RT_REG_SZ, nullptr, buffer, &size) == ERROR_SUCCESS ? std::wstring{buffer} : std::wstring{L"<missing>"};
+    };
+    auto program = [&](const char *valueName, bool bEnabled)
+    {
+        auto *p = new StartupProgramInfo{valueName, "cmd", "test", StartupProgramType::RegistryRun, StartupProgramScope::User, bEnabled};
+        p->SetRegistryPath(utils::WideToUtf8(key));
+        p->SetRegistryValueName(valueName);
+        return p;
+    };
+    Check(set(L"X", L"enabled-x") && set(L"Disabled_x", L"disabled-x") && set(L"Disabled_Y", L"disabled-y") && set(L"Z", L"enabled-z") &&
+              set(L"Disabled_Z", L"disabled-z"),
+        "startup collision: scratch values created");
+
+    // Enable "Disabled_x" while "X" exists (case differs: registry names are case-insensitive)
+    auto *px = program("Disabled_x", false);
+    Check(!StartupProgramManager::SetEnabled(px, true), "startup collision: Enable refused because 'X' exists");
+    Check(get(L"X") == L"enabled-x" && get(L"Disabled_x") == L"disabled-x", "startup collision: both values unchanged after the refused Enable");
+
+    // Disable "Z" while "Disabled_Z" exists
+    auto *pz = program("Z", true);
+    Check(!StartupProgramManager::SetEnabled(pz, false), "startup collision: Disable refused because 'Disabled_Z' exists");
+    Check(get(L"Z") == L"enabled-z" && get(L"Disabled_Z") == L"disabled-z", "startup collision: both values unchanged after the refused Disable");
+
+    // No collision: "Disabled_Y" -> "Y"
+    auto *py = program("Disabled_Y", false);
+    Check(StartupProgramManager::SetEnabled(py, true), "startup collision: Enable without a twin succeeds");
+    Check(get(L"Y") == L"disabled-y" && get(L"Disabled_Y") == L"<missing>", "startup collision: 'Disabled_Y' renamed to 'Y'");
+
+    for (auto *p : {px, pz, py})
+        p->Release(REFCOUNT_DEBUG_ARGS);
+    RegDeleteTreeW(HKEY_CURRENT_USER, key.c_str());
+    RegDeleteKeyW(HKEY_CURRENT_USER, L"Software\\pserv6-tests");
+}
+
 int main(int argc, char *argv[])
 {
     // --stress N: refresh every controller N times on a RefreshWorker (default 1; plan Phase 2 uses 50)
@@ -359,6 +409,7 @@ int main(int argc, char *argv[])
     TestDestructiveActionsReportFailure();
     TestLogFileHeldByAnotherInstance();
     TestContractCheckDetectsMisorder();
+    TestStartupEnableNeverOverwrites();
 
     pserv::DataControllerLibrary library;
     const auto &controllers = library.GetDataControllers();

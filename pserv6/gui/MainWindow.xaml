@@ -7,7 +7,20 @@
     <Window.SystemBackdrop>
         <MicaBackdrop />
     </Window.SystemBackdrop>
-    <NavigationView x:Name="Nav" PaneDisplayMode="Left" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
+    <Grid RowDefinitions="Auto,*">
+    <MenuBar x:Name="MainMenu">
+        <MenuBarItem Title="File" AccessKey="F">
+            <MenuFlyoutItem Text="Refresh" Click="OnRefreshClick" KeyboardAcceleratorTextOverride="F5">
+                <MenuFlyoutItem.Icon><SymbolIcon Symbol="Refresh" /></MenuFlyoutItem.Icon>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem x:Name="ConnectRemoteItem" Text="Connect to Remote Machine..." Click="OnConnectRemote" />
+            <MenuFlyoutItem x:Name="ConnectLocalItem" Text="Connect to Local Machine" Click="OnConnectLocal" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem Text="Exit" Click="OnExit" KeyboardAcceleratorTextOverride="Alt+F4" />
+        </MenuBarItem>
+    </MenuBar>
+    <NavigationView Grid.Row="1" x:Name="Nav" PaneDisplayMode="Left" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
                     OpenPaneLength="210" SelectionChanged="OnNavSelectionChanged">
         <Grid RowDefinitions="Auto,*,Auto" Padding="8,6,8,4" RowSpacing="6">
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -28,7 +41,8 @@
                 <Grid RowDefinitions="Auto,*">
                     <Grid x:Name="HeaderGrid" Height="30" />
                     <ListView Grid.Row="1" x:Name="RowList" SelectionMode="Extended" IsItemClickEnabled="False"
-                              ContainerContentChanging="OnContainerContentChanging">
+                              ContainerContentChanging="OnContainerContentChanging"
+                              ContextRequested="OnRowContextRequested" DoubleTapped="OnRowDoubleTapped">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="MinHeight" Value="24" />
@@ -54,4 +68,5 @@
             <TextBlock Grid.Row="2" x:Name="StatusText" Opacity="0.8" />
         </Grid>
     </NavigationView>
+    </Grid>
 </Window>
