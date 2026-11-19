@@ -82,12 +82,10 @@ namespace pserv
         return CreateServiceActions(currentState, controlsAccepted);
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     std::vector<const DataAction *> ServicesDataController::GetAllActions() const
     {
         return CreateAllServiceActions();
     }
-#endif
 
     VisualState ServicesDataController::GetVisualState(const DataObject *dataObject) const
     {

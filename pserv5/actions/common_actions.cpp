@@ -4,7 +4,6 @@
 #include <core/data_controller.h>
 #include <core/exporters/exporter_interface.h>
 #include <core/exporters/exporter_registry.h>
-#include <utils/file_dialogs.h>
 #include <utils/string_utils.h>
 
 namespace pserv
@@ -31,23 +30,29 @@ namespace pserv
             }
 
         public:
+            static constexpr const char *OUTPUT_PARAMETER = "output";
+
             bool IsAvailableFor(const DataObject *) const override
             {
                 return true;
             }
 
-#ifdef PSERV_CONSOLE_BUILD
-            void RegisterArguments(argparse::ArgumentParser &cmd) const override
+            std::vector<ActionParameter> GetParameters(const DataController *controller) const override
             {
-                if (!m_bCopyToClipboard)
+                if (m_bCopyToClipboard)
+                    return {};
+
+                const IExporter *exporter = ExporterRegistry::Instance().FindExporter(m_exporterName);
+                ActionParameter output{OUTPUT_PARAMETER, "Export to file", ActionParameterKind::SaveFilePath};
+                if (exporter)
                 {
-                    // Export to file actions need --output parameter
-                    cmd.add_argument("--output")
-                        .help("Output file path")
-                        .required();
+                    output.DefaultValue = std::format("export_{}{}", controller ? std::string{controller->GetControllerName()} : std::string{"data"},
+                        exporter->GetFileExtension());
+                    output.FileFilters.push_back({std::format("{} Files", exporter->GetFormatName()), std::format("*{}", exporter->GetFileExtension())});
                 }
+                output.FileFilters.push_back({"All Files", "*.*"});
+                return {output};
             }
-#endif
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
@@ -60,9 +65,7 @@ namespace pserv
                 IExporter *exporter = ExporterRegistry::Instance().FindExporter(m_exporterName);
                 if (!exporter)
                 {
-                    spdlog::error("ExportAction: Exporter '{}' not found", m_exporterName);
-                    MessageBoxA(ctx.m_hWnd, "Exporter not available", "Error", MB_OK | MB_ICONERROR);
-                    return;
+                    throw std::runtime_error(std::format("Exporter '{}' is not available", m_exporterName));
                 }
 
                 // Get columns from controller
@@ -88,92 +91,35 @@ namespace pserv
                 }
                 catch (const std::exception &e)
                 {
-                    spdlog::error("Export failed: {}", e.what());
-                    MessageBoxA(ctx.m_hWnd, std::format("Export failed: {}", e.what()).c_str(), "Error", MB_OK | MB_ICONERROR);
-                    return;
+                    throw std::runtime_error(std::format("Export failed: {}", e.what()));
                 }
 
                 if (m_bCopyToClipboard)
                 {
-#ifdef PSERV_CONSOLE_BUILD
-                    // Console doesn't support clipboard
-                    spdlog::error("Clipboard operations not supported in console build");
-                    throw std::runtime_error("Clipboard operations not supported in console build");
-#else
-                    // Copy to clipboard
-                    utils::CopyToClipboard(exportedData.c_str());
+                    utils::CopyToClipboard(exportedData); // throws on failure; reported by the frontend
                     spdlog::info("Copied {} object(s) as {} to clipboard", ctx.m_selectedObjects.size(), exporter->GetFormatName());
-#endif
+                    return;
                 }
-                else
+
+                // Export to file: the frontend collected the path before dispatch (GetParameters)
+                const std::string outputPath = ctx.GetParameter(OUTPUT_PARAMETER);
+                if (outputPath.empty())
                 {
-                    // Export to file
-                    std::wstring filePath;
-#ifdef PSERV_CONSOLE_BUILD
-                    // Get filename from --output argument
-                    if (ctx.m_pActionParser)
-                    {
-                        try
-                        {
-                            std::string outputPath = ctx.m_pActionParser->get<std::string>("--output");
-                            filePath = utils::Utf8ToWide(outputPath);
-                        }
-                        catch (const std::exception &e)
-                        {
-                            spdlog::error("Failed to get --output argument: {}", e.what());
-                            throw std::runtime_error("--output argument required for export");
-                        }
-                    }
-                    else
-                    {
-                        throw std::runtime_error("No action parser available for --output argument");
-                    }
-#else
-                    std::wstring defaultFileName = utils::Utf8ToWide(std::format("export_{}", ctx.m_pController->GetControllerName()));
-
-                    std::vector<utils::FileTypeFilter> filters{{std::format(L"{} Files", utils::Utf8ToWide(exporter->GetFormatName())),
-                                                                   std::format(L"*{}", utils::Utf8ToWide(exporter->GetFileExtension()))},
-                        {L"All Files", L"*.*"}};
-
-                    if (!utils::SaveFileDialog(ctx.m_hWnd, L"Export Data", defaultFileName, filters, 0, filePath))
-                    {
-                        return; // User cancelled
-                    }
-#endif
-
-                    // Write to file
-                    try
-                    {
-                        std::ofstream outFile{filePath, std::ios::binary};
-                        if (!outFile)
-                        {
-                            spdlog::error("Failed to open file for writing");
-                            throw std::runtime_error("Failed to open file for writing");
-                        }
-
-                        outFile.write(exportedData.c_str(), exportedData.size());
-                        outFile.close();
-
-                        if (outFile.fail())
-                        {
-                            spdlog::error("Failed to write data to file");
-                            throw std::runtime_error("Failed to write data to file");
-                        }
-
-                        spdlog::info("Exported {} object(s) as {} to file: {}",
-                            ctx.m_selectedObjects.size(),
-                            exporter->GetFormatName(),
-                            utils::WideToUtf8(filePath));
-                    }
-                    catch (const std::exception &e)
-                    {
-                        spdlog::error("File write failed: {}", e.what());
-#ifndef PSERV_CONSOLE_BUILD
-                        MessageBoxA(ctx.m_hWnd, std::format("Failed to write file: {}", e.what()).c_str(), "Error", MB_OK | MB_ICONERROR);
-#endif
-                        throw; // Re-throw for console error handling
-                    }
+                    throw std::runtime_error("No output file given for export");
                 }
+
+                std::ofstream outFile{utils::Utf8ToWide(outputPath), std::ios::binary};
+                if (outFile)
+                {
+                    outFile.write(exportedData.c_str(), exportedData.size());
+                    outFile.close();
+                }
+                if (!outFile)
+                {
+                    throw std::runtime_error(std::format("Failed to write file '{}'", outputPath));
+                }
+
+                spdlog::info("Exported {} object(s) as {} to file: {}", ctx.m_selectedObjects.size(), exporter->GetFormatName(), outputPath);
             }
         };
 
@@ -255,9 +201,7 @@ namespace pserv
         }
 
         actions.push_back(&theDataActionSeparator);
-#ifndef PSERV_CONSOLE_BUILD
         actions.push_back(&theDataPropertiesAction);
-#endif
     }
 
 } // namespace pserv

@@ -39,17 +39,12 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                spdlog::error("'Copy Value' is not supported in console build");
-                throw std::runtime_error("This action requires clipboard and is not available in console mode");
-#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
                 const auto *envVar = GetEnvVarInfo(ctx.m_selectedObjects[0]);
                 utils::CopyToClipboard(envVar->GetValue().c_str());
                 spdlog::info("Copied environment variable value to clipboard: {}", envVar->GetName());
-#endif
             }
         };
 
@@ -68,17 +63,12 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                spdlog::error("'Copy Name' is not supported in console build");
-                throw std::runtime_error("This action requires clipboard and is not available in console mode");
-#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
                 const auto *envVar = GetEnvVarInfo(ctx.m_selectedObjects[0]);
                 utils::CopyToClipboard(envVar->GetName().c_str());
                 spdlog::info("Copied environment variable name to clipboard: {}", envVar->GetName());
-#endif
             }
         };
 
@@ -109,6 +99,17 @@ namespace pserv
                 return true;
             }
 
+            std::string GetConfirmationText(const std::vector<DataObject *> &selection) const override
+            {
+                std::vector<std::string> items;
+                for (const auto *obj : selection)
+                {
+                    const auto *envVar = GetEnvVarInfo(obj);
+                    items.push_back(std::format("{} ({})", envVar->GetName(), envVar->GetScopeString()));
+                }
+                return FormatConfirmationList("Are you sure you want to delete the following environment variables?", items);
+            }
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
                 std::vector<const EnvironmentVariableInfo *> envVars;
@@ -117,24 +118,6 @@ namespace pserv
                     envVars.push_back(GetEnvVarInfo(obj));
                 }
 
-#ifndef PSERV_CONSOLE_BUILD
-                // GUI: Show confirmation dialog
-                std::string confirmMsg = "Are you sure you want to delete the following environment variables?\n\n";
-                for (const auto *envVar : envVars)
-                {
-                    confirmMsg += std::format("{} ({})\n", envVar->GetName(), envVar->GetScopeString());
-                    if (envVars.size() >= 10)
-                    {
-                        confirmMsg += "... and more\n";
-                        break;
-                    }
-                }
-                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Deletion", MB_YESNO | MB_ICONWARNING) != IDYES)
-                {
-                    return;
-                }
-#endif
-                // Console: --force flag already checked by pservc.cpp
 
                 int success = 0;
                 for (const auto *envVar : envVars)
@@ -170,16 +153,42 @@ namespace pserv
                 return true;
             }
 
+            std::vector<ActionParameter> GetParameters(const DataController *) const override
+            {
+                return {{"name", "Name", ActionParameterKind::Text}, {"value", "Value", ActionParameterKind::Text}};
+            }
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifndef PSERV_CONSOLE_BUILD
-                // Show the add variable dialog
-                auto *controller = static_cast<EnvironmentVariablesDataController *>(ctx.m_pController);
-                controller->ShowAddVariableDialog(m_scope);
-#else
-                spdlog::error("Adding new environment variables is not supported in console mode");
-                throw std::runtime_error("Adding new environment variables is not supported in console mode. Use the GUI application.");
-#endif
+                const std::string name = ctx.GetParameter("name");
+                const std::string value = ctx.GetParameter("value");
+                const char *scopeStr = (m_scope == EnvironmentVariableScope::System) ? "System" : "User";
+
+                if (name.empty() || name.find('=') != std::string::npos)
+                {
+                    throw std::runtime_error("The variable name must not be empty and must not contain '='.");
+                }
+
+                // Refuse to silently overwrite an existing variable of the same scope
+                if (ctx.m_pController)
+                {
+                    const std::string lowerName = utils::ToLower(name);
+                    for (const auto *obj : ctx.m_pController->GetDataObjects())
+                    {
+                        const auto *envVar = GetEnvVarInfo(obj);
+                        if (envVar->GetScope() == m_scope && utils::ToLower(envVar->GetName()) == lowerName)
+                        {
+                            throw std::runtime_error(std::format("Variable '{}' already exists in {} scope.", name, scopeStr));
+                        }
+                    }
+                }
+
+                if (!EnvironmentVariableManager::SetEnvironmentVariable(name, value, m_scope))
+                {
+                    throw std::runtime_error(std::format("Failed to create variable '{}'. You may need administrator privileges for {} variables.", name, scopeStr));
+                }
+                spdlog::info("Created new {} environment variable: {}", scopeStr, name);
+                ctx.m_bNeedsRefresh = true;
             }
         };
 
@@ -202,10 +211,6 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                spdlog::error("'Open in Registry Editor' is not supported in console build");
-                throw std::runtime_error("This action requires GUI and is not available in console mode");
-#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
@@ -259,7 +264,6 @@ namespace pserv
                 {
                     LogWin32Error("ShellExecuteW", "opening regedit.exe");
                 }
-#endif
             }
         };
 
@@ -310,7 +314,6 @@ namespace pserv
         return actions;
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     std::vector<const DataAction *> CreateAllEnvironmentVariableActions()
     {
         // Console: Return all actions regardless of variable scope
@@ -325,6 +328,5 @@ namespace pserv
             &theDataActionSeparator,
             &theDeleteAction};
     }
-#endif
 
 } // namespace pserv

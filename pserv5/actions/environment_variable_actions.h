@@ -17,9 +17,7 @@ namespace pserv
     /// Delete, Copy Name, Copy Value.
     std::vector<const DataAction *> CreateEnvironmentVariableActions(EnvironmentVariableScope scope);
 
-#ifdef PSERV_CONSOLE_BUILD
     /// @brief Create all possible environment variable actions for CLI registration.
     std::vector<const DataAction *> CreateAllEnvironmentVariableActions();
-#endif
 
 } // namespace pserv

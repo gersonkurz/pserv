@@ -149,7 +149,7 @@ rather than hidden.
 | **D1** | **WinUI 3 with C++/WinRT, Windows App SDK pinned to 1.8, unpackaged, self-contained.** | Owner decision. Unpackaged and self-contained means an xcopy payload: no MSIX, no framework package or runtime installer, and MSIS can install it like any other files. Pinned because WinAppSDK changes build targets between releases (F3–F5); upgrades are deliberate, single-purpose changes. |
 | **D2** | **Component packages, not the meta-package**: `Microsoft.WindowsAppSDK.WinUI` and `.Foundation` (F5). | Saves ~38 MB of ML runtime pserv never calls. |
 | **D3** | **One core library, one flavour.** The shared code becomes a static library `pserv_core`, compiled **once**, with no `PSERV_CONSOLE_BUILD` and no ImGui. `pservc`, the ImGui GUI (until it is removed) and `pserv6` all link it. | Today the macro changes **class layout and vtables** (`DataController` has a dialog member and different virtual functions per flavour; `core/data_controller.h`). Two flavours of one class in one process is an ODR violation waiting to happen. Probe 2 worked around it with the CLI flavour; production must not. |
-| **D4** | **Frontend services go through an interface, not `#ifdef`, and `Execute` never prompts.** Interaction that needs the user happens in the frontend **before** dispatch: confirmation (`RequiresConfirmation()` plus a new `GetConfirmationText(selection)`), and parameters such as an output file (a new `GetParameterRequests()`; the CLI satisfies them from arguments, e.g. `--output`). `Execute(ctx)` receives the answers in `ctx` and only uses non-interactive host services (`SetClipboardText`, `ReportError`, `ReportProgress` through `AsyncOperation`). | Today 50 files branch on `PSERV_CONSOLE_BUILD`, and the GUI branches call `MessageBoxA`, `ImGui::SetClipboardText` and an ImGui modal inside a controller; some actions branch on a synchronous confirmation, e.g. `actions/process_actions.cpp:178`. WinUI's `ContentDialog::ShowAsync` is asynchronous, and blocking on it on the UI thread is not allowed. Asking before dispatch keeps the core free of WinRT and of async types. **Lifetime:** the frontend builds `ctx`, `Retain`s every selected object when the dialog opens, and `Release`s after `Execute` (or its `AsyncOperation`) completes or is cancelled, so neither a refresh nor a view switch can free them. |
+| **D4** | **Frontend services go through an interface, not `#ifdef`, and `Execute` never prompts.** Interaction that needs the user happens in the frontend **before** dispatch: confirmation (`RequiresConfirmation()` plus a new `GetConfirmationText(selection)`), and parameters such as an output file (a new `GetParameters()`; the CLI satisfies them from arguments, e.g. `--output`). `Execute(ctx)` receives the answers in `ctx` and only uses non-interactive host services (`SetClipboardText`, `ReportError`, `ReportProgress` through `AsyncOperation`). | Today 50 files branch on `PSERV_CONSOLE_BUILD`, and the GUI branches call `MessageBoxA`, `ImGui::SetClipboardText` and an ImGui modal inside a controller; some actions branch on a synchronous confirmation, e.g. `actions/process_actions.cpp:178`. WinUI's `ContentDialog::ShowAsync` is asynchronous, and blocking on it on the UI thread is not allowed. Asking before dispatch keeps the core free of WinRT and of async types. **Lifetime:** the frontend builds `ctx`, `Retain`s every selected object when the dialog opens, and `Release`s after `Execute` (or its `AsyncOperation`) completes or is cancelled, so neither a refresh nor a view switch can free them. |
 | **D5** | **Refresh off the UI thread, double-buffered, with explicit invalidation.** Each controller keeps a worker-owned *shadow* container. A worker runs the existing manager code against the shadow (Start/Enumerate/FinishRefresh, unchanged). The UI thread then **publishes**: it merges the shadow into the live container by stable ID (assign into existing objects, clone new ones, drop missing ones) and re-sorts. One refresh worker for the whole app. Rules in section 5.1. | Probe 2: in 9 of 10 views every frame over 33 ms overlapped the synchronous refresh tick. Managers carry no state across refreshes except process-wide statics (`s_moduleCache` in `module_manager.cpp`, the services error-log set), so they can run unchanged on a worker, *provided only one refresh runs at a time*. The UI only ever reads objects the UI thread owns, so there are no locks in the paint path. Rejected: a reader/writer lock (the UI would block for the whole refresh), and splitting every manager into collect/apply (touches all ten managers for the same result). `pservc` calls collect plus publish inline, so behaviour is unchanged. |
 | **D6** | **The grid is our own control on top of `ListView`.** Columns are generated from `GetColumns()` at runtime, rows are filled in `ContainerContentChanging`, refreshes update realized rows in place, and the header supports sort, resize, reorder and per-view persistence. | WinUI 3 ships no DataGrid, and the Community Toolkit DataGrid was not carried forward. `ListView` provides virtualization, selection, keyboard handling and row-level UI Automation. Probe 2 ran this design on all ten views (section 2.2); its open items (Network Connections frames, view-switch latency) are Phase 4 work. Rejected: `ItemsRepeater` (we would reimplement selection, keyboard and UIA), and drawing the grid with Direct2D inside a `SwapChainPanel` (no accessibility at all). |
 | **D7** | **The installer exists from Phase 3 on** and is rebuilt and installed at every later phase exit. | The "must work" requirement: packaging is where WinUI attempts traditionally die late. |
@@ -177,17 +177,19 @@ pserv6.exe (WinUI 3) ──┘                    config, exporters, utils; one 
 
 **Seam (D3, D4).** `pserv_core` exposes:
 
-- `DataController`: columns, actions, sort, the property-edit transaction (exists already); a
-  new **create transaction** (`BeginCreate` / `SetPropertyEdit` / `CommitCreate`) that replaces
-  the ImGui "Add Environment Variable" modal inside `EnvironmentVariablesDataController`; and
+- `DataController`: columns, actions, sort, the property-edit transaction (exists already); and
   the refresh split `RefreshShadow(const RefreshRequest&)` (worker) / `Publish()` (UI thread),
   with `Refresh()` doing both for the CLI.
 - `DataController` loses `m_pPropertiesDialog`, `ShowPropertiesDialog`,
   `RenderPropertiesDialog` and `HasPropertiesDialogWithEdits`. Frontends own their dialogs.
 - `DataAction`: `RequiresConfirmation()` (exists), plus new `GetConfirmationText(selection)`
-  and `GetParameterRequests()` (D4). `Execute(ctx)` reads answers from `ctx` and never prompts.
+  and `GetParameters()` (D4). `Execute(ctx)` reads answers from `ctx` and never prompts.
+  "Add Environment Variable" is an action with two text parameters, replacing the ImGui modal
+  that lived inside `EnvironmentVariablesDataController`. (Revision 2 planned a separate create
+  transaction on the controller; implemented in Phase 1 as parameters instead, which is one
+  mechanism instead of two and also gives the CLI `--name`/`--value`.)
 - CLI argument registration (`RegisterArguments`, argparse) moves into `pservc`, which reads
-  `GetColumns()` / `GetAllActions()` / `GetParameterRequests()`. `GetAllActions()` becomes
+  `GetColumns()` / `GetAllActions()` / `GetParameters()`. `GetAllActions()` becomes
   unconditional, so the core has no argparse dependency.
 
 ### 5.1 Refresh rules (D5)
@@ -271,11 +273,11 @@ and its performance is assumed to match ARM64 (owner, 2026-11-18; R4).
   elevated `--selftest`.
 
 ### Phase 1 — `pserv_core`, one flavour (D3, D4)
-- Introduce `IActionHost`, `GetConfirmationText` and `GetParameterRequests`; move every GUI
+- Introduce `IActionHost`, `GetConfirmationText` and `GetParameters`; move every GUI
   branch in `actions/`, `controllers/` and `core/` behind them. Classify all 50
   `PSERV_CONSOLE_BUILD` files; the ones that only guard argparse move to `pservc`.
-- Remove the dialog members from `DataController`. Add the create transaction and port the
-  environment-variable "Add" to it.
+- Remove the dialog members from `DataController`. Port the environment-variable "Add" to an
+  action with parameters.
 - `pserv_core.vcxproj`; `pservc` and `pserv5` (ImGui) link it. The ImGui frontend implements
   the host and the before-dispatch dialogs with its existing UI.
 - **Exit:**

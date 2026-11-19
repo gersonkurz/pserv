@@ -3,11 +3,9 @@
 // Version information - single source of truth
 #include "version.h"
 
-#ifdef _CONSOLE
-#define PSERV_CONSOLE_BUILD
-#else
-#undef PSERV_CONSOLE_BUILD
-#endif
+// The shared core is compiled once and is identical for every frontend; nothing in it depends on
+// a frontend macro. PSERV_IMGUI_FRONTEND (defined only by pserv5.vcxproj) merely adds the ImGui
+// and Direct3D headers to that project's precompiled header; it must never change a type.
 
 // Windows headers
 //#define WIN32_LEAN_AND_MEAN
@@ -59,7 +57,7 @@
 
 #include <wrl/client.h>
 
-#ifndef PSERV_CONSOLE_BUILD
+#ifdef PSERV_IMGUI_FRONTEND
 #include <d3d11.h>
 #include <dxgi.h>
 #endif
@@ -68,14 +66,14 @@
 #include <sddl.h>
 #include <psapi.h>
 
-#ifndef PSERV_CONSOLE_BUILD
+#ifdef PSERV_IMGUI_FRONTEND
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
 #include <imgui_internal.h>
+#endif
 #include <shellapi.h>
 #include <ShObjIdl.h>
-#endif
 
 #include <wil/resource.h>
 #include <wil/com.h>

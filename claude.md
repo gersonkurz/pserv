@@ -23,7 +23,7 @@ Build with `just` (recipes in the repo-root `justfile`) from a **Visual Studio 2
 
 Builds are solution-driven (`pserv5/pserv5.slnx`) so `$(SolutionDir)` resolves — building a bare `.vcxproj` leaves output paths undefined. The `CopyThemes` MSBuild target copies `pserv5/themes/*.yaml` into the output dir next to the exe.
 
-Solution: `pserv5/pserv5.slnx` (projects: `pserv5.vcxproj` GUI, `pservc/pservc.vcxproj` CLI, `pserv_core/pserv_core.vcxproj` shared core static library linked by the CLI and the tests, `tests/pserv_core_tests.vcxproj`). The GUI still compiles the core sources itself, in its own flavour, until Phase 1 of `docs/pserv6-plan.md`.
+Solution: `pserv5/pserv5.slnx` (projects: `pserv5.vcxproj` GUI, `pservc/pservc.vcxproj` CLI, `pserv_core/pserv_core.vcxproj` shared core static library linked by the GUI, the CLI and the tests, `tests/pserv_core_tests.vcxproj`). The core is frontend-neutral: one compiled library, no frontend macros (see AGENTS.md).
 Output: `pserv5/bin/<Platform>/<Config>/` — e.g. `pserv5/bin/x64/Release/pserv5.exe` (GUI), `pservc.exe` (CLI). Note the x86 solution platform builds into `bin/Win32/`. `pserv_core_tests.exe` builds into `pserv5/bin/tests/<Platform>/<Config>/`, outside the folder `just` stages into the installers.
 Platforms: x64, x86, arm64.
 

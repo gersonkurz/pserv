@@ -15,9 +15,7 @@ namespace pserv
     /// Actions include: Terminate, Open File Location, View Modules.
     std::vector<const DataAction *> CreateProcessActions();
 
-#ifdef PSERV_CONSOLE_BUILD
     /// @brief Create all possible process actions for CLI registration.
     std::vector<const DataAction *> CreateAllProcessActions();
-#endif
 
 } // namespace pserv

@@ -1,6 +1,4 @@
 #include "precomp.h"
-
-#ifndef PSERV_CONSOLE_BUILD
 #include <core/data_action.h>
 #include <core/data_controller.h>
 #include <core/data_object.h>
@@ -11,10 +9,22 @@ namespace pserv
 {
 
     DataPropertiesDialog::DataPropertiesDialog(DataController *controller, const std::vector<DataObject *> &dataObjects, HWND hWnd)
-        : m_controller{controller},
-          m_dataObjects{dataObjects},
+        : m_dataObjects{dataObjects},
+          m_controller{controller},
           m_hWnd{hWnd}
     {
+        for (auto *obj : m_dataObjects)
+        {
+            obj->Retain(REFCOUNT_DEBUG_ARGS);
+        }
+    }
+
+    DataPropertiesDialog::~DataPropertiesDialog()
+    {
+        for (auto *obj : m_dataObjects)
+        {
+            obj->Release(REFCOUNT_DEBUG_ARGS);
+        }
     }
 
     void DataPropertiesDialog::Open()
@@ -443,18 +453,12 @@ namespace pserv
                     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
                 }
 
-                if (ImGui::Button(action->GetName().c_str()))
+                if (ImGui::Button(action->GetName().c_str()) && m_onAction)
                 {
-                    // Build dispatch context for this action
-                    DataActionDispatchContext ctx;
-                    ctx.m_pController = m_controller;
-                    ctx.m_selectedObjects = {const_cast<DataObject *>(dataObject)};
-                    ctx.m_hWnd = m_hWnd;
-                    ctx.m_pAsyncOp = nullptr;
-                    ctx.m_bShowProgressDialog = false;
-
-                    // Execute action
-                    action->Execute(ctx);
+                    // The owner confirms, collects parameters and executes, on its persistent dispatch
+                    // context. (A local context here released objects it never retained, and waited for
+                    // async work in its destructor, freezing the UI.)
+                    m_onAction(action, {const_cast<DataObject *>(dataObject)});
                 }
 
                 if (action->IsDestructive())
@@ -550,4 +554,3 @@ namespace pserv
     }
 
 } // namespace pserv
-#endif

@@ -13,6 +13,107 @@
 
 using namespace pserv;
 
+namespace
+{
+    /// @brief "Network Connections" -> "network-connections" (controller and action subcommand names).
+    std::string ToCommandName(std::string_view name)
+    {
+        std::string cmd = utils::ToLower(std::string{name});
+        std::replace(cmd.begin(), cmd.end(), ' ', '-');
+        return cmd;
+    }
+
+    /// @brief The console's IActionHost: messages go to the console; there is no properties UI
+    /// (theDataPropertiesAction is never registered as a CLI subcommand).
+    class ConsoleActionHost final : public IActionHost
+    {
+    public:
+        void ShowMessage(ActionMessageKind kind, std::string_view title, std::string_view text) override
+        {
+            const char *color = kind == ActionMessageKind::Error     ? CONSOLE_FOREGROUND_RED
+                                : kind == ActionMessageKind::Warning ? CONSOLE_FOREGROUND_YELLOW
+                                                                     : CONSOLE_STANDARD;
+            console::write_line(std::string{color} + std::string{title} + ": " + std::string{text} + CONSOLE_STANDARD);
+        }
+
+        void ShowProperties(DataActionDispatchContext &) override {}
+    };
+
+    /// @brief Register one controller's subcommand, its options and its action subcommands.
+    /// @return The controller's own parser. Action parsers are stored in the same `subparsers`
+    ///         vector, so callers must use this pointer, not a position in the vector.
+    argparse::ArgumentParser *RegisterControllerArguments(const DataController &controller, argparse::ArgumentParser &program,
+        std::vector<std::unique_ptr<argparse::ArgumentParser>> &subparsers)
+    {
+        const auto &columns = controller.GetColumns();
+
+        // argparse stores references, so every parser must outlive `program`; unique_ptr because
+        // ArgumentParser is neither copyable nor movable. exit_on_default_arguments is disabled so
+        // --help does not std::exit() and destructors still run.
+        subparsers.push_back(std::make_unique<argparse::ArgumentParser>(
+            ToCommandName(controller.GetControllerName()), PSERV_VERSION_STRING, argparse::default_arguments::help, false));
+        auto &cmd = *subparsers.back();
+        cmd.add_description("Manage " + std::string(controller.GetItemName()) + "s");
+
+        cmd.add_argument("--format").help("Output format: table, json, csv").default_value(std::string("table"));
+        cmd.add_argument("--filter")
+            .help("Filter results by text (case-insensitive substring match across all fields)")
+            .default_value(std::string(""));
+        cmd.add_argument("--sort").help("Sort by column name (ascending by default)").default_value(std::string(""));
+        cmd.add_argument("--desc").help("Sort in descending order (use with --sort)").default_value(false).implicit_value(true);
+
+        for (const auto &col : columns)
+        {
+            cmd.add_argument("--col-" + utils::ToLower(col.BindingName))
+                .help("Filter by " + col.DisplayName + " (case-insensitive substring match)")
+                .default_value(std::string(""));
+        }
+
+        for (const DataAction *action : controller.GetAllActions())
+        {
+            if (action->IsSeparator())
+                continue;
+
+            subparsers.push_back(std::make_unique<argparse::ArgumentParser>(
+                ToCommandName(action->GetName()), PSERV_VERSION_STRING, argparse::default_arguments::help, false));
+            auto &action_cmd = *subparsers.back();
+
+            // The console cannot ask, so confirmation is given up front with --force.
+            const bool bNeedsForce = action->IsDestructive() || action->RequiresConfirmation();
+            std::string description = action->GetName();
+            if (bNeedsForce)
+            {
+                description += " (DESTRUCTIVE - requires --force)";
+            }
+            action_cmd.add_description(description);
+
+            // nargs(any), not remaining(): remaining() swallowed every later token, so the documented
+            // `pservc services stop Spooler --force` treated "--force" as a target name.
+            action_cmd.add_argument("targets")
+                .help("Target object(s) to act upon (by " + columns[0].DisplayName + ")")
+                .nargs(argparse::nargs_pattern::any);
+
+            if (bNeedsForce)
+            {
+                action_cmd.add_argument("--force").help("Confirm the action without a prompt").default_value(false).implicit_value(true);
+            }
+
+            // The action's parameters become required --<name> options.
+            for (const auto &param : action->GetParameters(&controller))
+            {
+                action_cmd.add_argument("--" + param.Name)
+                    .help(param.Kind == ActionParameterKind::SaveFilePath ? param.Label + " (file path)" : param.Label)
+                    .required();
+            }
+
+            cmd.add_subparser(action_cmd);
+        }
+
+        program.add_subparser(cmd);
+        return &cmd;
+    }
+} // namespace
+
 int main(int argc, char *argv[])
 {
     utils::BaseApp baseApp;
@@ -23,14 +124,13 @@ int main(int argc, char *argv[])
     // This allows destructors to run properly and prevents memory leak reports
     argparse::ArgumentParser program{"pservc", PSERV_VERSION_STRING, argparse::default_arguments::all, false};
 
-    // Storage for subparsers - must outlive the program ArgumentParser
-    // argparse stores references, so these must remain alive
-    // Using unique_ptr because ArgumentParser has deleted copy/move constructors
+    // Storage for every parser (controllers and actions) - must outlive the program ArgumentParser
     std::vector<std::unique_ptr<argparse::ArgumentParser>> subparsers;
+    std::vector<std::pair<DataController *, argparse::ArgumentParser *>> controllerParsers;
 
     for (const auto controller : dataControllerLibrary.GetDataControllers())
     {
-        controller->RegisterArguments(program, subparsers);
+        controllerParsers.emplace_back(controller, RegisterControllerArguments(*controller, program, subparsers));
     }
     try
     {
@@ -50,22 +150,14 @@ int main(int argc, char *argv[])
     // Find which subcommand was used
     DataController *selectedController = nullptr;
     argparse::ArgumentParser *selectedSubparser = nullptr;
-    size_t subparserIndex = 0;
-
-    for (const auto controller : dataControllerLibrary.GetDataControllers())
+    for (const auto &[controller, parser] : controllerParsers)
     {
-        // Convert controller name to lowercase-hyphenated format
-        std::string cmd_name(controller->GetControllerName());
-        std::transform(cmd_name.begin(), cmd_name.end(), cmd_name.begin(), ::tolower);
-        std::replace(cmd_name.begin(), cmd_name.end(), ' ', '-');
-
-        if (program.is_subcommand_used(cmd_name))
+        if (program.is_subcommand_used(ToCommandName(controller->GetControllerName())))
         {
             selectedController = controller;
-            selectedSubparser = subparsers[subparserIndex].get();
+            selectedSubparser = parser;
             break;
         }
-        subparserIndex++;
     }
 
     // If no subcommand was provided, argparse will have printed help already
@@ -86,40 +178,26 @@ int main(int argc, char *argv[])
     }
 
     // Check if an action subcommand was used
-    std::vector<const DataAction *> allActions = selectedController->GetAllActions();
     const DataAction *selectedAction = nullptr;
     argparse::ArgumentParser *selectedActionParser = nullptr;
-
-    for (const DataAction *action : allActions)
+    for (const DataAction *action : selectedController->GetAllActions())
     {
         if (action->IsSeparator())
             continue;
 
-        std::string action_name = utils::ToLower(action->GetName());
-        std::replace(action_name.begin(), action_name.end(), ' ', '-');
-
-        // Check if this action subcommand was used
-        // Wrap in try-catch because is_subcommand_used() throws std::out_of_range if subcommand doesn't exist
+        const std::string action_name = ToCommandName(action->GetName());
+        // is_subcommand_used() throws std::out_of_range for a name that is not registered
         try
         {
             if (selectedSubparser->is_subcommand_used(action_name))
             {
                 selectedAction = action;
-                // Get the action parser from the subparser
-                try
-                {
-                    selectedActionParser = &selectedSubparser->at<argparse::ArgumentParser>(action_name);
-                }
-                catch (const std::exception &)
-                {
-                    // Action subparser not found
-                }
+                selectedActionParser = &selectedSubparser->at<argparse::ArgumentParser>(action_name);
                 break;
             }
         }
-        catch (const std::out_of_range &)
+        catch (const std::exception &)
         {
-            // Subcommand not registered - skip it
             continue;
         }
     }
@@ -127,8 +205,6 @@ int main(int argc, char *argv[])
     // If action was selected, dispatch to action execution
     if (selectedAction && selectedActionParser)
     {
-        // Argparse will have printed help for action if --help was used
-
         // Load data
         console::write_line("Loading data...");
         selectedController->Refresh(false);
@@ -144,7 +220,9 @@ int main(int argc, char *argv[])
             // No targets provided
         }
 
-        if (targetNames.empty())
+        // Actions that take their input from parameters (e.g. "add user variable") need no target;
+        // every other action operates on named objects.
+        if (targetNames.empty() && selectedAction->GetParameters(selectedController).empty())
         {
             console::write_line(CONSOLE_FOREGROUND_RED "Error: No target objects specified" CONSOLE_STANDARD);
             return 1;
@@ -176,8 +254,8 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Check --force for destructive actions
-        if (selectedAction->IsDestructive())
+        // The console cannot ask: actions that are destructive or need confirmation require --force
+        if (selectedAction->IsDestructive() || selectedAction->RequiresConfirmation())
         {
             bool force = false;
             try
@@ -195,13 +273,17 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Create dispatch context
+        // Create dispatch context. SetSelection retains the objects: the context owns one
+        // reference per selected object and releases them when it is destroyed.
+        ConsoleActionHost host;
         DataActionDispatchContext ctx;
-        ctx.m_selectedObjects = selectedObjects;
+        ctx.SetSelection(selectedObjects);
         ctx.m_pController = selectedController;
-        ctx.m_pActionParser = selectedActionParser;
-        ctx.m_hWnd = nullptr;
-        ctx.m_pAsyncOp = nullptr;
+        ctx.m_pHost = &host;
+        for (const auto &param : selectedAction->GetParameters(selectedController))
+        {
+            ctx.m_parameters[param.Name] = selectedActionParser->get<std::string>("--" + param.Name);
+        }
 
         // Execute action
         std::string actionName = selectedAction->GetName();
@@ -216,10 +298,18 @@ int main(int argc, char *argv[])
             {
                 console::write_line("Working...");
                 ctx.m_pAsyncOp->Wait();
+                const auto status = ctx.m_pAsyncOp->GetStatus();
+                const std::string error = ctx.m_pAsyncOp->GetErrorMessage();
 
                 // Clean up async operation
                 delete ctx.m_pAsyncOp;
                 ctx.m_pAsyncOp = nullptr;
+
+                if (status == AsyncStatus::Failed)
+                {
+                    console::write_line(CONSOLE_FOREGROUND_RED "Error executing action: " + error + CONSOLE_STANDARD);
+                    return 1;
+                }
             }
 
             // If action needs refresh, do it
@@ -336,17 +426,13 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < columns.size(); ++i)
         {
             std::string argName = "--col-" + utils::ToLower(columns[i].BindingName);
-            spdlog::debug("Parsing column filter: argName='{}', column='{}' (index={})",
-                          argName, columns[i].DisplayName, i);
             try
             {
                 std::string filterValue = selectedSubparser->get<std::string>(argName);
-                spdlog::debug("  Found filter value: '{}'", filterValue);
                 if (!filterValue.empty())
                 {
                     columnFilters[static_cast<int>(i)] = filterValue;
-                    spdlog::info("Column filter applied: column={} ({}), filter='{}'",
-                                 i, columns[i].DisplayName, filterValue);
+                    spdlog::info("Column filter applied: column={} ({}), filter='{}'", i, columns[i].DisplayName, filterValue);
                 }
             }
             catch (const std::exception &e)

@@ -48,6 +48,13 @@ namespace pserv
                 return true;
             }
 
+            std::string GetConfirmationText(const std::vector<DataObject *> &selection) const override
+            {
+                const auto *program = selection.empty() ? nullptr : GetProgramInfo(selection[0]);
+                return std::format("Are you sure you want to uninstall '{}'?\n\nThis will launch the program's uninstaller.",
+                    program ? program->GetDisplayName() : std::string{});
+            }
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
                 if (ctx.m_selectedObjects.empty())
@@ -57,23 +64,8 @@ namespace pserv
 
                 if (program->GetUninstallString().empty())
                 {
-                    spdlog::warn("Cannot uninstall '{}': UninstallString is empty.", program->GetDisplayName());
-#ifndef PSERV_CONSOLE_BUILD
-                    MessageBoxA(ctx.m_hWnd, "Uninstall string is empty. Cannot proceed with uninstallation.", "Uninstallation Error", MB_OK | MB_ICONERROR);
-#endif
-                    return;
+                    throw std::runtime_error(std::format("Cannot uninstall '{}': its uninstall string is empty.", program->GetDisplayName()));
                 }
-
-#ifndef PSERV_CONSOLE_BUILD
-                // GUI: Show confirmation dialog
-                std::string confirmMsg =
-                    std::format("Are you sure you want to uninstall '{}'?\n\nThis will launch the program's uninstaller.", program->GetDisplayName());
-                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Uninstallation", MB_YESNO | MB_ICONWARNING) != IDYES)
-                {
-                    return;
-                }
-#endif
-                // Console: --force flag already checked by pservc.cpp
 
                 spdlog::info("Launching uninstaller for '{}': {}", program->GetDisplayName(), program->GetUninstallString());
 
@@ -86,11 +78,7 @@ namespace pserv
 
                 if (!argv || argc == 0)
                 {
-                    spdlog::error("Failed to parse uninstall command: {}", uninstallCmd);
-#ifndef PSERV_CONSOLE_BUILD
-                    MessageBoxA(ctx.m_hWnd, "Failed to parse uninstall command.", "Uninstallation Error", MB_OK | MB_ICONERROR);
-#endif
-                    throw std::runtime_error("Failed to parse uninstall command");
+                    throw std::runtime_error(std::format("Failed to parse uninstall command: {}", uninstallCmd));
                 }
 
                     // First argument is the command, rest are arguments
@@ -116,21 +104,10 @@ namespace pserv
                     }
 
                 // ShellExecuteW will handle elevation if needed and is generally robust
-#ifdef PSERV_CONSOLE_BUILD
-                HINSTANCE result = ShellExecuteW(nullptr, L"open", wCommand.c_str(), wArgs.empty() ? nullptr : wArgs.c_str(), nullptr, SW_SHOWNORMAL);
-#else
                 HINSTANCE result = ShellExecuteW(ctx.m_hWnd, L"open", wCommand.c_str(), wArgs.empty() ? nullptr : wArgs.c_str(), nullptr, SW_SHOWNORMAL);
-#endif
                 if (reinterpret_cast<intptr_t>(result) <= 32)
                 {
                     std::string errorMsg = pserv::utils::GetLastWin32ErrorMessage();
-                    spdlog::error("Failed to launch uninstaller for '{}': {}", program->GetDisplayName(), errorMsg);
-#ifndef PSERV_CONSOLE_BUILD
-                    MessageBoxA(ctx.m_hWnd,
-                        std::format("Failed to launch uninstaller. Error: {}.", errorMsg).c_str(),
-                        "Uninstallation Error",
-                        MB_OK | MB_ICONERROR);
-#endif
                     throw std::runtime_error(std::format("Failed to launch uninstaller: {}", errorMsg));
                 }
                 else
@@ -155,12 +132,10 @@ namespace pserv
         return {&theUninstallProgramAction};
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     std::vector<const DataAction *> CreateAllUninstallerActions()
     {
         // Console: Return all actions regardless of program state
         return {&theUninstallProgramAction};
     }
-#endif
 
 } // namespace pserv

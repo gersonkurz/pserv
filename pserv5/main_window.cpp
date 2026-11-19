@@ -1,5 +1,4 @@
 #include "precomp.h"
-#ifndef PSERV_CONSOLE_BUILD
 #include "Resource.h"
 #include <actions/common_actions.h>
 #include <config/settings.h>
@@ -10,6 +9,7 @@
 #include <main_window.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
+#include <utils/file_dialogs.h>
 #include <core/data_controller.h>
 #include <core/data_object_container.h>
 #include <controllers/services_data_controller.h>
@@ -28,6 +28,7 @@ namespace pserv
     MainWindow::MainWindow()
         : m_lastAutoRefreshTime(std::chrono::steady_clock::now())
     {
+        m_dispatchContext.m_pHost = this;
     }
 
     MainWindow::~MainWindow()
@@ -265,10 +266,10 @@ namespace pserv
                     if (status == AsyncStatus::Completed)
                     {
                         spdlog::info("Async operation completed successfully");
-                        // Refresh controller to show updated state
+                        // Refresh controller to show updated state (deferred: see RunDeferredRefreshes)
                         if (pWindow->m_dispatchContext.m_pController)
                         {
-                            pWindow->m_dispatchContext.m_pController->Refresh();
+                            pWindow->m_deferredRefreshes.insert(pWindow->m_dispatchContext.m_pController);
                         }
                     }
                     else if (status == AsyncStatus::Cancelled)
@@ -281,10 +282,10 @@ namespace pserv
                         spdlog::error("Async operation failed: {}", errorMsg);
                         pWindow->m_errorDialogMessage = errorMsg;
                         pWindow->m_bShowErrorDialog = true;
-                        // Refresh controller to show actual state
+                        // Refresh controller to show actual state (deferred: see RunDeferredRefreshes)
                         if (pWindow->m_dispatchContext.m_pController)
                         {
-                            pWindow->m_dispatchContext.m_pController->Refresh();
+                            pWindow->m_deferredRefreshes.insert(pWindow->m_dispatchContext.m_pController);
                         }
                     }
 
@@ -1102,13 +1103,17 @@ namespace pserv
             {
                 if (action->GetName() == "Delete")
                 {
-                    spdlog::debug("Delete key pressed, executing Delete action on {} selected object(s)",
+                    spdlog::debug("Delete key pressed, requesting Delete action on {} selected object(s)",
                         m_dispatchContext.m_selectedObjects.size());
-                    action->Execute(m_dispatchContext);
+                    RequestAction(action, m_dispatchContext.m_selectedObjects);
                     break;
                 }
             }
         }
+
+        // The one safe point for refreshes requested during the previous frame: no table loop is
+        // running and no borrowed row pointers are alive.
+        RunDeferredRefreshes();
 
         // Create tab bar with placeholder tabs
         if (ImGui::BeginTabBar("MainTabBar", ImGuiTabBarFlags_None))
@@ -1248,16 +1253,9 @@ namespace pserv
         if (m_pThemeDialog)
             m_pThemeDialog->Render();
 
-        // Render environment variable add dialog if active
-        if (m_pCurrentController && m_pCurrentController->GetControllerName() == ENVIRONMENT_VARIABLES_CONTROLLER_NAME)
-        {
-            static_cast<EnvironmentVariablesDataController *>(m_pCurrentController)->RenderAddVariableDialog(m_hWnd);
-        }
-
-        if (m_pCurrentController)
-        {
-            m_pCurrentController->RenderPropertiesDialog();
-        }
+        // Modal for actions that need text input (e.g. "Add User Variable"), then properties dialogs
+        RenderPendingActionDialog();
+        RenderPropertiesDialogs();
 
         // Rendering
         ImGui::Render();
@@ -1700,7 +1698,7 @@ namespace pserv
 
                                 if (ImGui::MenuItem(menuLabel.c_str()))
                                 {
-                                    action->Execute(m_dispatchContext);
+                                    RequestAction(action, m_dispatchContext.m_selectedObjects);
                                 }
 
                                 if (action->IsDestructive())
@@ -2371,7 +2369,8 @@ namespace pserv
             return false;
 
         // Pause if properties dialog has pending edits
-        if (settings.pauseDuringEdits.get() && m_pCurrentController->HasPropertiesDialogWithEdits())
+        const auto dialog = m_propertiesDialogs.find(m_pCurrentController);
+        if (settings.pauseDuringEdits.get() && dialog != m_propertiesDialogs.end() && dialog->second->HasPendingEdits())
         {
             spdlog::debug("Auto-refresh paused: properties dialog has pending edits");
             return false;
@@ -2380,6 +2379,228 @@ namespace pserv
         return true;
     }
 
-} // namespace pserv
+    // ============================================================================
+    // IActionHost and pre-dispatch (confirmation and parameters before Execute)
+    // ============================================================================
 
-#endif // PSERV_CONSOLE_BUILD
+    void MainWindow::ShowMessage(ActionMessageKind kind, std::string_view title, std::string_view text)
+    {
+        // Non-fatal notes and errors alike go to the existing ImGui error/notice dialog.
+        m_errorDialogMessage = std::format("{}: {}", title, text);
+        m_bShowErrorDialog = true;
+    }
+
+    void MainWindow::ShowProperties(DataActionDispatchContext &ctx)
+    {
+        if (ctx.m_selectedObjects.empty() || !ctx.m_pController)
+            return;
+        auto dialog = std::make_unique<DataPropertiesDialog>(ctx.m_pController, ctx.m_selectedObjects, m_hWnd);
+        dialog->m_onAction = [this](const DataAction *pAction, const std::vector<DataObject *> &selection) { RequestAction(pAction, selection); };
+        dialog->Open();
+        m_propertiesDialogs[ctx.m_pController] = std::move(dialog);
+    }
+
+    void MainWindow::RenderPropertiesDialogs()
+    {
+        const auto it = m_propertiesDialogs.find(m_pCurrentController);
+        if (it == m_propertiesDialogs.end())
+            return;
+        if (it->second->Render())
+        {
+            // Edits were applied: refresh to show the updated data
+            m_deferredRefreshes.insert(m_pCurrentController);
+        }
+        if (!it->second->IsOpen())
+        {
+            m_propertiesDialogs.erase(it);
+        }
+    }
+
+    void MainWindow::RequestAction(const DataAction *pAction, const std::vector<DataObject *> &selection)
+    {
+        if (!pAction || !m_pCurrentController || m_pendingAction.pAction)
+            return;
+
+        // 1. Confirmation, before anything else (Execute() never asks)
+        if (pAction->RequiresConfirmation())
+        {
+            const std::string text = pAction->GetConfirmationText(selection);
+            if (MessageBoxA(m_hWnd, text.c_str(), std::format("Confirm: {}", pAction->GetName()).c_str(), MB_YESNO | MB_ICONWARNING) != IDYES)
+                return;
+        }
+
+        // 2. Parameters: file paths through the native save dialog, text through an ImGui modal
+        std::map<std::string, std::string> values;
+        std::vector<ActionParameter> textParameters;
+        for (const auto &param : pAction->GetParameters(m_pCurrentController))
+        {
+            if (param.Kind == ActionParameterKind::SaveFilePath)
+            {
+                std::vector<utils::FileTypeFilter> filters;
+                for (const auto &f : param.FileFilters)
+                {
+                    filters.push_back({utils::Utf8ToWide(f.Name), utils::Utf8ToWide(f.Pattern)});
+                }
+                std::wstring path;
+                if (!utils::SaveFileDialog(m_hWnd, utils::Utf8ToWide(param.Label), utils::Utf8ToWide(param.DefaultValue), filters, 0, path))
+                    return; // cancelled
+                values[param.Name] = utils::WideToUtf8(path);
+            }
+            else
+            {
+                textParameters.push_back(param);
+            }
+        }
+
+        if (textParameters.empty())
+        {
+            ExecuteAction(m_pCurrentController, pAction, selection, std::move(values));
+            return;
+        }
+
+        // Text input is collected by RenderPendingActionDialog(); the selection stays retained until then.
+        for (auto *obj : selection)
+        {
+            obj->Retain(REFCOUNT_DEBUG_ARGS);
+        }
+        m_pendingAction.pAction = pAction;
+        m_pendingAction.pController = m_pCurrentController;
+        m_pendingAction.selection = selection;
+        m_pendingAction.parameters = std::move(textParameters);
+        m_pendingAction.values = std::move(values);
+        m_pendingAction.buffers.assign(m_pendingAction.parameters.size(), {});
+        for (size_t i = 0; i < m_pendingAction.parameters.size(); ++i)
+        {
+            strncpy_s(m_pendingAction.buffers[i].data(), m_pendingAction.buffers[i].size(), m_pendingAction.parameters[i].DefaultValue.c_str(), _TRUNCATE);
+        }
+        m_pendingAction.bOpenRequested = true;
+    }
+
+    void MainWindow::ClearPendingAction()
+    {
+        for (auto *obj : m_pendingAction.selection)
+        {
+            obj->Release(REFCOUNT_DEBUG_ARGS);
+        }
+        m_pendingAction = PendingAction{};
+    }
+
+    void MainWindow::RenderPendingActionDialog()
+    {
+        if (!m_pendingAction.pAction)
+            return;
+
+        const std::string title = std::format("{}###PendingActionDialog", m_pendingAction.pAction->GetName());
+        if (m_pendingAction.bOpenRequested)
+        {
+            ImGui::OpenPopup(title.c_str());
+            m_pendingAction.bOpenRequested = false;
+        }
+
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(450, 0));
+        if (!ImGui::BeginPopupModal(title.c_str(), nullptr, ImGuiWindowFlags_NoResize))
+            return;
+
+        bool bEnterPressed = false;
+        for (size_t i = 0; i < m_pendingAction.parameters.size(); ++i)
+        {
+            ImGui::TextUnformatted(m_pendingAction.parameters[i].Label.c_str());
+            ImGui::SetNextItemWidth(-1);
+            if (i == 0 && ImGui::IsWindowAppearing())
+            {
+                ImGui::SetKeyboardFocusHere();
+            }
+            const std::string id = std::format("##param{}", i);
+            bEnterPressed |= ImGui::InputText(id.c_str(), m_pendingAction.buffers[i].data(), m_pendingAction.buffers[i].size(), ImGuiInputTextFlags_EnterReturnsTrue);
+            ImGui::Spacing();
+        }
+        ImGui::Separator();
+
+        const bool bExecute = ImGui::Button("OK", ImVec2(120, 0)) || bEnterPressed;
+        ImGui::SameLine();
+        const bool bCancel = ImGui::Button("Cancel", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape);
+
+        if (bExecute || bCancel)
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+
+        if (bExecute)
+        {
+            const DataAction *pAction = m_pendingAction.pAction;
+            DataController *pController = m_pendingAction.pController;
+            std::vector<DataObject *> selection = m_pendingAction.selection;
+            auto values = m_pendingAction.values;
+            for (size_t i = 0; i < m_pendingAction.parameters.size(); ++i)
+            {
+                values[m_pendingAction.parameters[i].Name] = m_pendingAction.buffers[i].data();
+            }
+            for (auto *obj : selection)
+            {
+                obj->Retain(REFCOUNT_DEBUG_ARGS); // keep alive across ClearPendingAction()
+            }
+            ClearPendingAction();
+            ExecuteAction(pController, pAction, selection, std::move(values));
+            for (auto *obj : selection)
+            {
+                obj->Release(REFCOUNT_DEBUG_ARGS);
+            }
+        }
+        else if (bCancel)
+        {
+            ClearPendingAction();
+        }
+    }
+
+    void MainWindow::ExecuteAction(DataController *pController, const DataAction *pAction, const std::vector<DataObject *> &selection,
+        std::map<std::string, std::string> values)
+    {
+        // The persistent context: its async operation drives the progress dialog and completion.
+        if (&selection != &m_dispatchContext.m_selectedObjects)
+        {
+            m_dispatchContext.SetSelection(selection);
+        }
+        m_dispatchContext.m_pController = pController;
+        m_dispatchContext.m_hWnd = m_hWnd;
+        m_dispatchContext.m_pHost = this;
+        m_dispatchContext.m_parameters = std::move(values);
+        m_dispatchContext.m_bNeedsRefresh = false;
+
+        try
+        {
+            pAction->Execute(m_dispatchContext);
+        }
+        catch (const std::exception &e)
+        {
+            spdlog::error("Action '{}' failed: {}", pAction->GetName(), e.what());
+            ShowMessage(ActionMessageKind::Error, pAction->GetName(), e.what());
+        }
+
+        // Synchronous actions that changed data (e.g. Delete, Add): refresh at the next safe point.
+        // Asynchronous ones request it on WM_ASYNC_OPERATION_COMPLETE.
+        if (m_dispatchContext.m_bNeedsRefresh && !m_dispatchContext.m_pAsyncOp && pController)
+        {
+            m_deferredRefreshes.insert(pController);
+            m_dispatchContext.m_bNeedsRefresh = false;
+        }
+    }
+
+    void MainWindow::RunDeferredRefreshes()
+    {
+        const auto pending = std::exchange(m_deferredRefreshes, {});
+        for (auto *pController : pending)
+        {
+            try
+            {
+                pController->Refresh();
+            }
+            catch (const std::exception &e)
+            {
+                spdlog::error("Deferred refresh of '{}' failed: {}", pController->GetControllerName(), e.what());
+            }
+        }
+    }
+
+} // namespace pserv

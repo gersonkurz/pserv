@@ -632,15 +632,19 @@ namespace pserv
                 return true;
             }
 
-            void Execute(DataActionDispatchContext &ctx) const override
+            bool RequiresConfirmation() const override
+            {
+                return true;
+            }
+
+            std::string GetConfirmationText(const std::vector<DataObject *> &selection) const override
             {
                 std::vector<std::string> serviceNames;
-                for (const auto *svc : ctx.m_selectedObjects)
+                for (const auto *svc : selection)
                 {
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
-                // Show confirmation dialog
                 std::string confirmMsg;
                 if (serviceNames.size() == 1)
                 {
@@ -653,9 +657,16 @@ namespace pserv
                         "Are you sure you want to delete {} services?\n\nThis will remove all selected services from the system.", serviceNames.size());
                 }
 
-                int result = MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Service Deletion", MB_YESNO | MB_ICONWARNING);
-                if (result != IDYES)
-                    return;
+                return confirmMsg;
+            }
+
+            void Execute(DataActionDispatchContext &ctx) const override
+            {
+                std::vector<std::string> serviceNames;
+                for (const auto *svc : ctx.m_selectedObjects)
+                {
+                    serviceNames.push_back(GetServiceInfo(svc)->GetName());
+                }
 
                 spdlog::info("Starting async operation: Delete {} service(s)", serviceNames.size());
 
@@ -674,6 +685,7 @@ namespace pserv
                         try
                         {
                             size_t total = serviceNames.size();
+                            std::vector<std::string> failed;
                             for (size_t i = 0; i < total; ++i)
                             {
                                 const std::string &serviceName = serviceNames[i];
@@ -681,9 +693,23 @@ namespace pserv
 
                                 op->ReportProgress(progress, std::format("Deleting service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::DeleteService(serviceName);
+                                if (!ServiceManager::DeleteService(serviceName))
+                                {
+                                    failed.push_back(serviceName);
+                                }
                             }
 
+                            if (!failed.empty())
+                            {
+                                // Returning false makes this the operation's error message (AsyncStatus::Failed).
+                                std::string names;
+                                for (const auto &name : failed)
+                                {
+                                    names += (names.empty() ? "" : ", ") + name;
+                                }
+                                op->ReportProgress(1.0f, std::format("Deleted {}/{} service(s); failed: {}", total - failed.size(), total, names));
+                                return false;
+                            }
                             op->ReportProgress(1.0f, std::format("Deleted {} service(s) successfully", total));
                             return true;
                         }
@@ -714,15 +740,19 @@ namespace pserv
                 return true;
             }
 
-            void Execute(DataActionDispatchContext &ctx) const override
+            bool RequiresConfirmation() const override
+            {
+                return true;
+            }
+
+            std::string GetConfirmationText(const std::vector<DataObject *> &selection) const override
             {
                 std::vector<std::string> serviceNames;
-                for (const auto *svc : ctx.m_selectedObjects)
+                for (const auto *svc : selection)
                 {
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
-                // Show confirmation dialog
                 std::string confirmMsg;
                 if (serviceNames.size() == 1)
                 {
@@ -739,9 +769,16 @@ namespace pserv
                         serviceNames.size());
                 }
 
-                int result = MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Registry Key Deletion", MB_YESNO | MB_ICONWARNING);
-                if (result != IDYES)
-                    return;
+                return confirmMsg;
+            }
+
+            void Execute(DataActionDispatchContext &ctx) const override
+            {
+                std::vector<std::string> serviceNames;
+                for (const auto *svc : ctx.m_selectedObjects)
+                {
+                    serviceNames.push_back(GetServiceInfo(svc)->GetName());
+                }
 
                 spdlog::info("Starting async operation: Delete registry keys for {} service(s)", serviceNames.size());
 
@@ -862,7 +899,6 @@ namespace pserv
         return actions;
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     // Console: Return ALL possible actions regardless of state (for command registration)
     std::vector<const DataAction *> CreateAllServiceActions()
     {
@@ -884,6 +920,5 @@ namespace pserv
             &theServiceUninstallAction,
             &theServiceDeleteRegistryKeyAction};
     }
-#endif
 
 } // namespace pserv

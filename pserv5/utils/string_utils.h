@@ -49,15 +49,8 @@ namespace pserv::utils
         return utils::ToLower(key).find(lowerFilter) != std::string::npos;
     }
 
-    /// @brief Copy text to the system clipboard.
-    /// Uses Win32 API in console build, ImGui in GUI build.
-    #ifdef PSERV_CONSOLE_BUILD
+    /// @brief Copy text to the system clipboard (Win32; works in every frontend).
+    /// @throws std::runtime_error if the clipboard cannot be opened or written.
     void CopyToClipboard(const std::string &text);
-    #else
-    inline void CopyToClipboard(const std::string& text)
-    {
-        ImGui::SetClipboardText(text.c_str());
-    }
-    #endif
 
 } // namespace pserv::utils

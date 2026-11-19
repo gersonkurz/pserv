@@ -146,6 +146,17 @@ namespace pserv
                 return true;
             }
 
+            std::string GetConfirmationText(const std::vector<DataObject *> &selection) const override
+            {
+                std::vector<std::string> items;
+                for (auto *obj : selection)
+                {
+                    const auto *item = GetTaskInfo(obj);
+                    items.push_back(item->GetPath());
+                }
+                return FormatConfirmationList("Are you sure you want to delete the following scheduled tasks?", items);
+            }
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
                 std::vector<ScheduledTaskInfo *> tasks;
@@ -154,24 +165,6 @@ namespace pserv
                     tasks.push_back(GetTaskInfo(obj));
                 }
 
-#ifndef PSERV_CONSOLE_BUILD
-                // GUI: Show confirmation dialog
-                std::string confirmMsg = "Are you sure you want to delete the following scheduled tasks?\n\n";
-                for (auto *task : tasks)
-                {
-                    confirmMsg += std::format("{}\n", task->GetPath());
-                    if (tasks.size() >= 10)
-                    {
-                        confirmMsg += "... and more\n";
-                        break;
-                    }
-                }
-                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Deletion", MB_YESNO | MB_ICONWARNING) != IDYES)
-                {
-                    return;
-                }
-#endif
-                // Console: --force flag already checked by pservc.cpp
 
                 int success = 0;
                 for (auto *task : tasks)
@@ -205,17 +198,12 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                spdlog::error("'Copy Name' is not supported in console build");
-                throw std::runtime_error("This action requires clipboard and is not available in console mode");
-#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
                 const auto *task = GetTaskInfo(ctx.m_selectedObjects[0]);
                 utils::CopyToClipboard(task->GetName().c_str());
                 spdlog::info("Copied task name to clipboard: {}", task->GetName());
-#endif
             }
         };
 
@@ -234,17 +222,12 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                spdlog::error("'Copy Path' is not supported in console build");
-                throw std::runtime_error("This action requires clipboard and is not available in console mode");
-#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
                 const auto *task = GetTaskInfo(ctx.m_selectedObjects[0]);
                 utils::CopyToClipboard(task->GetPath().c_str());
                 spdlog::info("Copied task path to clipboard: {}", task->GetPath());
-#endif
             }
         };
 
@@ -267,10 +250,6 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                spdlog::error("'Edit Configuration' is not supported in console build");
-                throw std::runtime_error("This action requires GUI and is not available in console mode");
-#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
@@ -280,7 +259,6 @@ namespace pserv
                 std::wstring command = L"control schedtasks";
                 ShellExecuteW(nullptr, L"open", L"taskschd.msc", nullptr, nullptr, SW_SHOW);
                 spdlog::info("Opened Task Scheduler to edit task: {}", task->GetPath());
-#endif
             }
         };
 
@@ -336,7 +314,6 @@ namespace pserv
         return actions;
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     std::vector<const DataAction *> CreateAllScheduledTaskActions()
     {
         // Console: Return all actions regardless of task state
@@ -352,6 +329,5 @@ namespace pserv
             &theCopyNameAction,
             &theCopyPathAction};
     }
-#endif
 
 } // namespace pserv

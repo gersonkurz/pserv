@@ -5,10 +5,11 @@
 /// of one or more selected DataObjects.
 #pragma once
 
-#ifndef PSERV_CONSOLE_BUILD
 namespace pserv
 {
     class DataController;
+    class DataAction;
+    class DataObject;
 
     /// @brief Record of a pending property edit.
     struct PropertyEdit
@@ -29,7 +30,7 @@ namespace pserv
     class DataPropertiesDialog final
     {
     private:
-        const std::vector<DataObject *> &m_dataObjects;
+        std::vector<DataObject *> m_dataObjects; ///< Owned references (retained in the constructor, released in the destructor).
         DataController *m_controller{nullptr};
         HWND m_hWnd{nullptr};
         int m_activeTabIndex{0};
@@ -40,7 +41,14 @@ namespace pserv
 
     public:
         DataPropertiesDialog(DataController *controller, const std::vector<DataObject *> &dataObjects, HWND hWnd);
-        ~DataPropertiesDialog() = default;
+        ~DataPropertiesDialog();
+
+        DataPropertiesDialog(const DataPropertiesDialog &) = delete;
+        DataPropertiesDialog &operator=(const DataPropertiesDialog &) = delete;
+
+        /// @brief Called when an action button is pressed; the owner confirms, collects parameters
+        /// and executes (the dialog never executes actions itself).
+        std::function<void(const DataAction *, const std::vector<DataObject *> &)> m_onAction;
 
         /// @brief Open the dialog.
         void Open();
@@ -79,5 +87,3 @@ namespace pserv
     };
 
 } // namespace pserv
-
-#endif

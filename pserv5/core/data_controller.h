@@ -6,10 +6,6 @@
 #pragma once
 #include <core/data_object_column.h>
 #include <core/data_object_container.h>
-#ifdef PSERV_CONSOLE_BUILD
-#include <argparse/argparse.hpp>
-#endif
-
 
 namespace pserv
 {
@@ -50,10 +46,6 @@ namespace pserv
         ExportToTxt = -1002,
         CopyAsTxt = -1003
     };
-
-#ifndef PSERV_CONSOLE_BUILD
-    class DataPropertiesDialog;
-#endif
 
     /// @brief Abstract base class for data view controllers.
     ///
@@ -96,19 +88,11 @@ namespace pserv
             : m_controllerName{std::move(controllerName)}
             , m_itemName{std::move(itemName)}
             , m_columns{std::move(columns)}
-#ifndef PSERV_CONSOLE_BUILD
-            , m_pPropertiesDialog{nullptr}
-#endif
         {
             LogColumnPropertyIdMismatches();
         }
 
         virtual ~DataController();
-
-#ifndef PSERV_CONSOLE_BUILD
-        /// @brief Show the properties dialog for selected objects.
-        void ShowPropertiesDialog(DataActionDispatchContext &ctx);
-#endif
 
         /// @name Core Abstract Methods
         /// @{
@@ -128,14 +112,9 @@ namespace pserv
         virtual std::vector<const DataAction *> GetActions(const DataObject *dataObject) const = 0;
         /// @}
 
-#ifdef PSERV_CONSOLE_BUILD
-        /// @brief Register CLI subcommands for this controller.
-        virtual void RegisterArguments(argparse::ArgumentParser &program, std::vector<std::unique_ptr<argparse::ArgumentParser>> &subparsers) const;
-
-        /// @brief Get all possible actions for CLI command registration.
-        /// Override to return complete action set regardless of object state.
+        /// @brief Get every action this controller can offer, regardless of object state.
+        /// Used by the console frontend to register one subcommand per action.
         virtual std::vector<const DataAction *> GetAllActions() const { return {}; }
-#endif
 
         /// @brief Index of the first column whose PropertyId differs from its index, or -1.
         /// Every consumer reads properties by column index, so this must be -1.
@@ -147,15 +126,6 @@ namespace pserv
         /// @brief Check if this controller supports auto-refresh.
         /// @return true if periodic refresh is meaningful for this data type.
         virtual bool SupportsAutoRefresh() const { return true; }
-
-#ifndef PSERV_CONSOLE_BUILD
-        /// @brief Check if properties dialog has unsaved edits.
-        /// Used to pause auto-refresh during editing.
-        bool HasPropertiesDialogWithEdits() const;
-
-        /// @brief Render the properties dialog if open.
-        void RenderPropertiesDialog();
-#endif
 
         /// @brief Sort objects by a column.
         /// @param columnIndex Column index to sort by.
@@ -218,9 +188,5 @@ namespace pserv
         bool m_lastSortAscending{true};                  ///< Last sort direction.
         std::chrono::system_clock::time_point m_lastRefreshTime{}; ///< Time of last successful refresh.
 
-#ifndef PSERV_CONSOLE_BUILD
-    private:
-        DataPropertiesDialog *m_pPropertiesDialog{nullptr}; ///< Active properties dialog.
-#endif
     };
 } // namespace pserv

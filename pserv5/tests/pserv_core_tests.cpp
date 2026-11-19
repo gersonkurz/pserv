@@ -13,6 +13,13 @@
 #include <windows_api/scheduled_task_manager.h>
 #include <utils/logging.h>
 #include <spdlog/sinks/null_sink.h>
+#include <actions/process_actions.h>
+#include <actions/service_actions.h>
+#include <core/async_operation.h>
+#include <core/data_action.h>
+#include <core/data_action_dispatch_context.h>
+#include <models/process_info.h>
+#include <models/service_info.h>
 
 namespace
 {
@@ -97,9 +104,17 @@ namespace
     void TestLogFileHeldByAnotherInstance()
     {
         std::cout << "[log file held by another instance: no sink, no truncation past 10 MB; positive control]\n";
-        const auto dir = std::filesystem::temp_directory_path() / std::format("pserv_core_tests_log_{}", GetCurrentProcessId());
-        std::filesystem::remove_all(dir);
-        std::filesystem::create_directories(dir);
+        // error_code overloads throughout: a sandbox that forbids writing the temp folder must skip
+        // this test with a message, not abort the whole run.
+        std::error_code ec;
+        const auto tempDir = std::filesystem::temp_directory_path(ec);
+        const auto dir = tempDir / std::format("pserv_core_tests_log_{}", GetCurrentProcessId());
+        std::filesystem::remove_all(dir, ec);
+        if (ec || !std::filesystem::create_directories(dir, ec) || ec)
+        {
+            std::cout << std::format("  SKIPPED: cannot create '{}': {}\n", dir.string(), ec.message());
+            return;
+        }
         const auto logPath = dir / "pserv5.log";
         const std::string foreignContent = "{\"msg\":\"other instance's active log\"}\n";
 
@@ -136,8 +151,57 @@ namespace
         }
         spdlog::set_default_logger(previous);
         testLogger.reset(); // closes the file sink
-        std::error_code ec;
         std::filesystem::remove_all(dir, ec);
+    }
+
+    const DataAction *FindAction(const std::vector<const DataAction *> &actions, std::string_view name)
+    {
+        for (const auto *action : actions)
+        {
+            if (action->GetName() == name)
+                return action;
+        }
+        return nullptr;
+    }
+
+    // Runs a real destructive action end to end (Execute + its AsyncOperation, as pservc does)
+    // against a target that cannot exist, so nothing can be harmed. The operation must end Failed
+    // with a message; both actions used to report success after a failure.
+    void ProbeDestructiveActionReportsFailure(const DataAction *action, DataObject *target, std::string_view what)
+    {
+        Check(action != nullptr, std::format("{}: action not found", what));
+        if (!action)
+            return;
+        Check(action->IsDestructive() && action->RequiresConfirmation(), std::format("{}: must be destructive and require confirmation", what));
+        Check(!action->GetConfirmationText({target}).empty(), std::format("{}: empty confirmation text", what));
+
+        DataActionDispatchContext ctx;
+        ctx.SetSelection({target});
+        action->Execute(ctx);
+        Check(ctx.m_pAsyncOp != nullptr, std::format("{}: no async operation started", what));
+        if (!ctx.m_pAsyncOp)
+            return;
+        ctx.m_pAsyncOp->Wait();
+        const auto status = ctx.m_pAsyncOp->GetStatus();
+        const std::string error = ctx.m_pAsyncOp->GetErrorMessage();
+        Check(status == AsyncStatus::Failed, std::format("{}: expected Failed, got status {} (error '{}')", what, static_cast<int>(status), error));
+        Check(!error.empty(), std::format("{}: failed without an error message", what));
+        constexpr const char *STATUS_NAMES[] = {"Pending", "Running", "Completed", "Cancelled", "Failed"};
+        std::cout << std::format("  {}: status {}, error '{}'\n", what, STATUS_NAMES[static_cast<int>(status)], error);
+    }
+
+    void TestDestructiveActionsReportFailure()
+    {
+        std::cout << "[destructive actions report failure for targets that do not exist]\n";
+
+        auto *service = DBG_NEW ServiceInfo{"pserv6-probe-service-that-does-not-exist"};
+        ProbeDestructiveActionReportsFailure(FindAction(CreateAllServiceActions(), "Uninstall Service"), service, "Uninstall Service");
+        service->Release(REFCOUNT_DEBUG_ARGS);
+
+        // PIDs are multiples of 4; 0xFFFFFFFE cannot be a live process.
+        auto *process = DBG_NEW ProcessInfo{0xFFFFFFFE, "pserv6-probe-process.exe"};
+        ProbeDestructiveActionReportsFailure(FindAction(CreateAllProcessActions(), "Terminate Process"), process, "Terminate Process");
+        process->Release(REFCOUNT_DEBUG_ARGS);
     }
 
     void TestContractCheckDetectsMisorder()
@@ -274,6 +338,7 @@ int main()
     std::cout << "pserv_core_tests\n";
 
     TestComErrorPathsDoNotCrash();
+    TestDestructiveActionsReportFailure();
     TestLogFileHeldByAnotherInstance();
     TestContractCheckDetectsMisorder();
 

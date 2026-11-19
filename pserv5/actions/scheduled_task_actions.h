@@ -17,9 +17,7 @@ namespace pserv
     /// Actions include: Run, End (if running), Enable, Disable.
     std::vector<const DataAction *> CreateScheduledTaskActions(ScheduledTaskState state, bool enabled);
 
-#ifdef PSERV_CONSOLE_BUILD
     /// @brief Create all possible scheduled task actions for CLI registration.
     std::vector<const DataAction *> CreateAllScheduledTaskActions();
-#endif
 
 } // namespace pserv

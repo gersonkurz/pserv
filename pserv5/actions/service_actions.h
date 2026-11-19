@@ -18,10 +18,8 @@ namespace pserv
     /// and startup type changes (Auto, Manual, Disabled).
     std::vector<const DataAction *> CreateServiceActions(DWORD currentState, DWORD controlsAccepted);
 
-#ifdef PSERV_CONSOLE_BUILD
     /// @brief Create all possible service actions for CLI registration.
     /// @return Complete action set regardless of service state.
     std::vector<const DataAction *> CreateAllServiceActions();
-#endif
 
 } // namespace pserv

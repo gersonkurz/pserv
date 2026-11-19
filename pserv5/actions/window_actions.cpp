@@ -257,7 +257,6 @@ namespace pserv
         };
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     std::vector<const DataAction *> CreateAllWindowActions()
     {
         // Console: Return all actions regardless of window state
@@ -272,6 +271,5 @@ namespace pserv
             &theWindowCloseAction,
         };
     }
-#endif
 
 } // namespace pserv

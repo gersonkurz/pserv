@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   pserv_core: the shared core (models, controllers, actions, windows_api, config, exporters,
-  utils) as one static library, linked by pservc and pserv_core_tests.
-  Built in the CLI flavour (_CONSOLE => PSERV_CONSOLE_BUILD in precomp.h) for now; every
-  consumer of this library must define _CONSOLE too, because the macro changes class layout.
-  Phase 1 of docs/pserv6-plan.md removes the flavour.
+  utils) as one static library, linked by pservc, the ImGui GUI and pserv_core_tests.
+  Frontend-neutral: no frontend macro changes any type, so every consumer sees the same layout.
 -->
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
@@ -58,13 +56,13 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
-    <ClCompile><PreprocessorDefinitions>_DEBUG;_CONSOLE;_LIB;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+    <ClCompile><PreprocessorDefinitions>_DEBUG;_LIB;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_LIB;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_LIB;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">

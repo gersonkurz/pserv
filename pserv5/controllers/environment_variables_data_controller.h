@@ -34,14 +34,6 @@ namespace pserv
         EditBuffer m_editBuffer;
         DataObject *m_editingObject = nullptr; ///< Object being edited.
 
-#ifndef PSERV_CONSOLE_BUILD
-        // Add variable dialog state
-        bool m_bShowAddDialog{false};
-        EnvironmentVariableScope m_addDialogScope{EnvironmentVariableScope::User};
-        char m_addNameBuffer[256]{};
-        char m_addValueBuffer[4096]{};
-        std::string m_addDialogError;
-#endif
 
     public:
         EnvironmentVariablesDataController();
@@ -50,9 +42,7 @@ namespace pserv
         void Refresh(bool isAutoRefresh = false) override;
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
 
-#ifdef PSERV_CONSOLE_BUILD
         std::vector<const DataAction *> GetAllActions() const override;
-#endif
 
         VisualState GetVisualState(const DataObject *dataObject) const override;
 
@@ -60,15 +50,6 @@ namespace pserv
         bool SetPropertyEdit(DataObject *obj, int columnIndex, const std::string &newValue) override;
         bool CommitPropertyEdits(DataObject *obj) override;
 
-#ifndef PSERV_CONSOLE_BUILD
-        /// @brief Open the Add Variable dialog.
-        /// @param scope Whether to add a User or System variable.
-        void ShowAddVariableDialog(EnvironmentVariableScope scope);
-
-        /// @brief Render the Add Variable dialog if open.
-        /// @param hWnd Parent window handle for message boxes.
-        void RenderAddVariableDialog(HWND hWnd);
-#endif
     };
 
 } // namespace pserv

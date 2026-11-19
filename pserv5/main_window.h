@@ -1,10 +1,12 @@
 #pragma once
 
-#ifndef PSERV_CONSOLE_BUILD
+#include <core/data_action.h>
+#include <core/action_host.h>
 #include <core/data_controller_library.h>
 #include <core/data_action_dispatch_context.h>
 #include <theme/base16_theme.h>
 #include <dialogs/theme_selection_dialog.h>
+#include <dialogs/data_properties_dialog.h>
 
 struct ImGuiTable; // Forward declaration
 
@@ -15,11 +17,17 @@ namespace pserv
         class ConfigBackend;
     }
 
-    class MainWindow
+    /// The ImGui frontend's main window. It is also this frontend's IActionHost: action messages go
+    /// to its error dialog and "Properties..." opens its properties dialog.
+    class MainWindow final : public IActionHost
     {
     public:
         MainWindow();
-        ~MainWindow();
+        ~MainWindow() override;
+
+        // IActionHost
+        void ShowMessage(ActionMessageKind kind, std::string_view title, std::string_view text) override;
+        void ShowProperties(DataActionDispatchContext &ctx) override;
 
         bool Initialize(HINSTANCE hInstance);
         void Show(int nCmdShow);
@@ -109,6 +117,35 @@ namespace pserv
         bool m_bShowErrorDialog{false};
         std::string m_errorDialogMessage;
 
+        // Properties dialogs, one per controller (a view keeps its dialog while another view is shown).
+        std::map<DataController *, std::unique_ptr<DataPropertiesDialog>> m_propertiesDialogs;
+
+        // An action waiting for its text parameters (ImGui modal), collected before dispatch.
+        struct PendingAction
+        {
+            const DataAction *pAction{nullptr};
+            DataController *pController{nullptr}; ///< The view the action was requested in (views can switch while pending).
+            std::vector<DataObject *> selection; ///< Retained while pending.
+            std::vector<ActionParameter> parameters;
+            std::map<std::string, std::string> values;
+            std::vector<std::array<char, 4096>> buffers; ///< ImGui edit buffers, one per Text parameter.
+            bool bOpenRequested{false};
+        } m_pendingAction;
+
+        // Action dispatch: confirmation and parameters are collected here, before Execute().
+        void RequestAction(const DataAction *pAction, const std::vector<DataObject *> &selection);
+        void ExecuteAction(DataController *pController, const DataAction *pAction, const std::vector<DataObject *> &selection,
+            std::map<std::string, std::string> values);
+
+        // Refreshes requested while a table may be rendering (an action run from a row's context
+        // menu, a nested modal loop dispatching WM_ASYNC_OPERATION_COMPLETE) are deferred to the
+        // start of the next frame: a refresh can release objects the table loop still points at.
+        std::set<DataController *> m_deferredRefreshes;
+        void RunDeferredRefreshes();
+        void RenderPendingActionDialog();
+        void ClearPendingAction();
+        void RenderPropertiesDialogs();
+
         // Helper methods
         bool ShouldAutoRefresh() const;
         void SaveWindowState();
@@ -122,4 +159,3 @@ namespace pserv
     };
 
 } // namespace pserv
-#endif

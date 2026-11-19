@@ -78,12 +78,10 @@ namespace pserv
         return CreateProcessActions();
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     std::vector<const DataAction *> ProcessesDataController::GetAllActions() const
     {
         return CreateAllProcessActions();
     }
-#endif
 
     VisualState ProcessesDataController::GetVisualState(const DataObject *dataObject) const
     {

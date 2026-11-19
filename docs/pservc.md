@@ -463,7 +463,17 @@ pservc environment-variables --filter PATH
 
 | Action | Description | Destructive |
 |--------|-------------|-------------|
+| `add-user-variable` | Create a user variable (`--name`, `--value`; no target) | No |
+| `add-system-variable` | Create a system variable (`--name`, `--value`; no target; needs administrator) | No |
+| `copy-name`, `copy-value` | Copy a variable's name or value to the clipboard | No |
+| `open-in-registry-editor` | Open the variable's key in Regedit | No |
 | `delete` | Delete an environment variable | Yes |
+
+```bash
+# Create, then delete, a user variable
+pservc environment-variables add-user-variable --name MY_VAR --value "some value"
+pservc environment-variables delete MY_VAR --force
+```
 
 ---
 
@@ -522,7 +532,9 @@ pservc processes --filter chrome --format json
 
 ## Notes
 
-- **Destructive actions** require the `--force` flag to confirm intent
+- **Destructive actions**, and actions that ask for confirmation in the GUI, require the `--force` flag to confirm intent. It may be given before or after the targets.
+- **Actions with parameters** take them as required options (e.g. `--name`, `--value`); such actions need no target.
+- **Copy actions** write to the Windows clipboard, and **Open ...** actions launch Explorer, Regedit or Task Scheduler, exactly as in the GUI.
 - **Target names** are matched case-insensitively against the first column (usually Name)
 - **Multiple targets** can be specified for actions: `pservc services start Svc1 Svc2 Svc3`
 - **Administrator privileges** may be required for certain operations (starting/stopping services, terminating processes, etc.)

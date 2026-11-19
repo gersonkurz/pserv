@@ -16,9 +16,7 @@ namespace pserv
     /// Bring to Front, Send to Back.
     std::vector<const DataAction *> CreateWindowActions();
 
-#ifdef PSERV_CONSOLE_BUILD
     /// @brief Create all possible window actions for CLI registration.
     std::vector<const DataAction *> CreateAllWindowActions();
-#endif
 
 } // namespace pserv

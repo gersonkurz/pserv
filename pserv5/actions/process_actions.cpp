@@ -42,11 +42,6 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                // Console: Not supported (requires GUI)
-                spdlog::error("'Open File Location' is not supported in console build");
-                throw std::runtime_error("This action requires GUI and is not available in console mode");
-#else
                 for (const auto *obj : ctx.m_selectedObjects)
                 {
                     const auto *proc = GetProcessInfo(obj);
@@ -63,7 +58,6 @@ namespace pserv
                         }
                     }
                 }
-#endif
             }
         };
 
@@ -139,74 +133,55 @@ namespace pserv
                 return true;
             }
 
+            std::string GetConfirmationText(const std::vector<DataObject *> &selection) const override
+            {
+                std::vector<std::string> items;
+                for (const auto *obj : selection)
+                {
+                    const auto *proc = GetProcessInfo(obj);
+                    items.push_back(std::format("{} (PID: {})", proc->GetName(), proc->GetPid()));
+                }
+                return FormatConfirmationList("Are you sure you want to terminate the following processes?", items);
+            }
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
                 std::vector<DWORD> pids;
-
                 for (const auto *obj : ctx.m_selectedObjects)
                 {
-                    const auto *proc = GetProcessInfo(obj);
-                    pids.push_back(proc->GetPid());
+                    pids.push_back(GetProcessInfo(obj)->GetPid());
                 }
 
-#ifdef PSERV_CONSOLE_BUILD
-                // Console: --force flag already checked by pservc.cpp
-                // Terminate processes synchronously
-                size_t success = 0;
-                for (DWORD pid : pids)
+                // Same pattern as the service actions, in every frontend: the GUI shows progress,
+                // the console waits for ctx.m_pAsyncOp after Execute() returns.
+                if (ctx.m_pAsyncOp)
                 {
-                    if (ProcessManager::TerminateProcessById(pid))
-                    {
-                        success++;
-                    }
-                }
-                spdlog::info("Terminated {}/{} processes", success, pids.size());
-#else
-                // GUI: Show confirmation dialog
-                std::string confirmMsg = "Are you sure you want to terminate the following processes?\n\n";
-                for (const auto *obj : ctx.m_selectedObjects)
-                {
-                    const auto *proc = GetProcessInfo(obj);
-                    confirmMsg += std::format("{} (PID: {})\n", proc->GetName(), proc->GetPid());
-                    if (pids.size() >= 10)
-                    {
-                        confirmMsg += "... and more\n";
-                        break;
-                    }
+                    ctx.m_pAsyncOp->Wait();
+                    delete ctx.m_pAsyncOp;
+                    ctx.m_pAsyncOp = nullptr;
                 }
 
-                if (MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Termination", MB_YESNO | MB_ICONWARNING) == IDYES)
-                {
+                ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
+                ctx.m_bShowProgressDialog = true;
 
-                    // Async termination
-                    if (ctx.m_pAsyncOp)
+                ctx.m_pAsyncOp->Start(ctx.m_hWnd,
+                    [pids](AsyncOperation *op) -> bool
                     {
-                        ctx.m_pAsyncOp->Wait();
-                        delete ctx.m_pAsyncOp;
-                        ctx.m_pAsyncOp = nullptr;
-                    }
-
-                    ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
-                    ctx.m_bShowProgressDialog = true;
-
-                    ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                        [pids](AsyncOperation *op) -> bool
+                        size_t total = pids.size();
+                        size_t success = 0;
+                        for (size_t i = 0; i < total; ++i)
                         {
-                            size_t total = pids.size();
-                            size_t success = 0;
-                            for (size_t i = 0; i < total; ++i)
+                            op->ReportProgress(static_cast<float>(i) / total, std::format("Terminating process PID {}...", pids[i]));
+                            if (ProcessManager::TerminateProcessById(pids[i]))
                             {
-                                op->ReportProgress(static_cast<float>(i) / total, std::format("Terminating process PID {}...", pids[i]));
-                                if (ProcessManager::TerminateProcessById(pids[i]))
-                                {
-                                    success++;
-                                }
+                                success++;
                             }
-                            op->ReportProgress(1.0f, std::format("Terminated {}/{} processes", success, total));
-                            return true;
-                        });
-                }
-#endif
+                        }
+                        op->ReportProgress(1.0f, std::format("Terminated {}/{} processes", success, total));
+                        spdlog::info("Terminated {}/{} processes", success, total);
+                        // Any failure fails the operation; the message above becomes its error text.
+                        return success == total;
+                    });
             }
         };
 
@@ -239,7 +214,6 @@ namespace pserv
             &theProcessTerminateAction};
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     std::vector<const DataAction *> CreateAllProcessActions()
     {
         // Console: Return all actions regardless of process state
@@ -255,6 +229,5 @@ namespace pserv
             &theDataActionSeparator,
             &theProcessTerminateAction};
     }
-#endif
 
 } // namespace pserv

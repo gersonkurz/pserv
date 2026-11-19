@@ -3,14 +3,13 @@
 ///
 /// Defines the DataAction base class and related types for implementing
 /// context menu and properties dialog actions on data items.
+///
+/// Frontend contract: everything that needs the user happens in the frontend **before**
+/// Execute() is called - confirmation (RequiresConfirmation / GetConfirmationText) and input
+/// (GetParameters). Execute() never prompts; it reads the answers from the dispatch context and
+/// reports problems through the context's IActionHost. This keeps the core free of any UI
+/// toolkit, so one compiled core serves the console, ImGui and WinUI frontends alike.
 #pragma once
-
-#ifdef PSERV_CONSOLE_BUILD
-namespace argparse
-{
-    class ArgumentParser;
-}
-#endif
 
 namespace pserv
 {
@@ -29,28 +28,42 @@ namespace pserv
         Both = ContextMenu | PropertiesDialog ///< Show in both locations.
     };
 
+    /// @brief Kind of input an action parameter asks for.
+    enum class ActionParameterKind
+    {
+        Text,         ///< Single-line text.
+        SaveFilePath  ///< Path of a file to write; GUI frontends offer a save-file dialog.
+    };
+
+    /// @brief One file-type filter for a SaveFilePath parameter (e.g. {"JSON Files", "*.json"}).
+    struct ActionFileFilter
+    {
+        std::string Name;
+        std::string Pattern;
+    };
+
+    /// @brief Input an action needs from the user before it can execute.
+    ///
+    /// The frontend collects a value for every parameter and stores it in
+    /// DataActionDispatchContext::m_parameters under Name. The console frontend maps each
+    /// parameter to a `--<Name>` argument.
+    struct ActionParameter
+    {
+        std::string Name;          ///< Key in the context, and the CLI option name (without "--").
+        std::string Label;         ///< Prompt shown in GUI frontends.
+        ActionParameterKind Kind{ActionParameterKind::Text};
+        std::string DefaultValue;  ///< Pre-filled value (e.g. a suggested file name).
+        std::vector<ActionFileFilter> FileFilters; ///< SaveFilePath only.
+    };
+
     /// @brief Abstract base class for all data actions.
     ///
     /// Actions are self-contained command objects that encapsulate:
     /// - Identity: Name for display in menus/buttons
     /// - Visibility: Where the action appears in the UI
     /// - Availability: Whether the action applies to a given object
+    /// - Input and confirmation: declared, collected by the frontend before Execute()
     /// - Execution: The actual operation to perform
-    /// - UI hints: Styling and confirmation requirements
-    ///
-    /// @par Implementing a Custom Action:
-    /// @code
-    /// class MyAction : public DataAction {
-    /// public:
-    ///     MyAction() : DataAction{"Do Thing", ActionVisibility::Both} {}
-    ///     bool IsAvailableFor(const DataObject* obj) const override {
-    ///         return obj != nullptr;  // Available for any object
-    ///     }
-    ///     void Execute(DataActionDispatchContext& ctx) const override {
-    ///         // Perform the action
-    ///     }
-    /// };
-    /// @endcode
     class DataAction
     {
     private:
@@ -59,13 +72,15 @@ namespace pserv
 
     protected:
         /// @brief Construct an action with a name and visibility.
-        /// @param name Display name shown in menus and buttons.
-        /// @param visibility Where the action should appear in the UI.
         DataAction(std::string name, ActionVisibility visibility)
             : m_name{std::move(name)},
               m_visibility{visibility}
         {
         }
+
+        /// @brief Build a confirmation text: a headline, then one line per item, at most
+        /// maxItems lines followed by "... and N more".
+        static std::string FormatConfirmationList(std::string_view headline, const std::vector<std::string> &items, size_t maxItems = 10);
 
     public:
         virtual ~DataAction() = default;
@@ -78,33 +93,32 @@ namespace pserv
 
         /// @brief Check if this action is available for a specific object.
         /// @param object The DataObject to check (may be nullptr for global actions).
-        /// @return true if the action can be executed on this object.
         virtual bool IsAvailableFor(const DataObject *object) const = 0;
 
         /// @brief Check if this is a menu separator pseudo-action.
         virtual bool IsSeparator() const { return false; }
 
-        /// @brief Execute the action.
-        /// @param context Provides access to selected objects, controller, and UI handles.
+        /// @brief Execute the action. Never prompts: confirmation and parameters were collected
+        /// by the frontend beforehand (see the file comment).
         virtual void Execute(DataActionDispatchContext &context) const = 0;
 
-#ifdef PSERV_CONSOLE_BUILD
-        /// @brief Register custom command-line arguments for this action.
-        /// @param cmd The ArgumentParser for this action's subcommand.
-        /// Override to add action-specific CLI parameters (e.g., --output for export).
-        virtual void RegisterArguments(argparse::ArgumentParser &cmd) const
-        {
-            // Default: no custom arguments
-        }
-#endif
-
-        /// @brief Check if this action is destructive (delete, stop, etc.).
-        /// @return true to render button with warning color.
+        /// @brief Check if this action is destructive (delete, stop, etc.); styled as a warning.
         virtual bool IsDestructive() const { return false; }
 
-        /// @brief Check if this action requires user confirmation.
-        /// @return true to show a confirmation dialog before execution.
+        /// @brief Check if the frontend must confirm with the user before Execute().
+        /// The console frontend requires --force instead.
         virtual bool RequiresConfirmation() const { return false; }
+
+        /// @brief The question to confirm, for the given selection. Only called when
+        /// RequiresConfirmation() is true.
+        virtual std::string GetConfirmationText(const std::vector<DataObject *> &selection) const
+        {
+            return std::format("Are you sure you want to run '{}' on {} item(s)?", m_name, selection.size());
+        }
+
+        /// @brief Input the frontend must collect before Execute(); empty by default.
+        /// @param controller The controller the action runs on (for context-dependent defaults).
+        virtual std::vector<ActionParameter> GetParameters(const DataController *controller) const { return {}; }
     };
 
     /// @brief Pseudo-action representing a visual separator in menus.
@@ -123,11 +137,10 @@ namespace pserv
         void Execute(DataActionDispatchContext &) const override { }
     };
 
-#ifndef PSERV_CONSOLE_BUILD
     /// @brief Built-in action to open the properties dialog for an object.
     ///
-    /// This action is typically added as the last item in context menus
-    /// and triggers the properties dialog for viewing/editing object details.
+    /// Execute() asks the frontend's host to show its properties UI for the selection;
+    /// frontends without one (the console) never list this action.
     class DataPropertiesAction final : public DataAction
     {
     public:
@@ -139,14 +152,11 @@ namespace pserv
         bool IsAvailableFor(const DataObject *) const override { return true; }
         void Execute(DataActionDispatchContext &ctx) const override;
     };
-#endif
 
     /// @brief Global separator instance for reuse across controllers.
     extern DataActionSeparator theDataActionSeparator;
 
-#ifndef PSERV_CONSOLE_BUILD
     /// @brief Global properties action instance for reuse across controllers.
     extern DataPropertiesAction theDataPropertiesAction;
-#endif
 
 } // namespace pserv

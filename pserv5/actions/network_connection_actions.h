@@ -17,9 +17,7 @@ namespace pserv
     /// Actions include: Close Connection (TCP only, established connections).
     std::vector<const DataAction *> CreateNetworkConnectionActions(NetworkProtocol protocol, TcpState state);
 
-#ifdef PSERV_CONSOLE_BUILD
     /// @brief Create all possible network connection actions for CLI registration.
     std::vector<const DataAction *> CreateAllNetworkConnectionActions();
-#endif
 
 } // namespace pserv

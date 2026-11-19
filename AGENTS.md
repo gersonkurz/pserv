@@ -35,7 +35,7 @@ Run recipes from the repository root with `just` in a **Visual Studio 2026 Devel
 - `just run-cli services` — build Debug and list services through the CLI.
 - `just --list` — current public recipes.
 
-The `justfile` drives MSBuild against `pserv5/pserv5.slnx`, containing `pserv5/pserv5.vcxproj` (GUI), `pserv5/pservc/pservc.vcxproj` (CLI), `pserv5/pserv_core/pserv_core.vcxproj` (the shared core as a static library, linked by the CLI and the tests) and `pserv5/tests/pserv_core_tests.vcxproj`. Build the solution: project paths depend on `$(SolutionDir)`. Output is `pserv5/bin/<Platform>/<Configuration>/`; the x86 solution platform uses `Win32` as the output directory name. Intermediates live under `pserv5/temp/`. Native recipes select ARM64 on ARM64 hosts and x64 otherwise.
+The `justfile` drives MSBuild against `pserv5/pserv5.slnx`, containing `pserv5/pserv5.vcxproj` (GUI), `pserv5/pservc/pservc.vcxproj` (CLI), `pserv5/pserv_core/pserv_core.vcxproj` (the shared core as a static library, linked by the GUI, the CLI and the tests) and `pserv5/tests/pserv_core_tests.vcxproj`. Build the solution: project paths depend on `$(SolutionDir)`. Output is `pserv5/bin/<Platform>/<Configuration>/`; the x86 solution platform uses `Win32` as the output directory name. Intermediates live under `pserv5/temp/`. Native recipes select ARM64 on ARM64 hosts and x64 otherwise.
 
 Verify changes compile before handing off, and run `just test`: it builds Debug and runs `pserv_core_tests`, which checks every controller against live system data (column/property-id contract, typed values fit column types) and exits non-zero on any failure. It does not exercise the GUI or actions. For behavior changes, exercise the affected GUI or CLI path in addition to building and report what was actually checked. CLI help and listing commands provide read-only smoke checks, for example `pserv5/bin/x64/Debug/pservc.exe --help` (adjust for the built architecture). Build success alone does not verify UI behavior.
 
@@ -64,7 +64,7 @@ Paths below are relative to `pserv5/` unless stated otherwise.
 
 ## Architecture and Change Conventions
 
-- Keep shared behavior in the model/controller/action and Windows API layers so both frontends benefit. GUI-only code is excluded from the CLI with `PSERV_CONSOLE_BUILD`; do not introduce unconditional ImGui dependencies into shared code.
+- Keep shared behavior in the model/controller/action and Windows API layers so both frontends benefit. The core (`pserv_core`) is compiled once for every frontend and must not depend on a UI toolkit or a frontend macro: actions never prompt (confirmation via `RequiresConfirmation`/`GetConfirmationText`, input via `GetParameters`, collected by the frontend before `Execute`), report non-fatal notes through `IActionHost` and throw on failure. `PSERV_IMGUI_FRONTEND` only adds ImGui/D3D headers to the GUI's precompiled header; do not introduce ImGui dependencies into shared code.
 - `DataObject` supplies display properties, typed properties for sorting, filtering, and stable IDs. Keep column metadata and both property representations consistent when adding or changing columns.
 - `DataController` defines columns and actions and refreshes its objects. `DataAction` executes through `DataActionDispatchContext`; preserve availability, destructive-action, and confirmation semantics in both frontends.
 - Objects use intrusive `Retain`/`Release` reference counting. `DataObjectContainer::Append` takes the incoming reference; it does not retain it again. `GetByStableId` returns a borrowed pointer and marks the object seen in the current refresh generation. Preserve the `StartRefresh`/`FinishRefresh` lifecycle and check ownership when selections or async work outlive a refresh.
@@ -78,7 +78,7 @@ When adding a view:
 1. Add the model, controller, Windows API wrapper, and actions as needed, following a comparable existing view.
 2. Register the controller in `core/data_controller_library.cpp`; add its name constant in `core/data_controller.h`.
 3. Add the per-view settings in `config/settings.h` and the lookup in `config/settings.cpp`.
-4. Add source/header entries to the relevant `.vcxproj` files and maintain their `.filters` files. Shared sources go into `pserv_core/pserv_core.vcxproj` (used by the CLI and the tests) and, until the GUI links that library too, into `pserv5.vcxproj`; they are not discovered automatically. List a controller's columns in its model's property-id order (`DataObjectColumn` takes the property enum first); `just test` fails otherwise.
+4. Add source/header entries to the relevant `.vcxproj` files and maintain their `.filters` files. Shared sources go into `pserv_core/pserv_core.vcxproj`, which the GUI, the CLI and the tests link; they are not discovered automatically. List a controller's columns in its model's property-id order (`DataObjectColumn` takes the property enum first); `just test` fails otherwise.
 5. Check CLI argument/action registration and behavior. The CLI enumerates the shared controller library, but frontend-specific action handling may still be required.
 6. Update the relevant user manual when behavior or commands change.
 

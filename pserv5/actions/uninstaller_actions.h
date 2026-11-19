@@ -15,9 +15,7 @@ namespace pserv
     /// Actions include: Uninstall, Modify, Open Registry Key.
     std::vector<const DataAction *> CreateUninstallerActions();
 
-#ifdef PSERV_CONSOLE_BUILD
     /// @brief Create all possible uninstaller actions for CLI registration.
     std::vector<const DataAction *> CreateAllUninstallerActions();
-#endif
 
 } // namespace pserv

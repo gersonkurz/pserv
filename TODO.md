@@ -26,3 +26,15 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 ## Deferred checks (owner-accepted)
 
 8. **Execute the MSI major upgrade from an installed pserv5 5.2.0 to a 6.x package.** The 6.0.0 version stamp (2026-11-19) keeps the per-arch UpgradeCode `{672E9734-DC0A-4FD9-B25E-8544C621B230}`, and Windows Installer lists the installed 5.2.0 ARM64 product as related to it. So the lineage is as intended, but no upgrade has been executed. The owner declined running it on the dev box ("Do not update the install … focus on the actual app functionality at this point", 2026-11-19). Covered by the plan's Phase 3/7 installer exit criteria at the latest.
+
+9. **Execute the ImGui GUI checklist for the Phase 1 dispatch changes:** properties edit, "Add User Variable" (new parameter modal), copy, "Export to JSON..." (save dialog collected before dispatch), and confirm-delete of a throwaway variable. Phase 1 changed how the ImGui frontend dispatches actions (pre-dispatch confirmation and parameters, `IActionHost`, the properties dialog owning its selection). It is verified to build and link only; the interactive paths are unexecuted. The owner chose to defer this (2026-11-19: "Defer it"), because the ImGui frontend is deleted in Phase 7 and the effort goes to the WinUI app.
+
+## From the pserv6 Phase 1 review (Codex, 2026-11-19, thread 01a1f3ef)
+
+10. **[task] Pre-existing process termination reports success after failure.** [process_actions.cpp:175](C:/Projects/pserv-claude/pserv5/actions/process_actions.cpp:175) counts failed `TerminateProcessById` calls but unconditionally returns `true` at line 182. Consequently, even zero successful terminations produce `AsyncStatus::Completed` and CLI success. Both previous frontend implementations already misreported failures, so correcting this is deferrable from the frontend-separation task. Propagate partial/total failure and verify it with a controlled failure case.
+
+    **Resolved (Phase 1, 2026-11-19):** the terminate work function now returns `success == total`, so any failure ends the operation `Failed` with `Terminated x/y processes` as its error. Verified by `TestDestructiveActionsReportFailure` (PID 0xFFFFFFFE → status Failed); with the old `return true` temporarily restored, the same test fails (status Completed). The same fix was applied to "Uninstall Service", which ignored `DeleteService`'s result.
+
+## Found while executing the Phase 1 CLI matrix (2026-11-19)
+
+11. **Pre-existing: "Open in Explorer" fails for drivers and reports success.** Device (driver) binary paths are stored as `\SystemRoot\System32\drivers\<name>.sys`; the services/devices "Open in Explorer" action passes the folder unexpanded to `ShellExecuteW`, which fails with ERROR_FILE_NOT_FOUND (`service_actions.cpp:570`). The failure is only logged, so `pservc devices open-in-explorer 1394ohci` exits 0. Expand `\SystemRoot` (and `\??\` prefixes), and report a launch failure to the user.

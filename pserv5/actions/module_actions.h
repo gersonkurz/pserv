@@ -15,9 +15,7 @@ namespace pserv
     /// Actions include: Open File Location, Copy Path.
     std::vector<const DataAction *> CreateModuleActions();
 
-#ifdef PSERV_CONSOLE_BUILD
     /// @brief Create all possible module actions for CLI registration.
     std::vector<const DataAction *> CreateAllModuleActions();
-#endif
 
 } // namespace pserv

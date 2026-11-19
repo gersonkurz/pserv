@@ -105,7 +105,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;PSERV_IMGUI_FRONTEND;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -129,7 +129,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;PSERV_IMGUI_FRONTEND;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -151,7 +151,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;PSERV_IMGUI_FRONTEND;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -175,7 +175,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;PSERV_IMGUI_FRONTEND;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -197,7 +197,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;PSERV_IMGUI_FRONTEND;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -221,7 +221,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;PSERV_IMGUI_FRONTEND;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)..\imgui;$(SolutionDir)..\imgui\backends;$(SolutionDir)..\spdlog\include;$(SolutionDir)..\tomlplusplus\include;$(SolutionDir)..\rapidjson\include;$(SolutionDir)..\wil\include;$(SolutionDir)..\fkYAML\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -322,35 +322,9 @@
     <ClInclude Include="..\imgui\backends\imgui_impl_dx11.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="actions\common_actions.cpp" />
-    <ClCompile Include="actions\environment_variable_actions.cpp" />
-    <ClCompile Include="actions\module_actions.cpp" />
-    <ClCompile Include="actions\network_connection_actions.cpp" />
-    <ClCompile Include="actions\process_actions.cpp" />
-    <ClCompile Include="actions\scheduled_task_actions.cpp" />
-    <ClCompile Include="actions\service_actions.cpp" />
-    <ClCompile Include="actions\startup_program_actions.cpp" />
-    <ClCompile Include="actions\uninstaller_actions.cpp" />
-    <ClCompile Include="actions\window_actions.cpp" />
-    <ClCompile Include="controllers\environment_variables_data_controller.cpp" />
-    <ClCompile Include="controllers\network_connections_data_controller.cpp" />
-    <ClCompile Include="controllers\scheduled_tasks_data_controller.cpp" />
-    <ClCompile Include="controllers\startup_programs_data_controller.cpp" />
-    <ClCompile Include="core\data_action.cpp" />
-    <ClCompile Include="core\data_action_dispatch_context.cpp" />
-    <ClCompile Include="core\data_controller.cpp" />
-    <ClCompile Include="core\data_controller_library.cpp" />
-    <ClCompile Include="core\data_object_container.cpp" />
-    <ClCompile Include="core\exporters\exporter_registry.cpp" />
-    <ClCompile Include="core\exporters\json_exporter.cpp" />
-    <ClCompile Include="core\exporters\plaintext_exporter.cpp" />
     <ClCompile Include="dialogs\data_properties_dialog.cpp" />
     <ClCompile Include="dialogs\theme_selection_dialog.cpp" />
     <ClCompile Include="theme\base16_theme.cpp" />
-    <ClCompile Include="models\environment_variable_info.cpp" />
-    <ClCompile Include="models\network_connection_info.cpp" />
-    <ClCompile Include="models\scheduled_task_info.cpp" />
-    <ClCompile Include="models\startup_program_info.cpp" />
     <ClCompile Include="precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -362,29 +336,6 @@
     <ClCompile Include="pserv5.cpp" />
     <ClCompile Include="main_window.cpp" />
     <ClCompile Include="utils\file_dialogs.cpp" />
-    <ClCompile Include="utils\logging.cpp" />
-    <ClCompile Include="core\async_operation.cpp" />
-    <ClCompile Include="controllers\services_data_controller.cpp" />
-    <ClCompile Include="models\service_info.cpp" />
-    <ClCompile Include="windows_api\environment_variable_manager.cpp" />
-    <ClCompile Include="windows_api\network_connection_manager.cpp" />
-    <ClCompile Include="windows_api\scheduled_task_manager.cpp" />
-    <ClCompile Include="windows_api\service_manager.cpp" />
-    <ClCompile Include="models\process_info.cpp" />
-    <ClCompile Include="windows_api\process_manager.cpp" />
-    <ClCompile Include="controllers\processes_data_controller.cpp" />
-    <ClCompile Include="controllers\windows_data_controller.cpp" />
-    <ClCompile Include="models\window_info.cpp" />
-    <ClCompile Include="windows_api\startup_program_manager.cpp" />
-    <ClCompile Include="windows_api\window_manager.cpp" />
-    <ClCompile Include="models\module_info.cpp" />
-    <ClCompile Include="windows_api\module_manager.cpp" />
-    <ClCompile Include="controllers\modules_data_controller.cpp" />
-    <ClCompile Include="models\installed_program_info.cpp" />
-    <ClCompile Include="windows_api\uninstaller_manager.cpp" />
-    <ClCompile Include="controllers\uninstaller_data_controller.cpp" />
-    <ClCompile Include="config\section.cpp" />
-    <ClCompile Include="config\settings.cpp" />
     <ClCompile Include="..\imgui\imgui.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -450,6 +401,11 @@
     <None Include="..\GEMINI.md" />
     <None Include="..\instructions.md" />
     <None Include="..\README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="pserv_core\pserv_core.vcxproj">
+      <Project>{3b7c2e41-9d5a-4f68-8e21-6a0c4d9b7f13}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

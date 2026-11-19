@@ -37,10 +37,6 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                spdlog::error("'Copy Local Endpoint' is not supported in console build");
-                throw std::runtime_error("This action requires clipboard and is not available in console mode");
-#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
@@ -48,7 +44,6 @@ namespace pserv
                 std::string endpoint = conn->GetLocalEndpoint();
                 utils::CopyToClipboard(endpoint.c_str());
                 spdlog::info("Copied local endpoint to clipboard: {}", endpoint);
-#endif
             }
         };
 
@@ -70,10 +65,6 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                spdlog::error("'Copy Remote Endpoint' is not supported in console build");
-                throw std::runtime_error("This action requires clipboard and is not available in console mode");
-#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
@@ -81,7 +72,6 @@ namespace pserv
                 std::string endpoint = conn->GetRemoteEndpoint();
                 utils::CopyToClipboard(endpoint.c_str());
                 spdlog::info("Copied remote endpoint to clipboard: {}", endpoint);
-#endif
             }
         };
 
@@ -100,17 +90,12 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifdef PSERV_CONSOLE_BUILD
-                spdlog::error("'Copy Process Name' is not supported in console build");
-                throw std::runtime_error("This action requires clipboard and is not available in console mode");
-#else
                 if (ctx.m_selectedObjects.empty())
                     return;
 
                 const auto *conn = GetConnectionInfo(ctx.m_selectedObjects[0]);
                 utils::CopyToClipboard(conn->GetProcessName().c_str());
                 spdlog::info("Copied process name to clipboard: {}", conn->GetProcessName());
-#endif
             }
         };
 
@@ -149,13 +134,8 @@ namespace pserv
                     // Check for IPv6 - not supported
                     if (conn->GetProtocol() == NetworkProtocol::TCPv6)
                     {
-                        spdlog::warn("Cannot close TCPv6 connection - not supported by Windows API");
-#ifndef PSERV_CONSOLE_BUILD
-                        MessageBoxA(ctx.m_hWnd,
-                            "Closing IPv6 TCP connections is not supported by the Windows API.",
-                            "Not Supported",
-                            MB_OK | MB_ICONWARNING);
-#endif
+                        ctx.ShowMessage(ActionMessageKind::Warning, "Not Supported",
+                            "Closing IPv6 TCP connections is not supported by the Windows API; the connection was skipped.");
                         continue;
                     }
 
@@ -165,11 +145,7 @@ namespace pserv
                             "This operation requires administrator privileges.",
                             conn->GetLocalAddress(), conn->GetLocalPort(),
                             conn->GetRemoteAddress(), conn->GetRemotePort());
-                        spdlog::error("{}", errorMsg);
-#ifndef PSERV_CONSOLE_BUILD
-                        MessageBoxA(ctx.m_hWnd, errorMsg.c_str(), "Error", MB_OK | MB_ICONERROR);
-#endif
-                        throw std::runtime_error(errorMsg);
+                        throw std::runtime_error(errorMsg); // reported by the frontend
                     }
                 }
                 ctx.m_bNeedsRefresh = true;
@@ -215,7 +191,6 @@ namespace pserv
         return actions;
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     std::vector<const DataAction *> CreateAllNetworkConnectionActions()
     {
         // Console: Return all actions regardless of connection state
@@ -227,6 +202,5 @@ namespace pserv
             &theDataActionSeparator,
             &theCloseAction};
     }
-#endif
 
 } // namespace pserv

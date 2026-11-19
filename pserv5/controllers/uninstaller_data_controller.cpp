@@ -50,12 +50,10 @@ namespace pserv
         return CreateUninstallerActions();
     }
 
-#ifdef PSERV_CONSOLE_BUILD
     std::vector<const DataAction *> UninstallerDataController::GetAllActions() const
     {
         return CreateAllUninstallerActions();
     }
-#endif
 
     VisualState UninstallerDataController::GetVisualState(const DataObject *dataObject) const
     {

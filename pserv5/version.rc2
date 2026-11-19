@@ -4,7 +4,7 @@
 #include "version.h"
 #include <winver.h>
 
-#ifdef PSERV_CONSOLE_BUILD
+#ifdef _CONSOLE
 #define VER_FILEDESCRIPTION_STR PSERV_FILE_DESCRIPTION_CONSOLE
 #define VER_INTERNALNAME_STR "pservc"
 #define VER_ORIGINALFILENAME_STR "pservc.exe"

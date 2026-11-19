@@ -6,7 +6,6 @@
 
 namespace pserv::utils
 {   
-#ifdef PSERV_CONSOLE_BUILD
     void CopyToClipboard(const std::string &utf8_text)
     {
         std::wstring text = Utf8ToWide(utf8_text);
@@ -54,7 +53,6 @@ namespace pserv::utils
 
         // Do NOT free hMem here; ownership transferred to clipboard.
     }
-#endif
 
     std::filesystem::path GetAppDataPath()
     {

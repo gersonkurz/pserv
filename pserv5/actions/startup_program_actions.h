@@ -18,9 +18,7 @@ namespace pserv
     /// Open Registry Key (for registry entries).
     std::vector<const DataAction *> CreateStartupProgramActions(StartupProgramType type, bool enabled);
 
-#ifdef PSERV_CONSOLE_BUILD
     /// @brief Create all possible startup program actions for CLI registration.
     std::vector<const DataAction *> CreateAllStartupProgramActions();
-#endif
 
 } // namespace pserv

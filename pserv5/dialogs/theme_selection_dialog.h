@@ -7,7 +7,6 @@
 /// borrows a reference.
 #pragma once
 
-#ifndef PSERV_CONSOLE_BUILD
 #include <functional>
 #include "theme/base16_theme.h"
 
@@ -37,5 +36,3 @@ namespace pserv
     };
 
 } // namespace pserv
-
-#endif
