@@ -20,6 +20,7 @@ namespace winrt::pserv6::implementation
         InitializeComponent();
         ExtendsContentIntoTitleBar(false);
         m_grid.Attach(RowList(), HeaderGrid());
+        m_grid.m_onHeaderChanged = [this] { RebuildSortMenu(); };
 
         // Background refresh (plan D5): one worker thread for every controller; completions come
         // back to this UI thread through the DispatcherQueue.
@@ -196,6 +197,54 @@ namespace winrt::pserv6::implementation
         m_grid.OnContainerContentChanging(args);
     }
 
+    // The keyboard path to sorting (the header cells are pointer-only): one radio item per column
+    // and a Descending toggle; reached with Alt+S, then arrows and Enter.
+    void MainWindow::RebuildSortMenu()
+    {
+        MenuFlyout flyout;
+        flyout.Placement(Primitives::FlyoutPlacementMode::BottomEdgeAlignedLeft);
+        if (m_pCurrent)
+        {
+            const int sortColumn = m_pCurrent->GetLastSortColumn();
+            const bool bAscending = m_pCurrent->IsLastSortAscending();
+            const auto &columns = m_pCurrent->GetColumns();
+            for (int c : m_grid.DisplayOrder())
+            {
+                RadioMenuFlyoutItem item;
+                item.GroupName(L"SortColumn");
+                item.Text(to_hstring(columns[static_cast<size_t>(c)].DisplayName));
+                item.IsChecked(c == sortColumn);
+                item.Click([this, c, bAscending, sortColumn](auto &&, auto &&) { m_grid.SetSort(c, sortColumn >= 0 ? bAscending : true); });
+                flyout.Items().Append(item);
+            }
+            flyout.Items().Append(MenuFlyoutSeparator{});
+            ToggleMenuFlyoutItem descending;
+            descending.Text(L"Descending");
+            descending.IsChecked(sortColumn >= 0 && !bAscending);
+            descending.Click([this, sortColumn, bAscending](auto &&, auto &&) { m_grid.SetSort(sortColumn >= 0 ? sortColumn : 0, !bAscending); });
+            flyout.Items().Append(descending);
+        }
+        SortButton().Flyout(flyout);
+    }
+
+    void MainWindow::CopySelection()
+    {
+        const auto selection = m_grid.GetSelection();
+        spdlog::info("Copy: {} selected row(s)", selection.size());
+        const std::string text = m_grid.FormatSelection();
+        if (text.empty())
+            return;
+        try
+        {
+            pserv::utils::CopyToClipboard(text);
+            StatusText().Text(to_hstring(std::format("Copied {} row(s)", selection.size())));
+        }
+        catch (const std::exception &e)
+        {
+            spdlog::error("Copy failed: {}", e.what());
+        }
+    }
+
     void MainWindow::AddKeyboardShortcuts()
     {
         auto root = Content().as<UIElement>();
@@ -215,6 +264,19 @@ namespace winrt::pserv6::implementation
         using Windows::System::VirtualKeyModifiers;
         add(VirtualKey::F5, VirtualKeyModifiers::None, [this] { RequestRefresh(false); });
         add(VirtualKey::F, VirtualKeyModifiers::Control, [this] { FilterBox().Focus(FocusState::Keyboard); });
+
+        // Keys that act on the selected rows: handled on the list itself, so they apply only while
+        // it has focus (the filter box keeps its own Ctrl+C).
+        RowList().KeyDown([this](auto &&, Input::KeyRoutedEventArgs const &args)
+            {
+                const bool bCtrl = (winrt::Microsoft::UI::Input::InputKeyboardSource::GetKeyStateForCurrentThread(VirtualKey::Control) &
+                                    winrt::Windows::UI::Core::CoreVirtualKeyStates::Down) == winrt::Windows::UI::Core::CoreVirtualKeyStates::Down;
+                if (bCtrl && args.Key() == VirtualKey::C)
+                {
+                    args.Handled(true);
+                    CopySelection();
+                }
+            });
         // Ctrl+1 .. Ctrl+9, Ctrl+0 select the views in order (as in pserv5)
         const auto &controllers = m_library.GetDataControllers();
         for (size_t i = 0; i < controllers.size() && i < 10; ++i)

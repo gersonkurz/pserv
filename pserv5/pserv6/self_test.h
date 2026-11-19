@@ -11,6 +11,11 @@ namespace winrt::pserv6::implementation
     struct MainWindow;
 }
 
+namespace pserv
+{
+    class DataController;
+}
+
 namespace pserv6
 {
     class SelfTest final
@@ -43,6 +48,7 @@ namespace pserv6
         void NextView();
         void OnRendering();
         void EndMeasure();
+        std::string RunGridChecks(pserv::DataController &controller);
         void Finish();
         void Line(const std::string &text);
 
@@ -52,6 +58,10 @@ namespace pserv6
         std::filesystem::path m_logPath;
         std::ofstream m_log;
         size_t m_index{0};
+        bool m_bGridChecked{false};
+        bool m_bGridCheckPending{false}; ///< The deferred grid checks run; NextView waits for them.
+        std::string m_gridCheckError; ///< Set by the deferred part of RunGridChecks.
+        std::vector<winrt::weak_ref<winrt::Microsoft::UI::Xaml::Controls::Grid>> m_discardedHeaderCells;
         enum class Stage
         {
             Idle,

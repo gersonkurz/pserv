@@ -29,6 +29,7 @@ namespace winrt::pserv6::implementation
         bool IsRefreshInFlight() const { return m_pCurrent && m_coordinator && m_coordinator->IsInFlight(m_pCurrent); }
         const std::vector<pserv::DataController *> &Controllers() { return m_library.GetDataControllers(); }
         ::pserv6::DataGrid &Grid() { return m_grid; }
+        bool IsSelfTesting() const { return m_selfTest != nullptr; }
 
     private:
         void ShowController(pserv::DataController *pController);
@@ -39,6 +40,8 @@ namespace winrt::pserv6::implementation
         void RestoreWindowPlacement();
         void SaveSettings();
         void AddKeyboardShortcuts();
+        void CopySelection();
+        void RebuildSortMenu();
 
         // Lifetime: a worker task calls into the coordinator (and its controllers) after the
         // enumeration, so the worker must be joined first. Members are destroyed in reverse order:

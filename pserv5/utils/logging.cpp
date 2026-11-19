@@ -236,6 +236,11 @@ namespace pserv::utils
             file_sink->set_level(spdlog::level::debug);
             file_sink->set_formatter(std::make_unique<NdjsonFormatter>());
             logger->sinks().push_back(file_sink);
+            // The file sink buffers: without these, the last lines before an exit or a crash were
+            // lost. Warnings and errors are written at once, everything else within 2 seconds;
+            // BaseApp flushes once more when it shuts down.
+            logger->flush_on(spdlog::level::warn);
+            spdlog::flush_every(std::chrono::seconds(2));
         }
         catch (const std::exception &e)
         {

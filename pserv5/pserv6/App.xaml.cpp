@@ -41,8 +41,14 @@ namespace winrt::pserv6::implementation
         // Registered after MainWindow's own Closed handler, so the window has written its state
         m_window.Closed([this](auto &&, auto &&)
             {
-                pserv::config::theSettings.save(*m_pBaseApp->m_pBackend);
-                spdlog::info("Configuration saved to: {}", m_pBaseApp->m_configPath.string());
+                // A self-test changes layouts and sorts while it measures: never persist those
+                if (!get_self<MainWindow>(m_window.as<winrt::pserv6::MainWindow>())->IsSelfTesting())
+                {
+                    pserv::config::theSettings.save(*m_pBaseApp->m_pBackend);
+                    spdlog::info("Configuration saved to: {}", m_pBaseApp->m_configPath.string());
+                }
+                // The process may end without destroying the App (and with it BaseApp)
+                pserv::utils::BaseApp::Flush();
             });
         m_window.Activate();
     }

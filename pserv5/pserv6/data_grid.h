@@ -2,6 +2,10 @@
 // The pserv6 grid (plan D6): a virtualized ListView whose columns are generated from the current
 // controller's GetColumns(). Rows are filled on demand (ContainerContentChanging); a refresh is
 // applied as an identity diff on the item collection plus an in-place update of the realized rows.
+//
+// Column layout per view (widths, display order, sort) is kept in the view's DisplayTable settings,
+// in pserv5's format so imported settings apply: widths and display positions are listed by
+// column index.
 #include <core/data_controller.h>
 
 namespace pserv6
@@ -16,7 +20,7 @@ namespace pserv6
         /// Bind to the XAML elements (once, after InitializeComponent).
         void Attach(winrt::Microsoft::UI::Xaml::Controls::ListView const &list, winrt::Microsoft::UI::Xaml::Controls::Grid const &header);
 
-        /// Show another controller: rebuild header and rows from its current live objects.
+        /// Show another controller: restore its column layout and sort, rebuild header and rows.
         void SetController(pserv::DataController *pController);
 
         /// Re-apply the controller's live objects (after a publish, a sort or a filter change).
@@ -30,11 +34,44 @@ namespace pserv6
         /// Number of rows currently shown (after filtering).
         size_t RowCount() const { return m_current.size(); }
 
-        /// The selected objects (borrowed pointers, valid until the next publish).
+        /// The selected objects in display order (borrowed pointers, valid until the next publish).
         std::vector<pserv::DataObject *> GetSelection() const;
 
-        /// Invoked after a header click changed the sort (the owner may persist it).
-        std::function<void()> m_onSortChanged;
+        /// The object shown in the given row container, or nullptr.
+        pserv::DataObject *ObjectFromContainer(winrt::Microsoft::UI::Xaml::DependencyObject const &element) const;
+
+        /// Make `pObject` the only selected row (used before a context menu on an unselected row).
+        void SelectOnly(pserv::DataObject *pObject);
+
+        /// Tab-separated text of the selected rows (header line first), columns in display order.
+        std::string FormatSelection() const;
+
+        /// Sort by a column, as a header click does (same column again toggles the direction).
+        void SortBy(int column);
+
+        /// Sort by a column in a given direction (the keyboard path: the toolbar's Sort menu).
+        void SetSort(int column, bool bAscending);
+
+        /// Invoked when the sort, the column order or the controller changed (to update menus).
+        std::function<void()> m_onHeaderChanged;
+
+        /// Vertical scroll position of the rows (self-test).
+        double VerticalOffset();
+        void ScrollTo(double offset);
+
+        /// Weak references to the current header cells (the self-test checks that rebuilt
+        /// headers are released, i.e. that no handler keeps its element alive).
+        std::vector<winrt::weak_ref<winrt::Microsoft::UI::Xaml::Controls::Grid>> HeaderCellRefs() const;
+
+        /// Column layout, display position -> column index (for tests and the self-test).
+        const std::vector<int> &DisplayOrder() const { return m_order; }
+        const std::vector<double> &Widths() const { return m_widths; }
+
+        /// Move the column at display position `from` to display position `to`.
+        void MoveColumn(int from, int to);
+
+        /// Set the width of a column (by column index), live, and persist it.
+        void SetColumnWidth(int column, double width);
 
         /// UI-thread cost counters, read and reset by the self-test.
         struct Stats
@@ -47,19 +84,45 @@ namespace pserv6
         } m_stats;
 
     private:
+        void LoadLayout();
+        void SaveLayout() const;
         void BuildHeader();
+        void UpdateSortIndicators();
+        void ApplyWidthsToRealizedRows();
+        void BuildRowCells(winrt::Microsoft::UI::Xaml::Controls::Grid const &row);
         void FillRow(winrt::Microsoft::UI::Xaml::Controls::Grid const &row, pserv::DataObject *pObject);
         void UpdateRealized();
-        void SortBy(int column);
+        void RestoreSelection(const std::unordered_set<pserv::DataObject *> &selected);
+        int DisplayPositionAt(double x) const;
+        winrt::Microsoft::UI::Xaml::Controls::ScrollViewer Scroller();
 
         winrt::Microsoft::UI::Xaml::Controls::ListView m_list{nullptr};
         winrt::Microsoft::UI::Xaml::Controls::Grid m_header{nullptr};
+        winrt::Microsoft::UI::Xaml::Controls::ScrollViewer m_scroller{nullptr};
         winrt::Windows::Foundation::Collections::IObservableVector<winrt::Windows::Foundation::IInspectable> m_items{nullptr};
         std::vector<pserv::DataObject *> m_current; ///< Parallel to m_items (each RowItem holds a reference).
         pserv::DataController *m_pController{nullptr};
-        std::vector<double> m_widths;
+        std::vector<double> m_widths; ///< By column index.
+        std::vector<int> m_order;     ///< Display position -> column index.
+        std::vector<winrt::Microsoft::UI::Xaml::Controls::TextBlock> m_sortGlyphs; ///< By display position.
         std::string m_filter;
         int m_layoutGeneration{0}; ///< Bumped when the column layout changes; stamped on row containers.
+
+        // Header interaction: click a cell to sort, drag a cell to reorder, drag a gripper to resize
+        struct HeaderDrag
+        {
+            int fromPosition{-1};
+            double startX{0};
+            bool bMoved{false};
+        } m_headerDrag;
+        struct Resize
+        {
+            int column{-1};
+            double startX{0};
+            double startWidth{0};
+        } m_resize;
+
         winrt::Microsoft::UI::Xaml::Media::Brush m_normalBrush{nullptr}, m_highlightBrush{nullptr}, m_disabledBrush{nullptr};
+        winrt::Microsoft::UI::Xaml::Media::Brush m_gripperBrush{nullptr}, m_dropBrush{nullptr};
     };
 } // namespace pserv6

@@ -98,6 +98,15 @@ namespace pserv
             ~BaseApp()
             {
                 delete m_pBackend;
+                Flush();
+            }
+
+            /// @brief Write out buffered log lines (also call it where a frontend's exit path
+            /// may not run this destructor).
+            static void Flush()
+            {
+                if (auto logger = spdlog::default_logger())
+                    logger->flush();
             }
 
             config::TomlBackend *m_pBackend = nullptr; ///< Configuration backend.

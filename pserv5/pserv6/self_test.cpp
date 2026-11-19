@@ -237,6 +237,103 @@ namespace pserv6
         }
     }
 
+    // Grid behaviour on the first view with enough rows (Phase 4): the column layout survives a
+    // reload through the settings, and the selection survives a re-sort (a ReplaceAll). Leaves
+    // layout and sort as they were; a self-test run never saves the settings.
+    std::string SelfTest::RunGridChecks(pserv::DataController &controller)
+    {
+        auto &grid = m_window.Grid();
+        const auto order = grid.DisplayOrder();
+        const auto widths = grid.Widths();
+        const int sortColumn = controller.GetLastSortColumn();
+        const bool bSortAscending = controller.IsLastSortAscending();
+        if (order.size() < 2)
+            return {};
+
+        // Every header generation discarded below must be released (checked in Finish(), when
+        // the rebuilds are long done): no event handler may keep its element alive.
+        auto keep = [this, &grid]
+        {
+            for (auto &ref : grid.HeaderCellRefs())
+                m_discardedHeaderCells.push_back(std::move(ref));
+        };
+
+        // 1. Layout round trip: move the first column one to the right, widen it, reload.
+        const int moved = order[0];
+        keep();
+        grid.MoveColumn(0, 1);
+        // The Sort menu follows the new display order
+        const auto firstMenuItem = m_window.SortButton().Flyout().as<winrt::Microsoft::UI::Xaml::Controls::MenuFlyout>().Items().GetAt(0)
+                                       .as<winrt::Microsoft::UI::Xaml::Controls::MenuFlyoutItem>().Text();
+        const bool bMenuFollows = winrt::to_string(firstMenuItem) == controller.GetColumns()[static_cast<size_t>(grid.DisplayOrder()[0])].DisplayName;
+        grid.SetColumnWidth(moved, widths[static_cast<size_t>(moved)] + 37);
+        keep();
+        grid.SetController(&controller); // re-reads the layout from the settings
+        const bool bLayoutKept = grid.DisplayOrder().size() == order.size() && grid.DisplayOrder()[1] == moved &&
+                                 grid.Widths()[static_cast<size_t>(moved)] == std::clamp(widths[static_cast<size_t>(moved)] + 37, 30.0, 2000.0);
+        keep();
+        grid.MoveColumn(1, 0);
+        grid.SetColumnWidth(moved, widths[static_cast<size_t>(moved)]);
+        const bool bLayoutRestored = grid.DisplayOrder() == order && grid.Widths() == widths;
+
+        // 2. Selection and scroll position across a re-sort (a ReplaceAll): scroll down, select
+        // rows 1 and 3, reverse the sort, compare.
+        grid.ScrollTo(10 * 24.0);
+        const double offsetBefore = grid.VerticalOffset();
+        m_window.RowList().SelectRange(winrt::Microsoft::UI::Xaml::Data::ItemIndexRange{1, 1});
+        m_window.RowList().SelectRange(winrt::Microsoft::UI::Xaml::Data::ItemIndexRange{3, 1});
+        auto before = grid.GetSelection();
+        const int resetsBefore = grid.m_stats.resets;
+        grid.SortBy(0);
+        grid.SortBy(0); // twice: the second toggles the direction, so the order surely changes
+        auto after = grid.GetSelection();
+        const bool bReset = grid.m_stats.resets > resetsBefore;
+        std::sort(before.begin(), before.end());
+        std::sort(after.begin(), after.end());
+        const bool bSelectionKept = before.size() == 2 && before == after;
+
+        // The scroll position is read once the dispatcher is idle, so a late adjustment by the
+        // ListView after the reset would be seen. Then the reviewer's sequence: scroll to the
+        // top and re-sort again; the offset must stay 0 (no older restore may win). The next
+        // view switch waits for the last continuation (m_bGridCheckPending).
+        const std::string name{controller.GetControllerName()};
+        auto dispatcher = m_window.DispatcherQueue();
+        dispatcher.TryEnqueue(winrt::Microsoft::UI::Dispatching::DispatcherQueuePriority::Low,
+            [this, dispatcher, &controller, name, bLayoutKept, bLayoutRestored, bMenuFollows, bReset, bSelectionKept, offsetBefore, sortColumn, bSortAscending]
+            {
+                auto &grid = m_window.Grid();
+                const double offsetAfter = grid.VerticalOffset();
+                const bool bScrollKept = offsetBefore > 0 && std::abs(offsetAfter - offsetBefore) < 1.0;
+                grid.ScrollTo(0);
+                grid.SortBy(0);
+                dispatcher.TryEnqueue(winrt::Microsoft::UI::Dispatching::DispatcherQueuePriority::Low,
+                    [this, &controller, name, bLayoutKept, bLayoutRestored, bMenuFollows, bReset, bSelectionKept, bScrollKept, offsetBefore, offsetAfter, sortColumn, bSortAscending]
+                    {
+                        auto &grid = m_window.Grid();
+                        const double offsetTop = grid.VerticalOffset();
+                        const bool bTopKept = offsetTop < 1.0;
+                        m_window.RowList().DeselectRange(winrt::Microsoft::UI::Xaml::Data::ItemIndexRange{0, static_cast<uint32_t>(grid.RowCount())});
+                        // Restore the sort
+                        if (sortColumn >= 0)
+                            controller.Sort(sortColumn, bSortAscending);
+                        for (auto &ref : grid.HeaderCellRefs())
+                            m_discardedHeaderCells.push_back(std::move(ref));
+                        grid.SetController(&controller);
+                        grid.ScrollTo(0);
+                        Line(std::format("grid checks on {}: layout round trip {}, layout restored {}, sort menu follows the column order {}, "
+                                         "re-sort was a reset {}, selection kept {}, scroll position kept {} ({:.0f} -> {:.0f}), "
+                                         "top kept after a reset at the top {} ({:.0f})",
+                            name, bLayoutKept, bLayoutRestored, bMenuFollows, bReset, bSelectionKept, bScrollKept, offsetBefore, offsetAfter, bTopKept, offsetTop));
+                        if (!bLayoutKept || !bLayoutRestored || !bMenuFollows || !bReset || !bSelectionKept || !bScrollKept || !bTopKept)
+                            m_gridCheckError = "grid checks failed";
+                        // Only now go on: the checks re-attach this view's rows
+                        m_bGridCheckPending = false;
+                        m_window.DispatcherQueue().TryEnqueue(winrt::Microsoft::UI::Dispatching::DispatcherQueuePriority::Low, [this] { NextView(); });
+                    });
+            });
+        return {};
+    }
+
     void SelfTest::EndMeasure()
     {
         m_timeout.Stop();
@@ -245,6 +342,12 @@ namespace pserv6
         if (m_current.error.empty() && pController && m_window.Grid().RowCount() != m_current.rows)
         {
             m_current.error = std::format("grid shows {} rows, controller has {}", m_window.Grid().RowCount(), m_current.rows);
+        }
+        if (m_current.error.empty() && pController && !m_bGridChecked && m_current.rows >= 5)
+        {
+            m_bGridChecked = true;
+            m_bGridCheckPending = true;
+            m_current.error = RunGridChecks(*pController);
         }
 
         // Budgets: plan section 7 (targets; binding from Phase 4 on)
@@ -298,8 +401,9 @@ namespace pserv6
             stats.refreshMs, stats.containers, stats.containerMs, budgets, m_current.error.empty() ? "" : " ERROR: " + m_current.error));
         m_results.push_back(std::move(m_current));
         m_stage = Stage::Idle;
-        // Let the dispatcher breathe before the next switch
-        m_window.DispatcherQueue().TryEnqueue(winrt::Microsoft::UI::Dispatching::DispatcherQueuePriority::Low, [this] { NextView(); });
+        // Let the dispatcher breathe before the next switch (the grid checks go on themselves)
+        if (!m_bGridCheckPending)
+            m_window.DispatcherQueue().TryEnqueue(winrt::Microsoft::UI::Dispatching::DispatcherQueuePriority::Low, [this] { NextView(); });
     }
 
     void SelfTest::Finish()
@@ -309,6 +413,12 @@ namespace pserv6
         pmc.cb = sizeof(pmc);
         GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
         Line(std::format("working set {:.1f} MB (peak {:.1f} MB)", pmc.WorkingSetSize / 1048576.0, pmc.PeakWorkingSetSize / 1048576.0));
+        if (!m_gridCheckError.empty() && !m_results.empty())
+            m_results.front().error = m_gridCheckError;
+        const auto alive = std::count_if(m_discardedHeaderCells.begin(), m_discardedHeaderCells.end(), [](auto const &ref) { return ref.get() != nullptr; });
+        Line(std::format("discarded header cells still alive: {} of {}", alive, m_discardedHeaderCells.size()));
+        if (alive > 0 && !m_results.empty() && m_results.front().error.empty())
+            m_results.front().error = "discarded header cells are still alive (a reference cycle?)";
         // Shutdown with work in flight: the window must join the worker before it destroys the
         // coordinator the worker's task calls back into.
         m_window.RequestRefresh(false);

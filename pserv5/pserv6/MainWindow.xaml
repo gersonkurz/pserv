@@ -14,6 +14,12 @@
                 <Button x:Name="RefreshButton" Click="OnRefreshClick" ToolTipService.ToolTip="Refresh (F5)">
                     <SymbolIcon Symbol="Refresh" />
                 </Button>
+                <DropDownButton x:Name="SortButton" AccessKey="S" ToolTipService.ToolTip="Sort by column (Alt+S)">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <SymbolIcon Symbol="Sort" />
+                        <TextBlock Text="Sort" />
+                    </StackPanel>
+                </DropDownButton>
                 <ToggleSwitch x:Name="AutoRefreshSwitch" OnContent="Auto-refresh" OffContent="Auto-refresh" Toggled="OnAutoRefreshToggled" MinWidth="0" />
                 <TextBox x:Name="FilterBox" PlaceholderText="Filter" Width="260" TextChanged="OnFilterChanged" />
             </StackPanel>
@@ -31,6 +37,12 @@
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             </Style>
                         </ListView.ItemContainerStyle>
+                        <ListView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <!-- The grid restores the scroll offset itself after a reset; item anchoring would move it again -->
+                                <ItemsStackPanel ItemsUpdatingScrollMode="KeepScrollOffset" />
+                            </ItemsPanelTemplate>
+                        </ListView.ItemsPanel>
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <Grid />
