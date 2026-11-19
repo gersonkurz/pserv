@@ -2,8 +2,8 @@
 <setup>
     <!-- Setup script uses MSIS - see https://github.com/gersonkurz/msis -->
     <!-- PRODUCT_VERSION mirrors pserv5/version.h; keep in sync via `just version X.Y.Z`. -->
-    <set name="PRODUCT_NAME" value="pserv5 ARM64"/>
-    <set name="PRODUCT_VERSION" value="5.2.0"/>
+    <set name="PRODUCT_NAME" value="pserv6 ARM64"/>
+    <set name="PRODUCT_VERSION" value="6.0.0"/>
     <set name="LANGUAGE" value="en-us"/>
     <set name="PLATFORM" value="arm64"/>
     <set name="REPAIR_ENABLED" value="True"/>

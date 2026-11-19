@@ -82,7 +82,7 @@ namespace pserv
         // Create window with modern borderless style
         // WS_POPUP = no title bar, WS_THICKFRAME = resizable borders
         m_hWnd = CreateWindowW(L"pserv5WindowClass",
-            L"pserv5",
+            L"pserv6",
             WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU,
             posX,
             posY,

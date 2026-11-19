@@ -5,8 +5,8 @@
 -->
 <setup>
   <!-- Product identification -->
-  <set name="PRODUCT_NAME" value="pserv5"/>
-  <set name="PRODUCT_VERSION" value="5.2.0"/>
+  <set name="PRODUCT_NAME" value="pserv6"/>
+  <set name="PRODUCT_VERSION" value="6.0.0"/>
   <set name="MANUFACTURER" value="https://github.com/gersonkurz/pserv"/>
   <set name="UPGRADE_CODE" value="{1EF9E5CE-E3CA-44D3-97B2-EE7BAA1DCADB}"/>
 
