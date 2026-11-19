@@ -22,10 +22,9 @@ namespace pserv
     {
     public:
         StartupProgramsDataController();
-
-    private:
         ~StartupProgramsDataController() override = default;
 
+    private:
         void Refresh(bool isAutoRefresh = false) override;
         std::vector<const DataAction *> GetActions(const DataObject *dataObject) const override;
 

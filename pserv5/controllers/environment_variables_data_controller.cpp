@@ -130,22 +130,11 @@ namespace pserv
         {
             spdlog::info("Committing property edits for environment variable: {}", envVar->GetName());
 
-            // If name changed, we need to delete old and create new
-            if (m_editBuffer.name != envVar->GetName())
+            bool success = m_editBuffer.name == envVar->GetName() ?
+                EnvironmentVariableManager::SetEnvironmentVariable(m_editBuffer.name, m_editBuffer.value, envVar->GetScope()) :
+                EnvironmentVariableManager::RenameEnvironmentVariable(envVar->GetName(), m_editBuffer.name, m_editBuffer.value, envVar->GetScope());
+            if (!success)
             {
-                // Delete old variable
-                if (!EnvironmentVariableManager::DeleteEnvironmentVariable(envVar->GetName(), envVar->GetScope()))
-                {
-                    spdlog::error("Failed to delete old environment variable");
-                    m_editingObject = nullptr;
-                    return false;
-                }
-            }
-
-            // Set the variable (either update existing or create renamed one)
-            if (!EnvironmentVariableManager::SetEnvironmentVariable(m_editBuffer.name, m_editBuffer.value, envVar->GetScope()))
-            {
-                spdlog::error("Failed to set environment variable");
                 m_editingObject = nullptr;
                 return false;
             }
@@ -166,7 +155,7 @@ namespace pserv
         }
     }
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
     void EnvironmentVariablesDataController::ShowAddVariableDialog(EnvironmentVariableScope scope)
     {
         m_bShowAddDialog = true;

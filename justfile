@@ -1,18 +1,18 @@
-# Build automation for pserv5 — Windows system administration tool
-# C++20 + Dear ImGui + DirectX 11 (GUI: pserv5.exe) and a shared-core CLI (pservc.exe)
+# Build automation for pserv6 — native C++/WinRT and WinUI 3.
+# The pserv5 ImGui frontend and shared-core CLI remain available explicitly.
 # Requires: just, msbuild on PATH (VS 2026 Developer Command Prompt / pwsh).
 #
 # Builds drive off the solution so $(SolutionDir) resolves correctly — the
 # projects derive OutDir/IntDir from it. Output lands in pserv5\bin\<Platform>\<Config>\.
-# Packaging (MSI) is intentionally absent for now; it's a separate, later step.
+# Existing MSI recipes package pserv5; pserv6 packaging is not implemented yet.
 
 set windows-shell := ["cmd.exe", "/c"]
 
 solution := "pserv5\\pserv5.slnx"
 
-# Map %PROCESSOR_ARCHITECTURE% to the native solution platform: AMD64 → x64, ARM64 → ARM64.
-_arch := env_var_or_default("PROCESSOR_ARCHITECTURE", "AMD64")
-platform := if _arch == "ARM64" { "ARM64" } else { "x64" }
+# Query Windows, not the architecture of an emulated just or Developer shell.
+platform := `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/native-platform.ps1`
+bindir := if platform == "x86" { "Win32" } else { platform }
 
 # Default: show available recipes
 default:
@@ -30,22 +30,48 @@ _require-devshell:
 _msbuild configuration platform: _require-devshell
     msbuild {{solution}} /p:Configuration={{configuration}} /p:Platform={{platform}} /m /nologo /v:minimal
 
-# Build Debug (native arch) — both pserv5.exe and pservc.exe
-build: (_msbuild "Debug" platform)
+# Build pserv6 Debug for the native OS architecture.
+build: (build-winui platform)
 
 # Build Release (native arch)
-build-release: (_msbuild "Release" platform)
+build-release: (build-winui-release platform)
 
 # Build everything: Debug+Release across x64, x86, ARM64
-build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug" "x86") (_msbuild "Release" "x86") (_msbuild "Debug" "ARM64") (_msbuild "Release" "ARM64")
+build-all: (build-winui "x64") (build-winui-release "x64") (build-winui "x86") (build-winui-release "x86") (build-winui "ARM64") (build-winui-release "ARM64")
 
-# Build Debug + launch the GUI (native arch)
-run: build
-    @pserv5\bin\{{platform}}\Debug\pserv5.exe
+# Build and launch pserv6 Release (native architecture).
+run: build-release
+    @pserv5\bin\{{bindir}}\Release\pserv6\pserv6.exe
+
+# Build the original ImGui frontend and CLI (Debug, native architecture).
+build-legacy: (_msbuild "Debug" platform)
+
+# Build the original ImGui frontend and CLI (Release, native architecture).
+build-legacy-release: (_msbuild "Release" platform)
+
+# Build and launch the original ImGui frontend.
+run-legacy: build-legacy
+    @pserv5\bin\{{bindir}}\Debug\pserv5.exe
 
 # Build Debug + launch the CLI (native arch); pass args after `--`, e.g. `just run-cli -- services`
-run-cli *ARGS: build
-    @pserv5\bin\{{platform}}\Debug\pservc.exe {{ARGS}}
+run-cli *ARGS: build-legacy
+    @pserv5\bin\{{bindir}}\Debug\pservc.exe {{ARGS}}
+
+# Restore the pinned WinUI 3 frontend dependencies.
+restore-winui:
+    nuget restore pserv5\pserv6\packages.config -PackagesDirectory pserv5\pserv6\packages -NonInteractive
+
+# Build the separate WinUI frontend (Windows App SDK 2.7).
+build-winui arch=platform: _require-devshell restore-winui
+    msbuild pserv5\pserv6.slnx /p:Configuration=Debug /p:Platform={{arch}} /m /nologo /v:minimal
+
+# Build the WinUI frontend in Release.
+build-winui-release arch=platform: _require-devshell restore-winui
+    msbuild pserv5\pserv6.slnx /p:Configuration=Release /p:Platform={{arch}} /m /nologo /v:minimal
+
+# Build and launch the separate WinUI frontend.
+run-winui arch=platform: (build-winui arch)
+    @pserv5\bin\{{if arch == "x86" { "Win32" } else { arch }}}\Debug\pserv6\pserv6.exe
 
 # Clean + rebuild Debug (native arch)
 rebuild: clean build
@@ -63,19 +89,19 @@ version VERSION:
 # --- Packaging (MSIS 3.x → MSI + multi-arch bundle) -------------------------
 
 # Build the full release: x64 + x86 + ARM64 MSIs and the multi-arch bundle .exe, into setup\.
-release: package-all bundle
+release: package-all
 
-# Build all three per-architecture MSIs.
-package-all: package-x64 package-x86 package-arm64
+# Build all three per-architecture MSIs and the final multi-architecture bundle.
+package-all: package-x64 package-x86 package-arm64 bundle
 
 # Build the x64 MSI.
-package-x64: (_stage "x64" "x64" "x64" "Release") (_stage_symbols "x64" "x64" "Release") (_package "pserv5-x64.msis")
+package-x64: (_stage "x64" "x64" "x64" "Release") (_package "pserv5-x64.msis")
 
 # Build the x86 MSI (the x86 solution platform builds into bin\Win32\).
-package-x86: (_stage "x86" "Win32" "x86" "Release") (_stage_symbols "Win32" "x86" "Release") (_package "pserv5-x86.msis")
+package-x86: (_stage "x86" "Win32" "x86" "Release") (_package "pserv5-x86.msis")
 
 # Build the ARM64 MSI.
-package-arm64: (_stage "ARM64" "ARM64" "arm64" "Release") (_stage_symbols "ARM64" "arm64" "Release") (_package "pserv5-arm64.msis")
+package-arm64: (_stage "ARM64" "ARM64" "arm64" "Release") (_package "pserv5-arm64.msis")
 
 # Build the multi-architecture bundle .exe (requires the three MSIs built first).
 bundle:
@@ -86,18 +112,8 @@ bundle:
 # Stage the Release payload (pserv5.exe + pservc.exe + themes\) for one arch.
 # Args: <solution-platform> <bin-dir> <stage-name> <configuration>.
 [private]
-_stage msplatform bindir stagename configuration: (_msbuild configuration msplatform)
-    @if exist dist\stage\{{stagename}} rmdir /s /q dist\stage\{{stagename}}
-    @mkdir dist\stage\{{stagename}}
-    @robocopy pserv5\bin\{{bindir}}\{{configuration}} dist\stage\{{stagename}} /E /XF *.pdb *.exp *.lib *.ilk >nul & if errorlevel 8 exit /b 1
-
-# Stage the Release debug symbols for one arch (optional installer feature).
-# Args: <bin-dir> <stage-name> <configuration>.
-[private]
-_stage_symbols bindir stagename configuration:
-    @if exist dist\symbols\{{stagename}} rmdir /s /q dist\symbols\{{stagename}}
-    @mkdir dist\symbols\{{stagename}}
-    @copy /Y pserv5\bin\{{bindir}}\{{configuration}}\*.pdb dist\symbols\{{stagename}}\ >nul
+_stage msplatform bindir stagename configuration: (build-winui-release msplatform)
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\stage-release.ps1 {{msplatform}}
 
 # Build one MSI from setup\ (standalone — the bundle adds prerequisites).
 [private]

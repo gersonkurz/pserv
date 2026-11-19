@@ -19,7 +19,7 @@ The only currency that matters: Does this advance or halt productive thinking? I
 
 ## Project Overview
 
-pserv5 is a native Windows system administration tool. It has a Dear ImGui / DirectX 11 GUI (`pserv5.exe`) and a console application (`pservc.exe`) that compile shared controllers, models, actions, and Windows API wrappers. Views cover services, devices, processes, windows, modules, installed programs, startup programs, scheduled tasks, network connections, and environment variables.
+pserv6 is the new native C++/WinRT / WinUI 3 frontend (`pserv5/pserv6/`, Windows App SDK 2.7.0). The original Dear ImGui / DirectX 11 GUI (`pserv5.exe`) and console application (`pservc.exe`) remain available. They compile shared controllers, models, actions, and Windows API wrappers. Views cover services, devices, processes, windows, modules, installed programs, startup programs, scheduled tasks, network connections, and environment variables.
 
 The code uses modern C++; both projects currently select MSVC `stdcpplatest` and toolset `v145`. Check the project files rather than relying on older C++20 or Visual Studio 2022 descriptions.
 
@@ -27,14 +27,16 @@ The code uses modern C++; both projects currently select MSVC `stdcpplatest` and
 
 Run recipes from the repository root with `just` in a **Visual Studio 2026 Developer shell**. The build requires `VisualStudioVersion=18.0` and `msbuild` on PATH. Do not merely set that variable to bypass the guard; initialize the VS toolchain environment.
 
-- `just build` — Debug, native architecture; builds both executables.
-- `just build-release` — Release, native architecture.
+- `just build` — pserv6 Debug, native architecture.
+- `just build-release` — pserv6 Release, native architecture.
 - `just build-all` — Debug and Release for x64, x86, and ARM64.
-- `just run` — build Debug and launch the GUI.
+- `just run` — build Release and launch pserv6.
+- `just build-legacy` / `just build-legacy-release` — build the original ImGui GUI and CLI.
+- `just run-legacy` — build Debug and launch the original ImGui GUI.
 - `just run-cli services` — build Debug and list services through the CLI.
 - `just --list` — current public recipes.
 
-The `justfile` drives MSBuild against `pserv5/pserv5.slnx`, containing `pserv5/pserv5.vcxproj` and `pserv5/pservc/pservc.vcxproj`. Build the solution: project paths depend on `$(SolutionDir)`. Output is `pserv5/bin/<Platform>/<Configuration>/`; the x86 solution platform uses `Win32` as the output directory name. Intermediates live under `pserv5/temp/`. Native recipes select ARM64 on ARM64 hosts and x64 otherwise.
+The default recipes drive MSBuild against `pserv5/pserv6.slnx`; legacy recipes use `pserv5/pserv5.slnx`, containing `pserv5/pserv5.vcxproj` and `pserv5/pservc/pservc.vcxproj`. Build the solution: project paths depend on `$(SolutionDir)`. Output is `pserv5/bin/<Platform>/<Configuration>/`, with pserv6 in its own `pserv6/` subdirectory; the x86 solution platform uses `Win32` as the output directory name. Intermediates live under `pserv5/temp/`. `scripts/native-platform.ps1` queries IsWow64Process2, selecting ARM64 on ARM64 hosts even under x64 emulation. Do not use PROCESSOR_ARCHITECTURE or .NET Framework OSArchitecture for this detection.
 
 Verify changes compile before handing off. There is currently no repository-owned automated test suite or `just test` recipe. For behavior changes, exercise the affected GUI or CLI path in addition to building and report what was actually checked. CLI help and listing commands provide read-only smoke checks, for example `pserv5/bin/x64/Debug/pservc.exe --help` (adjust for the built architecture). Build success alone does not verify UI behavior.
 
@@ -95,4 +97,4 @@ Configuration uses TOML; Base16 themes use YAML parsed with fkYAML. Edit theme s
 - `just bundle` combines the existing per-architecture MSIs; `just release` builds all packages and the bundle.
 - Staging uses `dist/stage/<arch>/` and `dist/symbols/<arch>/`. Final MSI and bundle outputs land in `setup/`. Keep generated binaries and staging output out of commits.
 
-Treat the current `justfile`, solution, project files, and implementation as authoritative when older documentation disagrees. In particular, the README's VS 2022 / `.sln` build instructions and the `justfile` introductory comment claiming packaging is absent are outdated.
+Treat the current `justfile`, solution, project files, and implementation as authoritative when older documentation disagrees. Existing packaging recipes target pserv5; pserv6 MSI integration is pending.

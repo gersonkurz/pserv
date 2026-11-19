@@ -150,7 +150,7 @@ namespace pserv::utils
         return logger;
     }
 
-    void ReconfigureLoggingWithFile(const std::string& logFilePath)
+    void ReconfigureLoggingWithFile(const std::string& logFilePath) try
     {
         // Get existing logger
         auto logger = spdlog::default_logger();
@@ -192,5 +192,11 @@ namespace pserv::utils
 
         // Add file sink to existing logger
         logger->sinks().push_back(file_sink);
+    }
+    catch (const std::exception& error)
+    {
+        // Keep the debug sink when another instance holds the log open.
+        // A failure to rotate diagnostics must not abort application startup.
+        spdlog::warn("File logging unavailable for '{}': {}", logFilePath, error.what());
     }
 } // namespace pserv::utils

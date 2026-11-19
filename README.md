@@ -2,22 +2,22 @@
   <img src="logo.jpg" alt="pserv logo" width="1024"/>
 </p>
 
-A Windows system administration tool for managing services, devices, processes, and more. Native C++20 application with a modern ImGui interface.
+A Windows system administration tool for managing services, drivers, processes, and more. pserv6 uses native C++/WinRT and WinUI 3; the pserv5 ImGui frontend and shared-core CLI remain available.
 
 More than 10 years after the last iteration, I decided to rewrite an old tool of mine originally started in 1998. [Click here to find out more about the history of the product](https://p-nand-q.com/download/pserv_cpl/index.html).
 
 ## Manual
 
-[Brief instructions for the UI](docs/pserv5.md) and [for the command line interface](docs/pservc.md).
+[pserv6 WinUI manual](docs/pserv6.md), [pserv5 ImGui manual](docs/pserv5.md), and [command line interface](docs/pservc.md).
 
-## Screenshot
+## pserv5 screenshot
 
 ![Screenshot of main application](docs/main.png)
 
 ## Features
 
 - **Services** - View, start, stop, configure Windows services
-- **Devices** - Browse and manage hardware devices
+- **Devices** - Browse and manage driver services
 - **Processes** - Monitor running processes with detailed information
 - **Windows** - Enumerate and interact with application windows
 - **Modules** - Inspect loaded DLLs and modules
@@ -29,7 +29,14 @@ More than 10 years after the last iteration, I decided to rewrite an old tool of
 
 ## Building
 
-Open `pserv5.sln` in Visual Studio 2022 and build the solution.
+Use a Visual Studio 2026 Developer shell with v145 C++ tools, Windows SDK 10.0.26100.0, `just`, and `nuget` on PATH.
+
+```powershell
+just build-release # Build pserv6 Release for the native OS architecture
+just run           # Build and launch pserv6 Release
+```
+
+ARM64 hosts select ARM64 even from an emulated x64 shell. The executable is under `pserv5/bin/ARM64/Release/pserv6/` on ARM64, or the corresponding platform directory. `just build` builds Debug. Open `pserv5/pserv6.slnx` for the WinUI solution; `just run-legacy` builds and launches the old ImGui UI. Existing MSI recipes still package pserv5.
 
 Dependencies are included as git submodules:
 - [ImGui](https://github.com/ocornut/imgui) - Immediate mode GUI
@@ -55,6 +62,7 @@ pserv has been around since 1998:
 | v3 | 2010 | C# Windows Forms |
 | v4 | 2014 | C# WPF with MahApps.Metro |
 | v5 | 2025 | C++20 with ImGui |
+| v6 | In development | Native C++/WinRT with WinUI 3 |
 
 ## License
 

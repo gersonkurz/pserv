@@ -172,7 +172,7 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
                 // Show the add variable dialog
                 auto *controller = static_cast<EnvironmentVariablesDataController *>(ctx.m_pController);
                 controller->ShowAddVariableDialog(m_scope);

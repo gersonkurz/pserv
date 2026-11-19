@@ -51,7 +51,7 @@ namespace pserv
         CopyAsTxt = -1003
     };
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
     class DataPropertiesDialog;
 #endif
 
@@ -96,7 +96,7 @@ namespace pserv
             : m_controllerName{std::move(controllerName)}
             , m_itemName{std::move(itemName)}
             , m_columns{std::move(columns)}
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
             , m_pPropertiesDialog{nullptr}
 #endif
         {
@@ -104,7 +104,7 @@ namespace pserv
 
         virtual ~DataController();
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
         /// @brief Show the properties dialog for selected objects.
         void ShowPropertiesDialog(DataActionDispatchContext &ctx);
 #endif
@@ -143,7 +143,7 @@ namespace pserv
         /// @return true if periodic refresh is meaningful for this data type.
         virtual bool SupportsAutoRefresh() const { return true; }
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
         /// @brief Check if properties dialog has unsaved edits.
         /// Used to pause auto-refresh during editing.
         bool HasPropertiesDialogWithEdits() const;
@@ -162,18 +162,18 @@ namespace pserv
         /// @{
 
         /// @brief Begin an editing transaction for an object.
-        virtual void BeginPropertyEdits(DataObject *obj) { }
+        virtual void BeginPropertyEdits(DataObject *) { }
 
         /// @brief Set a property value during editing.
         /// @return true if the value was accepted.
-        virtual bool SetPropertyEdit(DataObject *obj, int columnIndex, const std::string &newValue) { return false; }
+        virtual bool SetPropertyEdit(DataObject *, int, const std::string &) { return false; }
 
         /// @brief Commit all pending edits to the system.
         /// @return true if changes were successfully applied.
-        virtual bool CommitPropertyEdits(DataObject *obj) { return false; }
+        virtual bool CommitPropertyEdits(DataObject *) { return false; }
 
         /// @brief Get dropdown options for a Combo-type column.
-        virtual std::vector<std::string> GetComboOptions(int columnIndex) const { return {}; }
+        virtual std::vector<std::string> GetComboOptions(int) const { return {}; }
         /// @}
 
         /// @name Accessors
@@ -210,7 +210,7 @@ namespace pserv
         bool m_lastSortAscending{true};                  ///< Last sort direction.
         std::chrono::system_clock::time_point m_lastRefreshTime{}; ///< Time of last successful refresh.
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
     private:
         DataPropertiesDialog *m_pPropertiesDialog{nullptr}; ///< Active properties dialog.
 #endif

@@ -1,0 +1,15 @@
+namespace pserv6
+{
+    [default_interface]
+    runtimeclass DataCell : Microsoft.UI.Xaml.Data.INotifyPropertyChanged
+    {
+        DataCell();
+        String Text{ get; };
+        String FontName{ get; };
+        Windows.UI.Text.FontWeight FontWeight{ get; };
+        Windows.UI.Text.FontStyle FontStyle{ get; };
+        Double Width{ get; };
+        Microsoft.UI.Xaml.TextAlignment Alignment{ get; };
+        Microsoft.UI.Xaml.Media.Brush Foreground{ get; };
+    }
+}

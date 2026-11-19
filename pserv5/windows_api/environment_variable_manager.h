@@ -39,7 +39,12 @@ namespace pserv
         /// @return true on success.
         static bool DeleteEnvironmentVariable(const std::string &name, EnvironmentVariableScope scope);
 
+        static bool RenameEnvironmentVariable(const std::string& original, const std::string& name,
+            const std::string& value, EnvironmentVariableScope scope);
+
     private:
+        static bool EditEnvironmentVariable(const std::string& original, const std::string& name,
+            const std::string& value, EnvironmentVariableScope scope);
         static void EnumerateFromKey(HKEY hKeyRoot, const std::wstring &subKeyPath, EnvironmentVariableScope scope, DataObjectContainer *doc);
         static std::wstring GetRegistryPath(EnvironmentVariableScope scope);
         static HKEY GetRegistryRoot(EnvironmentVariableScope scope);

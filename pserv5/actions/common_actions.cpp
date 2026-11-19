@@ -255,7 +255,7 @@ namespace pserv
         }
 
         actions.push_back(&theDataActionSeparator);
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
         actions.push_back(&theDataPropertiesAction);
 #endif
     }

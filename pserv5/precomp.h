@@ -59,7 +59,7 @@
 
 #include <wrl/client.h>
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
 #include <d3d11.h>
 #include <dxgi.h>
 #endif
@@ -68,11 +68,13 @@
 #include <sddl.h>
 #include <psapi.h>
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
 #include <imgui_internal.h>
+#endif
+#ifndef PSERV_CONSOLE_BUILD
 #include <shellapi.h>
 #include <ShObjIdl.h>
 #endif

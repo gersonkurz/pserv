@@ -2,6 +2,8 @@
 
 `pserv5.exe` is the graphical interface for pserv5. It provides a modern, tabbed interface for managing Windows system components.
 
+A separate [WinUI 3 frontend, pserv6](pserv6.md), is available for evaluating the new interface across all ten local providers. See its manual for current validation and feature limitations.
+
 ## Overview
 
 ![Screenshot of main application](main.png)

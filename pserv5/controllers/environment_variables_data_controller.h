@@ -34,7 +34,7 @@ namespace pserv
         EditBuffer m_editBuffer;
         DataObject *m_editingObject = nullptr; ///< Object being edited.
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
         // Add variable dialog state
         bool m_bShowAddDialog{false};
         EnvironmentVariableScope m_addDialogScope{EnvironmentVariableScope::User};
@@ -60,7 +60,7 @@ namespace pserv
         bool SetPropertyEdit(DataObject *obj, int columnIndex, const std::string &newValue) override;
         bool CommitPropertyEdits(DataObject *obj) override;
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
         /// @brief Open the Add Variable dialog.
         /// @param scope Whether to add a User or System variable.
         void ShowAddVariableDialog(EnvironmentVariableScope scope);

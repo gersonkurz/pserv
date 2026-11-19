@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="pserv6/pserv6.vcxproj" Id="B96AB4A2-5217-4F46-91A5-EC6B2C4B8E25" />
+  <Project Path="pservc/pservc.vcxproj" Id="fff6295f-5877-4b5b-a65e-5d32080ff0da" />
+</Solution>

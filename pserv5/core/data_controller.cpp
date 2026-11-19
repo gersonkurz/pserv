@@ -3,7 +3,9 @@
 #include <core/data_object.h>
 #include <core/data_action.h>
 #include <core/exporters/exporter_registry.h>
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
 #include <dialogs/data_properties_dialog.h>
+#endif
 #include <utils/file_dialogs.h>
 #include <utils/string_utils.h>
 #include <core/data_action_dispatch_context.h>
@@ -12,7 +14,7 @@ namespace pserv
 {
     DataController::~DataController()
     {
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
         if (m_pPropertiesDialog)
         {
             m_pPropertiesDialog->Close();
@@ -22,7 +24,7 @@ namespace pserv
         Clear();
     }
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
     void DataController::ShowPropertiesDialog(DataActionDispatchContext &ctx)
     {
         if (!ctx.m_selectedObjects.empty())
@@ -150,7 +152,7 @@ namespace pserv
         m_objects.Sort(columnIndex, ascending, dataType);
     }
     
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
 
     bool DataController::HasPropertiesDialogWithEdits() const
     {

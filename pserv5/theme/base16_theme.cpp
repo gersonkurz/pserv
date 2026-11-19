@@ -41,7 +41,7 @@ namespace pserv::theme
 
         // --- Color helpers --------------------------------------------------
 
-        ImVec4 HexToColor(const std::string& s)
+        PaletteColor HexToColor(const std::string& s)
         {
             // Accepts "#RRGGBB". Returns opaque black on malformed input.
             const auto hex = [](char c) -> int {
@@ -61,33 +61,33 @@ namespace pserv::theme
                 }
                 if (ok)
                 {
-                    return ImVec4{
+                    return PaletteColor{
                         (v[0] * 16 + v[1]) / 255.0f,
                         (v[2] * 16 + v[3]) / 255.0f,
                         (v[4] * 16 + v[5]) / 255.0f,
                         1.0f};
                 }
             }
-            return ImVec4{0.0f, 0.0f, 0.0f, 1.0f};
+            return PaletteColor{0.0f, 0.0f, 0.0f, 1.0f};
         }
 
-        float Luminance(const ImVec4& c)
+        float Luminance(const PaletteColor& c)
         {
             return 0.2126f * c.x + 0.7152f * c.y + 0.0722f * c.z;
         }
 
-        ImVec4 Lerp(const ImVec4& a, const ImVec4& b, float t)
+        PaletteColor Lerp(const PaletteColor& a, const PaletteColor& b, float t)
         {
-            return ImVec4{
+            return PaletteColor{
                 a.x + (b.x - a.x) * t,
                 a.y + (b.y - a.y) * t,
                 a.z + (b.z - a.z) * t,
                 a.w + (b.w - a.w) * t};
         }
 
-        ImVec4 WithAlpha(const ImVec4& c, float a)
+        PaletteColor WithAlpha(const PaletteColor& c, float a)
         {
-            return ImVec4{c.x, c.y, c.z, a};
+            return PaletteColor{c.x, c.y, c.z, a};
         }
 
         // --- YAML parsing ---------------------------------------------------
@@ -116,7 +116,7 @@ namespace pserv::theme
                     "base08", "base09", "base0A", "base0B",
                     "base0C", "base0D", "base0E", "base0F"};
 
-                ImVec4 colors[16]{};
+                PaletteColor colors[16]{};
                 for (int i{0}; i < 16; ++i)
                 {
                     if (!palette.contains(keys[i]))
@@ -158,10 +158,10 @@ namespace pserv::theme
 
     // --- Base16Theme --------------------------------------------------------
 
-    ImVec4 Base16Theme::AccentText() const
+    PaletteColor Base16Theme::AccentText() const
     {
         // Contrast against the accent fill: dark accent -> white, light -> base00.
-        return Luminance(base[0x0D]) > 0.5f ? base[0x00] : ImVec4{1.0f, 1.0f, 1.0f, 1.0f};
+        return Luminance(base[0x0D]) > 0.5f ? base[0x00] : PaletteColor{1.0f, 1.0f, 1.0f, 1.0f};
     }
 
     // --- ThemeSet -----------------------------------------------------------
@@ -226,14 +226,15 @@ namespace pserv::theme
 
     // --- Base16 -> ImGuiStyle mapping ---------------------------------------
 
+#ifndef PSERV_WINUI_BUILD
     void ApplyToImGui(const Base16Theme& t, ImGuiStyle& style)
     {
-        const ImVec4* b = t.base;
-        const ImVec4 accent = b[0x0D];
-        const ImVec4 accentHover = Lerp(accent, b[0x05], 0.20f);
-        const ImVec4 accentActive = Lerp(accent, b[0x00], 0.20f);
+        const PaletteColor* b = t.base;
+        const PaletteColor accent = b[0x0D];
+        const PaletteColor accentHover = Lerp(accent, b[0x05], 0.20f);
+        const PaletteColor accentActive = Lerp(accent, b[0x00], 0.20f);
 
-        ImVec4* c = style.Colors;
+        PaletteColor* c = style.Colors;
 
         c[ImGuiCol_Text]                  = b[0x05];
         c[ImGuiCol_TextDisabled]          = b[0x03];
@@ -241,7 +242,7 @@ namespace pserv::theme
         c[ImGuiCol_ChildBg]               = b[0x00];
         c[ImGuiCol_PopupBg]               = b[0x01];
         c[ImGuiCol_Border]                = b[0x02];
-        c[ImGuiCol_BorderShadow]          = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        c[ImGuiCol_BorderShadow]          = PaletteColor(0.0f, 0.0f, 0.0f, 0.0f);
 
         c[ImGuiCol_FrameBg]               = b[0x01];
         c[ImGuiCol_FrameBgHovered]        = Lerp(b[0x01], b[0x02], 0.5f);
@@ -293,7 +294,7 @@ namespace pserv::theme
         c[ImGuiCol_TableHeaderBg]         = b[0x01];
         c[ImGuiCol_TableBorderStrong]     = b[0x02];
         c[ImGuiCol_TableBorderLight]      = Lerp(b[0x01], b[0x02], 0.5f);
-        c[ImGuiCol_TableRowBg]            = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        c[ImGuiCol_TableRowBg]            = PaletteColor(0.0f, 0.0f, 0.0f, 0.0f);
         c[ImGuiCol_TableRowBgAlt]         = WithAlpha(b[0x01], 0.4f);
 
         c[ImGuiCol_TextSelectedBg]        = WithAlpha(accent, 0.35f);
@@ -303,4 +304,5 @@ namespace pserv::theme
         c[ImGuiCol_NavWindowingDimBg]     = WithAlpha(b[0x00], 0.2f);
         c[ImGuiCol_ModalWindowDimBg]      = WithAlpha(b[0x00], 0.5f);
     }
+#endif
 }

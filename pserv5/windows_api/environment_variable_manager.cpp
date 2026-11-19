@@ -1,4 +1,5 @@
 #include "precomp.h"
+#include <core/environment_edit.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <windows_api/environment_variable_manager.h>
@@ -77,33 +78,51 @@ namespace pserv
         }
     }
 
-    bool EnvironmentVariableManager::SetEnvironmentVariable(const std::string &name, const std::string &value, EnvironmentVariableScope scope)
+    bool EnvironmentVariableManager::SetEnvironmentVariable(const std::string& name, const std::string& value, EnvironmentVariableScope scope)
     {
-        wil::unique_hkey hKey;
-        LSTATUS status = RegOpenKeyExW(GetRegistryRoot(scope), GetRegistryPath(scope).c_str(), 0, KEY_SET_VALUE, &hKey);
-        if (status != ERROR_SUCCESS)
+        return EditEnvironmentVariable(name, name, value, scope);
+    }
+
+    bool EnvironmentVariableManager::RenameEnvironmentVariable(const std::string& original, const std::string& name,
+        const std::string& value, EnvironmentVariableScope scope)
+    {
+        return EditEnvironmentVariable(original, name, value, scope);
+    }
+
+    bool EnvironmentVariableManager::EditEnvironmentVariable(const std::string& original, const std::string& name,
+        const std::string& value, EnvironmentVariableScope scope)
+    {
+        if (name.empty() || name.find('=') != std::string::npos || name.find('\0') != std::string::npos ||
+            value.find('\0') != std::string::npos) return false;
+        wil::unique_hkey key;
+        auto status = RegOpenKeyExW(GetRegistryRoot(scope), GetRegistryPath(scope).c_str(), 0, KEY_QUERY_VALUE | KEY_SET_VALUE, key.put());
+        if (status != ERROR_SUCCESS) { LogWin32ErrorCode("RegOpenKeyExW", status); return false; }
+        auto oldName = utils::Utf8ToWide(original), newName = utils::Utf8ToWide(name), newValue = utils::Utf8ToWide(value);
+        auto result = EditEnvironmentValue(oldName, newName, newValue, _wcsicmp(oldName.c_str(), newName.c_str()) == 0,
+            [&](auto const& entry, uint32_t& type)
+            {
+                DWORD actual{};
+                auto error = RegQueryValueExW(key.get(), entry.c_str(), nullptr, &actual, nullptr, nullptr);
+                if (error == ERROR_FILE_NOT_FOUND) return EnvironmentRead::Missing;
+                if (error != ERROR_SUCCESS || (actual != REG_SZ && actual != REG_EXPAND_SZ)) return EnvironmentRead::Failed;
+                type = actual; return EnvironmentRead::Present;
+            },
+            [&](auto const& entry, auto const& text, uint32_t type)
+            {
+                return RegSetValueExW(key.get(), entry.c_str(), 0, type, reinterpret_cast<const BYTE*>(text.c_str()),
+                    static_cast<DWORD>((text.size() + 1) * sizeof(wchar_t))) == ERROR_SUCCESS;
+            },
+            [&](auto const& entry) { return RegDeleteValueW(key.get(), entry.c_str()) == ERROR_SUCCESS; });
+        if (result != EnvironmentEditResult::Success)
         {
-            LogWin32ErrorCode("RegOpenKeyExW", status, "opening environment key for scope {} to set '{}'",
-                scope == EnvironmentVariableScope::System ? "System" : "User", name);
+            spdlog::error("Environment edit '{}' -> '{}' failed (stage {}). Original retained on rename failure.",
+                original, name, static_cast<int>(result));
+            if (result == EnvironmentEditResult::RollbackFailed)
+                spdlog::error("Replacement '{}' also remains because rollback failed; neither value was discarded.", name);
             return false;
         }
-
-        std::wstring wName = utils::Utf8ToWide(name);
-        std::wstring wValue = utils::Utf8ToWide(value);
-
-        status = RegSetValueExW(hKey.get(), wName.c_str(), 0, REG_SZ,
-            reinterpret_cast<const BYTE *>(wValue.c_str()),
-            static_cast<DWORD>((wValue.length() + 1) * sizeof(wchar_t)));
-
-        if (status != ERROR_SUCCESS)
-        {
-            LogWin32ErrorCode("RegSetValueExW", status, "setting environment variable '{}'", name);
-            return false;
-        }
-
         BroadcastEnvironmentChange();
-        spdlog::info("Set environment variable '{}' = '{}' (scope: {})", name, value,
-            scope == EnvironmentVariableScope::System ? "System" : "User");
+        spdlog::info("Updated environment variable '{}' (scope {})", name, static_cast<int>(scope));
         return true;
     }
 

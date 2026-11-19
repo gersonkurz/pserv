@@ -50,8 +50,8 @@ namespace pserv::utils
     }
 
     /// @brief Copy text to the system clipboard.
-    /// Uses Win32 API in console build, ImGui in GUI build.
-    #ifdef PSERV_CONSOLE_BUILD
+    /// Uses the frontend's Win32 helper outside the ImGui build.
+    #if defined(PSERV_CONSOLE_BUILD) || defined(PSERV_WINUI_BUILD)
     void CopyToClipboard(const std::string &text);
     #else
     inline void CopyToClipboard(const std::string& text)

@@ -10,10 +10,11 @@
 #include <utils/base_app.h>
 #include <utils/string_utils.h>
 #include <core/async_operation.h>
+#include <iostream>
 
 using namespace pserv;
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[]) try
 {
     utils::BaseApp baseApp;
 
@@ -367,4 +368,11 @@ int main(int argc, char *argv[])
     }
 
     return 0;
+}
+catch (const std::exception& error)
+{
+    // Startup (including configuration and logging) can fail before the normal
+    // command exception boundary. Report that failure instead of aborting.
+    std::cerr << "pservc: " << error.what() << '\n';
+    return 1;
 }

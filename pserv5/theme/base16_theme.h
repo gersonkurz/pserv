@@ -8,26 +8,36 @@
 /// Direct2D to ImGui.
 #pragma once
 
+#ifndef PSERV_WINUI_BUILD
 #include <imgui.h>
+#endif
 #include <string>
 #include <vector>
 
 namespace pserv::theme
 {
+#ifdef PSERV_WINUI_BUILD
+    struct PaletteColor
+    {
+        float x{}, y{}, z{}, w{};
+    };
+#else
+    using PaletteColor = ImVec4;
+#endif
     /// @brief A parsed Base16 scheme: name, light/dark classification, and the
     ///        16 palette entries (base00..base0F) as linear-ish ImGui colors.
     struct Base16Theme
     {
         std::string name;            ///< Display name (from YAML "name").
         bool isDark{true};           ///< Derived from base00 luminance.
-        ImVec4 base[16]{};           ///< base00..base0F.
+        PaletteColor base[16]{};     ///< base00..base0F.
 
         /// @brief Accent color used for selection/active highlights (base0D).
-        const ImVec4& Accent() const { return base[0x0D]; }
+        const PaletteColor& Accent() const { return base[0x0D]; }
 
         /// @brief Foreground text drawn on top of an Accent() fill.
         /// White for dark accents, near-black (base00) for light accents.
-        ImVec4 AccentText() const;
+        PaletteColor AccentText() const;
     };
 
     /// @brief Name + dark/light flag, for grouped listings in the picker.
@@ -60,5 +70,7 @@ namespace pserv::theme
 
     /// @brief Map a Base16 scheme onto an ImGuiStyle's color table in place.
     /// Geometry (sizes/rounding) is left untouched.
+#ifndef PSERV_WINUI_BUILD
     void ApplyToImGui(const Base16Theme& theme, ImGuiStyle& style);
+#endif
 }

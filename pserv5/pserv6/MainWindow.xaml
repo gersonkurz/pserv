@@ -1,0 +1,142 @@
+<Window
+    x:Class="pserv6.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:pserv6"
+    Title="pserv6 — Services">
+    <Grid x:Name="Viewport" SizeChanged="ViewportSizeChanged" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid x:Name="Root" Loaded="OnLoaded" HorizontalAlignment="Left" VerticalAlignment="Top" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid.RenderTransform><ScaleTransform x:Name="UiScale"/></Grid.RenderTransform>
+        <Grid.Resources>
+            <DataTemplate x:Key="CellTemplate" x:DataType="local:DataCell">
+                <Border Width="{x:Bind Width, Mode=OneWay}" Height="30" Padding="10,0">
+                    <TextBlock Text="{x:Bind Text, Mode=OneWay}" Foreground="{x:Bind Foreground, Mode=OneWay}"
+                               TextAlignment="{x:Bind Alignment, Mode=OneWay}" FontFamily="{x:Bind FontName, Mode=OneWay}" FontWeight="{x:Bind FontWeight, Mode=OneWay}" FontStyle="{x:Bind FontStyle, Mode=OneWay}" FontSize="13"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                </Border>
+            </DataTemplate>
+            <DataTemplate x:Key="RowTemplate" x:DataType="local:DataRow">
+                <ItemsControl ItemsSource="{x:Bind Cells}" ItemTemplate="{StaticResource CellTemplate}" IsTabStop="False">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </DataTemplate>
+        </Grid.Resources>
+        <MenuBar x:Name="MainMenu">
+            <MenuBarItem Title="File">
+                <MenuFlyoutItem Text="Refresh" Click="RefreshClicked"/>
+                <MenuFlyoutSeparator/>
+                <MenuFlyoutItem x:Name="LocalMenuItem" Text="Connect to local machine" Tag="local" Click="CommandClicked"/>
+                <MenuFlyoutItem x:Name="RemoteMenuItem" Text="Connect to remote machine…" Tag="remote" Click="CommandClicked"/>
+                <MenuFlyoutSeparator/>
+                <MenuFlyoutItem Text="Exit" Tag="exit" Click="CommandClicked"/>
+            </MenuBarItem>
+            <MenuBarItem Title="Edit">
+                <MenuFlyoutItem Text="Select all" Tag="select-all" Click="CommandClicked"/>
+                <MenuFlyoutItem x:Name="CopyTextMenuItem" Text="Copy as Plain Text" Tag="Copy as Plain Text" Click="CommandClicked"/>
+                <MenuFlyoutItem x:Name="CopyJsonMenuItem" Text="Copy as JSON" Tag="Copy as JSON" Click="CommandClicked"/>
+            </MenuBarItem>
+            <MenuBarItem Title="View">
+                <MenuFlyoutItem Text="Font…" Tag="font" Click="CommandClicked"/>
+                <MenuFlyoutItem Text="Columns…" Tag="columns" Click="CommandClicked"/>
+                <MenuFlyoutSubItem x:Name="RefreshIntervals" Text="Refresh interval"/>
+                <MenuFlyoutItem Text="Reset zoom" Tag="reset-zoom" Click="CommandClicked"/>
+            </MenuBarItem>
+            <MenuBarItem x:Name="ThemesMenu" Title="Themes">
+                <MenuFlyoutSubItem x:Name="DarkThemes" Text="Dark"/>
+                <MenuFlyoutSubItem x:Name="LightThemes" Text="Light"/>
+            </MenuBarItem>
+            <MenuBarItem Title="Help">
+                <MenuFlyoutItem Text="Documentation" Tag="documentation" Click="CommandClicked"/>
+                <MenuFlyoutItem Text="About pserv6…" Tag="about" Click="CommandClicked"/>
+            </MenuBarItem>
+        </MenuBar>
+        <NavigationView x:Name="Navigation" Grid.Row="1" IsBackButtonVisible="Collapsed" IsSettingsVisible="False"
+                        PaneDisplayMode="Left" OpenPaneLength="220" SelectionChanged="ProviderChanged" IsPaneOpen="True"
+                        AlwaysShowHeader="False" PaneTitle="pserv6">
+            <NavigationView.PaneFooter>
+                <StackPanel Margin="16,16,8,20" Spacing="4">
+                    <TextBlock x:Name="MachineLabel" Text="LOCAL COMPUTER" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock x:Name="MachineText" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="AccessText" FontSize="11" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </NavigationView.PaneFooter>
+            <Grid Margin="12,8,12,8" RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <StackPanel x:Name="PrimaryActions" Orientation="Horizontal" Spacing="4"/>
+                        <Button x:Name="AddVariableButton" Click="AddVariableClicked" Visibility="Collapsed"/>
+                        <Button x:Name="PropertiesButton" Click="PropertiesClicked" IsEnabled="False"/>
+                        <DropDownButton x:Name="MoreButton" IsEnabled="False" AutomationProperties.Name="More actions" ToolTipService.ToolTip="More actions"><DropDownButton.Content><FontIcon Glyph="&#xE712;" FontSize="16"/></DropDownButton.Content><DropDownButton.Flyout><MenuFlyout x:Name="ActionsMenu" Opening="ActionsOpening"/></DropDownButton.Flyout></DropDownButton>
+                        <Border Width="1" Margin="4,4" Background="{ThemeResource CardStrokeColorDefaultBrush}"/>
+                        <Button x:Name="ElevateButton" Tag="elevate" Click="CommandClicked"/>
+                        <Button Click="RefreshClicked" ToolTipService.ToolTip="Refresh (F5)" AutomationProperties.Name="Refresh"><FontIcon Glyph="&#xE72C;" FontSize="16"/></Button>
+                    </StackPanel>
+                    <TextBox x:Name="SearchBox" Grid.Column="1" PlaceholderText="Search" TextChanged="SearchChanged" MinWidth="140" MaxWidth="520" HorizontalAlignment="Stretch" AutomationProperties.Name="Search"/>
+                    <ToggleSwitch x:Name="AutoRefresh" Grid.Column="2" IsOn="True" OnContent="Every 5 seconds" OffContent="Paused" VerticalAlignment="Center" AutomationProperties.Name="Automatic refresh"/>
+                </Grid>
+                <Border Grid.Row="1" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <Grid x:Name="Table">
+                            <Grid.RowDefinitions><RowDefinition Height="36"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                            <ScrollViewer x:Name="HeaderScroll" Margin="0,0,16,0" HorizontalContentAlignment="Left" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+                                <Grid x:Name="Headers" HorizontalAlignment="Left" Background="{ThemeResource SubtleFillColorSecondaryBrush}"/>
+                            </ScrollViewer>
+                            <ListView x:Name="Rows" Grid.Row="1" ItemTemplate="{StaticResource RowTemplate}"
+                                      SelectionMode="Extended" IsMultiSelectCheckBoxEnabled="False"
+                                      Loaded="RowsLoaded" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                      ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.VerticalScrollMode="Enabled"
+                                      SelectionChanged="SelectionChanged"
+                                      DoubleTapped="RowsDoubleTapped" RightTapped="RowsRightTapped" KeyDown="RowsKeyDown">
+                                <ListView.Resources>
+                                    <!-- Reserve space for both bars instead of overlaying or hiding them. -->
+                                    <Style TargetType="ScrollViewer" BasedOn="{StaticResource DefaultScrollViewerStyle}">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ScrollViewer">
+                                                    <Grid Background="{TemplateBinding Background}">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                                        <ScrollContentPresenter x:Name="ScrollContentPresenter" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="{TemplateBinding Padding}"/>
+                                                        <ScrollBar x:Name="VerticalScrollBar" Grid.Column="1" Width="16" IsTabStop="False" IndicatorMode="MouseIndicator"
+                                                            Orientation="Vertical" Maximum="{TemplateBinding ScrollableHeight}" Value="{TemplateBinding VerticalOffset}"
+                                                            ViewportSize="{TemplateBinding ViewportHeight}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
+                                                        <ScrollBar x:Name="HorizontalScrollBar" Grid.Row="1" Height="16" IsTabStop="False" IndicatorMode="MouseIndicator"
+                                                            Orientation="Horizontal" Maximum="{TemplateBinding ScrollableWidth}" Value="{TemplateBinding HorizontalOffset}"
+                                                            ViewportSize="{TemplateBinding ViewportWidth}" Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"/>
+                                                    </Grid>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListView.Resources>
+                                <ListView.ItemContainerTransitions><TransitionCollection/></ListView.ItemContainerTransitions>
+                                <ListView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel ItemsUpdatingScrollMode="KeepScrollOffset"/></ItemsPanelTemplate></ListView.ItemsPanel>
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="MinHeight" Value="30"/><Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                            </ListView>
+                        </Grid>
+                </Border>
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock x:Name="CountText" FontSize="12" Text="Loading…" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock x:Name="RefreshText" Grid.Column="1" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </Grid>
+                <StackPanel Grid.Row="3" Spacing="6">
+                    <ProgressBar x:Name="Progress" Height="3" Visibility="Collapsed" IsIndeterminate="True"/>
+                    <InfoBar x:Name="Notice" IsOpen="False" IsClosable="True"/>
+                    <Button x:Name="CancelButton" Content="Cancel operation" Click="CancelClicked" Visibility="Collapsed"/>
+                </StackPanel>
+            </Grid>
+        </NavigationView>
+    </Grid>
+    </Grid>
+</Window>

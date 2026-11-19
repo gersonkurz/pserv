@@ -123,7 +123,7 @@ namespace pserv
         void Execute(DataActionDispatchContext &) const override { }
     };
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
     /// @brief Built-in action to open the properties dialog for an object.
     ///
     /// This action is typically added as the last item in context menus
@@ -144,7 +144,7 @@ namespace pserv
     /// @brief Global separator instance for reuse across controllers.
     extern DataActionSeparator theDataActionSeparator;
 
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
     /// @brief Global properties action instance for reuse across controllers.
     extern DataPropertiesAction theDataPropertiesAction;
 #endif

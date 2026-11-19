@@ -7,7 +7,7 @@ namespace pserv
 {
 
     DataActionSeparator theDataActionSeparator;
-#ifndef PSERV_CONSOLE_BUILD
+#if !defined(PSERV_CONSOLE_BUILD) && !defined(PSERV_WINUI_BUILD)
     DataPropertiesAction theDataPropertiesAction;
 
     void DataPropertiesAction::Execute(DataActionDispatchContext &ctx) const

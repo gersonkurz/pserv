@@ -1,0 +1,10 @@
+import "DataCell.idl";
+namespace pserv6
+{
+    [default_interface]
+    runtimeclass DataRow
+    {
+        DataRow();
+        Windows.Foundation.Collections.IVector<DataCell> Cells{ get; };
+    }
+}

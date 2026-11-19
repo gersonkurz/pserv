@@ -369,4 +369,5 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup><ClInclude Include="..\core\environment_edit.h" /></ItemGroup>
 </Project>

@@ -3,6 +3,7 @@
 #include <core/data_action.h>
 #include <core/data_action_dispatch_context.h>
 #include <core/data_controller.h>
+#include <controllers/services_data_controller.h>
 #include <models/service_info.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
@@ -11,11 +12,15 @@
 namespace pserv
 {
 
-    // Forward declare to avoid circular dependency
-    class ServicesDataController;
 
     namespace
     {
+
+        std::string TargetMachine(const DataActionDispatchContext& ctx)
+        {
+            auto controller = dynamic_cast<const ServicesDataController*>(ctx.m_pController);
+            return controller ? controller->GetMachineName() : std::string{};
+        }
 
         // Helper function to get ServiceInfo from DataObject
         inline const ServiceInfo *GetServiceInfo(const DataObject *obj)
@@ -60,7 +65,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName = TargetMachine(ctx)](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -79,7 +84,7 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    }, machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -135,7 +140,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName = TargetMachine(ctx)](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -154,7 +159,7 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    }, machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -209,7 +214,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName = TargetMachine(ctx)](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -228,7 +233,7 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    }, machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -284,7 +289,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName = TargetMachine(ctx)](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -303,7 +308,7 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    }, machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -358,7 +363,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName = TargetMachine(ctx)](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -377,7 +382,7 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    }, machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -441,7 +446,7 @@ namespace pserv
                 DWORD dwStartupAction{m_dwStartupAction};
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames, dwStartupAction](AsyncOperation *op) -> bool
+                    [serviceNames, dwStartupAction, machineName = TargetMachine(ctx)](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -453,10 +458,11 @@ namespace pserv
 
                                 op->ReportProgress(progress, std::format("Setting startup type for '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::ChangeServiceStartType(serviceName, dwStartupAction);
+                                if (!ServiceManager::ChangeServiceStartType(serviceName, dwStartupAction, machineName))
+                                    throw std::runtime_error("Failed to change startup type for " + serviceName);
                             }
 
-                            op->ReportProgress(1.0f, std::format("Set startup type to Automatic for {} service(s)", total));
+                            op->ReportProgress(1.0f, std::format("Changed startup type for {} service(s)", total));
                             return true;
                         }
                         catch (const std::exception &e)
@@ -514,6 +520,7 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                if (!TargetMachine(ctx).empty()) throw std::runtime_error("This action is only available on the local computer.");
                 std::string serviceName = GetServiceInfo(ctx.m_selectedObjects[0])->GetName();
                 std::string regPath = std::format("SYSTEM\\CurrentControlSet\\Services\\{}", serviceName);
 
@@ -559,6 +566,7 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                if (!TargetMachine(ctx).empty()) throw std::runtime_error("This action is only available on the local computer.");
                 std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
                 if (!installLocation.empty())
                 {
@@ -592,6 +600,7 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                if (!TargetMachine(ctx).empty()) throw std::runtime_error("This action is only available on the local computer.");
                 std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
                 if (!installLocation.empty())
                 {
@@ -669,7 +678,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName = TargetMachine(ctx)](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -681,7 +690,8 @@ namespace pserv
 
                                 op->ReportProgress(progress, std::format("Deleting service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::DeleteService(serviceName);
+                                if (!ServiceManager::DeleteService(serviceName, machineName))
+                                    throw std::runtime_error("Failed to delete service " + serviceName);
                             }
 
                             op->ReportProgress(1.0f, std::format("Deleted {} service(s) successfully", total));
@@ -716,6 +726,7 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                if (!TargetMachine(ctx).empty()) throw std::runtime_error("This action is only available on the local computer.");
                 std::vector<std::string> serviceNames;
                 for (const auto *svc : ctx.m_selectedObjects)
                 {
@@ -755,7 +766,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName = TargetMachine(ctx)](AsyncOperation *op) -> bool
                     {
                         try
                         {
