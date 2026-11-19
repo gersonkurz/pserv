@@ -40,27 +40,36 @@ namespace pserv
         void EnumerateServices(DataObjectContainer *doc, DWORD serviceType = SERVICE_WIN32 | SERVICE_DRIVER, bool isAutoRefresh = false);
 
         /// @name Service Control Operations
-        /// Static methods that open their own SCM handles.
+        /// Static methods that open their own SCM handles on the target machine (empty = local).
         /// @param progressCallback Optional callback for progress updates (0.0-1.0). Returns false to cancel.
-        /// @throws std::runtime_error on failure.
+        /// @param machineName Target machine name (empty for local machine).
         /// @{
-        static bool StartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
-        static bool StopServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
-        static bool PauseServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
-        static bool ResumeServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
-        static bool RestartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr);
+        static bool StartServiceByName(
+            const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr, const std::string &machineName = "");
+        static bool StopServiceByName(
+            const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr, const std::string &machineName = "");
+        static bool PauseServiceByName(
+            const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr, const std::string &machineName = "");
+        static bool ResumeServiceByName(
+            const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr, const std::string &machineName = "");
+        static bool RestartServiceByName(
+            const std::string &serviceName, std::function<bool(float, std::string)> progressCallback = nullptr, const std::string &machineName = "");
         /// @}
 
         /// @brief Change service startup type.
         /// @param startType SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, etc.
-        static bool ChangeServiceStartType(const std::string &serviceName, DWORD startType);
+        static bool ChangeServiceStartType(const std::string &serviceName, DWORD startType, const std::string &machineName = "");
 
         /// @brief Delete a service (must be stopped first).
-        static bool DeleteService(const std::string &serviceName);
+        static bool DeleteService(const std::string &serviceName, const std::string &machineName = "");
 
         /// @brief Change service configuration.
-        static bool ChangeServiceConfig(
-            const std::string &serviceName, const std::string &displayName, const std::string &description, DWORD startType, const std::string &binaryPathName);
+        static bool ChangeServiceConfig(const std::string &serviceName,
+            const std::string &displayName,
+            const std::string &description,
+            DWORD startType,
+            const std::string &binaryPathName,
+            const std::string &machineName = "");
     };
 
 } // namespace pserv

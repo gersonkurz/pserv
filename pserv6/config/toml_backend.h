@@ -269,10 +269,48 @@ namespace pserv
 
             void saveToFile()
             {
-                std::ofstream file(m_filename);
-                if (file.is_open())
+                try
                 {
-                    file << m_config;
+                    std::filesystem::path targetPath(
+                        reinterpret_cast<const char8_t *>(m_filename.data()),
+                        reinterpret_cast<const char8_t *>(m_filename.data() + m_filename.size()));
+                    std::error_code ec;
+                    if (targetPath.has_parent_path())
+                    {
+                        std::filesystem::create_directories(targetPath.parent_path(), ec);
+                    }
+
+                    std::filesystem::path tempPath = targetPath;
+                    tempPath += std::format(".{}.tmp", GetCurrentProcessId());
+
+                    {
+                        std::ofstream file(tempPath, std::ios::binary | std::ios::trunc);
+                        if (!file.is_open())
+                        {
+                            logger->error("Failed to open temporary config file '{}'", tempPath.string());
+                            return;
+                        }
+                        file << m_config;
+                        file.flush();
+                        if (file.fail())
+                        {
+                            logger->error("Failed to write temporary config file '{}'", tempPath.string());
+                            file.close();
+                            std::filesystem::remove(tempPath, ec);
+                            return;
+                        }
+                    }
+
+                    if (!MoveFileExW(tempPath.c_str(), targetPath.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+                    {
+                        DWORD err = GetLastError();
+                        logger->error("Atomic config rename failed (Win32 error {}) for '{}'", err, m_filename);
+                        std::filesystem::remove(tempPath, ec);
+                    }
+                }
+                catch (const std::exception &e)
+                {
+                    logger->error("Exception while saving config '{}': {}", m_filename, e.what());
                 }
             }
 

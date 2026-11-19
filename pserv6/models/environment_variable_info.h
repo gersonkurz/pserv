@@ -34,9 +34,10 @@ namespace pserv
         std::string m_name;
         std::string m_value;
         EnvironmentVariableScope m_scope;
+        DWORD m_regType{REG_SZ};
 
     public:
-        EnvironmentVariableInfo(std::string name, std::string value, EnvironmentVariableScope scope);
+        EnvironmentVariableInfo(std::string name, std::string value, EnvironmentVariableScope scope, DWORD regType = REG_SZ);
         ~EnvironmentVariableInfo() override = default;
 
         // DataObject interface
@@ -69,6 +70,10 @@ namespace pserv
         {
             return m_scope;
         }
+        DWORD GetRegType() const
+        {
+            return m_regType;
+        }
         std::string GetScopeString() const;
 
         // Setters (for editing)
@@ -79,6 +84,10 @@ namespace pserv
         void SetValue(std::string value)
         {
             m_value = std::move(value);
+        }
+        void SetRegType(DWORD regType)
+        {
+            m_regType = regType;
         }
     };
 

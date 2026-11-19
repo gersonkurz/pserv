@@ -6,7 +6,9 @@
 
 #include "Resource.h"
 #include <commctrl.h>
+#include <commdlg.h>
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "comdlg32.lib")
 
 #include <actions/common_actions.h>
 #include <config/settings.h>
@@ -21,7 +23,9 @@
 #include <utils/win32_error.h>
 #include <windows_api/environment_variable_manager.h>
 #include <windows_api/service_manager.h>
+#include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Microsoft.UI.Interop.h>
+#include <winrt/Windows.UI.ViewManagement.h>
 
 using namespace winrt;
 using namespace winrt::Microsoft::UI::Xaml;
@@ -113,9 +117,19 @@ namespace winrt::pserv6::implementation
 
     MainWindow::~MainWindow()
     {
+        ++m_refreshGeneration;
+        m_bPendingRefresh = false;
         if (m_periodicTimer)
         {
             m_periodicTimer.Stop();
+        }
+        if (m_refreshThread.joinable())
+        {
+            m_refreshThread.join();
+        }
+        if (m_connectThread.joinable())
+        {
+            m_connectThread.join();
         }
         if (m_hWnd)
         {
@@ -188,13 +202,36 @@ namespace winrt::pserv6::implementation
         {
             m_appWindow = this->AppWindow();
 
-            // Restore window position & size from settings
+            // Restore window position & size safely across multi-monitor setups
             auto &winSettings = pserv::config::theSettings.window;
             int width = std::clamp(winSettings.width.get(), 800, 3840);
             int height = std::clamp(winSettings.height.get(), 500, 2160);
-            int posX = std::clamp(winSettings.positionX.get(), 20, 1400);
-            int posY = std::clamp(winSettings.positionY.get(), 20, 900);
+            int posX = winSettings.positionX.get();
+            int posY = winSettings.positionY.get();
             bool maximized = winSettings.maximized.get();
+
+            RECT savedRect{posX, posY, posX + width, posY + height};
+            HMONITOR hMon = MonitorFromRect(&savedRect, MONITOR_DEFAULTTONULL);
+            if (!hMon)
+            {
+                hMon = MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTOPRIMARY);
+                MONITORINFO mi{};
+                mi.cbSize = sizeof(mi);
+                if (hMon && GetMonitorInfoW(hMon, &mi))
+                {
+                    int workW = mi.rcWork.right - mi.rcWork.left;
+                    int workH = mi.rcWork.bottom - mi.rcWork.top;
+                    width = std::min(width, std::max(800, workW));
+                    height = std::min(height, std::max(500, workH));
+                    posX = mi.rcWork.left + std::max(0, (workW - width) / 2);
+                    posY = mi.rcWork.top + std::max(0, (workH - height) / 2);
+                }
+                else
+                {
+                    posX = 100;
+                    posY = 100;
+                }
+            }
 
             SetWindowPos(m_hWnd, nullptr, posX, posY, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
             if (maximized)
@@ -203,9 +240,15 @@ namespace winrt::pserv6::implementation
             }
         }
 
-        // Load font size from config
+        // Load font family & size from config
         int32_t fontSizeScaled = pserv::config::theSettings.application.fontSizeScaled.get();
         m_fontSize = std::clamp(fontSizeScaled / 100.0, 9.0, 28.0);
+        m_fontFamily = pserv::config::theSettings.application.fontFamily.get();
+        if (m_fontFamily.empty())
+        {
+            m_fontFamily = "Segoe UI Variable";
+        }
+        m_cachedFontFamily = FontFamily(winrt::to_hstring(m_fontFamily));
 
         // Load Base16 themes, populate Themes menu once, and apply configured theme
         m_themeSet.LoadFromDirectory(GetThemesDirectory());
@@ -222,16 +265,11 @@ namespace winrt::pserv6::implementation
             box_value(PointerEventHandler{this, &MainWindow::OnRootPointerWheelChanged}),
             true);
 
-        // Restore remote machine name if set
-        const auto &controllers = m_controllers.GetDataControllers();
-        if (!controllers.empty())
+        // Restore remote machine name across BOTH Services and Devices controllers
+        std::string savedMachine = pserv::config::theSettings.application.serviceMachineName.get();
+        if (!savedMachine.empty())
         {
-            auto *servicesCtrl = static_cast<pserv::ServicesDataController *>(controllers[0]);
-            std::string savedMachine = pserv::config::theSettings.application.serviceMachineName.get();
-            if (!savedMachine.empty())
-            {
-                servicesCtrl->SetMachineName(savedMachine);
-            }
+            ApplyRemoteMachineToControllers(savedMachine);
         }
 
         // Populate navigation items & view menu
@@ -308,35 +346,194 @@ namespace winrt::pserv6::implementation
         return path.wstring();
     }
 
-    void MainWindow::ApplyTheme(const std::string &name)
+    void MainWindow::ApplyDwmTitleBarTheme(bool isDark)
     {
-        if (!m_themeSet.SelectByName(name))
+        if (!m_hWnd)
+            return;
+        constexpr DWORD DWMWA_IMMERSIVE_DARK = 20;
+        BOOL darkValue = isDark ? TRUE : FALSE;
+        DwmSetWindowAttribute(m_hWnd, DWMWA_IMMERSIVE_DARK, &darkValue, sizeof(darkValue));
+    }
+
+    void MainWindow::ClearCustomThemeResources()
+    {
+        static const wchar_t *const kThemeResourceKeys[] = {
+            L"ApplicationPageBackgroundThemeBrush",
+            L"SolidBackgroundFillColorBaseBrush",
+            L"LayerFillColorDefaultBrush",
+            L"CardBackgroundFillColorDefaultBrush",
+            L"SubtleFillColorSecondaryBrush",
+            L"NavigationViewDefaultPaneBackground",
+            L"NavigationViewExpandedPaneBackground",
+            L"NavigationViewTopPaneBackground",
+            L"MenuFlyoutPresenterBackground",
+            L"ContentDialogBackground",
+            L"ControlFillColorDefaultBrush",
+            L"ControlFillColorSecondaryBrush",
+            L"TextControlBackground",
+            L"TextControlBackgroundPointerOver",
+            L"TextControlBackgroundFocused",
+            L"TextFillColorPrimaryBrush",
+            L"TextFillColorSecondaryBrush",
+            L"TextFillColorTertiaryBrush",
+            L"TextControlForeground",
+            L"TextControlForegroundPointerOver",
+            L"TextControlForegroundFocused",
+            L"NavigationViewItemForeground",
+            L"NavigationViewItemForegroundPointerOver",
+            L"NavigationViewItemForegroundSelected",
+            L"DividerStrokeColorDefaultBrush",
+            L"CardStrokeColorDefaultBrush",
+            L"ControlStrokeColorDefaultBrush",
+            L"MenuFlyoutPresenterBorderBrush",
+            L"ContentDialogBorderBrush",
+            L"ListViewItemBackgroundSelected",
+            L"ListViewItemBackgroundSelectedPointerOver",
+            L"ListViewItemBackgroundPointerOver",
+            L"AccentFillColorDefaultBrush",
+            L"AccentTextFillColorPrimaryBrush"
+        };
+
+        auto appResources = Application::Current().Resources();
+        for (const wchar_t *key : kThemeResourceKeys)
         {
-            for (const auto &info : m_themeSet.Themes())
+            auto boxedKey = box_value(winrt::hstring(key));
+            if (appResources.HasKey(boxedKey))
             {
-                if (info.dark && m_themeSet.SelectByName(info.name))
-                    break;
+                appResources.Remove(boxedKey);
             }
         }
+    }
 
-        const auto &scheme = m_themeSet.Current();
-        RootGrid().RequestedTheme(scheme.isDark ? ElementTheme::Dark : ElementTheme::Light);
+    void MainWindow::ApplyTheme(const std::string &name)
+    {
+        bool isHighContrast = false;
+        try
+        {
+            winrt::Windows::UI::ViewManagement::AccessibilitySettings accessibility;
+            isHighContrast = accessibility.HighContrast();
+        }
+        catch (...)
+        {
+        }
 
-        // Build cached SolidColorBrushes from the Base16 palette
-        m_normalTextBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x05]));
-        m_highlightTextBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x0D]));
-        m_disabledTextBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x03]));
-        m_altRowBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x01], 95));
+        const bool useSystem = isHighContrast || name.empty() || name == "System";
+        m_activeThemeSetting = useSystem ? "System" : name;
         m_transparentBrush = SolidColorBrush(winrt::Windows::UI::Colors::Transparent());
-        m_destructiveBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x08]));
 
-        // Apply subtle Base16 background tint to main content and status bar
-        ContentAreaGrid().Background(SolidColorBrush(ToWinUIColor(scheme.base[0x00], 215)));
-        HeaderScrollViewer().Background(SolidColorBrush(ToWinUIColor(scheme.base[0x01], 240)));
-        StatusBarBorder().Background(SolidColorBrush(ToWinUIColor(scheme.base[0x01], 240)));
-        TopToolbarGrid().Background(SolidColorBrush(ToWinUIColor(scheme.base[0x01], 180)));
+        if (useSystem)
+        {
+            ClearCustomThemeResources();
+            ContentAreaGrid().ClearValue(Panel::BackgroundProperty());
+            HeaderScrollViewer().ClearValue(Control::BackgroundProperty());
+            StatusBarBorder().ClearValue(Border::BackgroundProperty());
+            TopToolbarGrid().ClearValue(Panel::BackgroundProperty());
 
-        // Re-tint visible rows and toolbar icons, and sync theme checkmarks (without rebuilding menu items)
+            RootGrid().RequestedTheme(ElementTheme::Default);
+            const bool isDark = (RootGrid().ActualTheme() == ElementTheme::Dark);
+            ApplyDwmTitleBarTheme(isDark);
+
+            if (isDark)
+            {
+                m_normalTextBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 240, 240, 240));
+                m_highlightTextBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 118, 185, 255));
+                m_disabledTextBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 145, 145, 145));
+                m_altRowBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(22, 255, 255, 255));
+                m_destructiveBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 255, 120, 120));
+                m_resizeGripBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(80, 255, 255, 255));
+            }
+            else
+            {
+                m_normalTextBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 24, 24, 24));
+                m_highlightTextBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 0, 95, 184));
+                m_disabledTextBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 128, 128, 128));
+                m_altRowBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(14, 0, 0, 0));
+                m_destructiveBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 196, 43, 28));
+                m_resizeGripBrush = SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(70, 0, 0, 0));
+            }
+        }
+        else
+        {
+            if (!m_themeSet.SelectByName(name))
+            {
+                for (const auto &info : m_themeSet.Themes())
+                {
+                    if (info.dark && m_themeSet.SelectByName(info.name))
+                        break;
+                }
+            }
+
+            const auto &scheme = m_themeSet.Current();
+            m_activeThemeSetting = scheme.name;
+
+            auto appResources = Application::Current().Resources();
+            auto setRes = [&](const wchar_t *key, const pserv::theme::Color4 &c, uint8_t alpha = 255)
+            {
+                appResources.Insert(box_value(winrt::hstring(key)), SolidColorBrush(ToWinUIColor(c, alpha)));
+            };
+
+            // Full Base16 chrome override across NavigationView, MenuBar, dialogs, inputs, and list selection
+            setRes(L"ApplicationPageBackgroundThemeBrush", scheme.base[0x00]);
+            setRes(L"SolidBackgroundFillColorBaseBrush", scheme.base[0x00]);
+            setRes(L"LayerFillColorDefaultBrush", scheme.base[0x01]);
+            setRes(L"CardBackgroundFillColorDefaultBrush", scheme.base[0x01]);
+            setRes(L"SubtleFillColorSecondaryBrush", scheme.base[0x02], 140);
+            setRes(L"NavigationViewDefaultPaneBackground", scheme.base[0x01], 235);
+            setRes(L"NavigationViewExpandedPaneBackground", scheme.base[0x01], 245);
+            setRes(L"NavigationViewTopPaneBackground", scheme.base[0x01], 235);
+            setRes(L"MenuFlyoutPresenterBackground", scheme.base[0x01]);
+            setRes(L"ContentDialogBackground", scheme.base[0x00]);
+            setRes(L"ControlFillColorDefaultBrush", scheme.base[0x01]);
+            setRes(L"ControlFillColorSecondaryBrush", scheme.base[0x02]);
+            setRes(L"TextControlBackground", scheme.base[0x01]);
+            setRes(L"TextControlBackgroundPointerOver", scheme.base[0x02]);
+            setRes(L"TextControlBackgroundFocused", scheme.base[0x00]);
+
+            setRes(L"TextFillColorPrimaryBrush", scheme.base[0x05]);
+            setRes(L"TextFillColorSecondaryBrush", scheme.base[0x04]);
+            setRes(L"TextFillColorTertiaryBrush", scheme.base[0x03]);
+            setRes(L"TextControlForeground", scheme.base[0x05]);
+            setRes(L"TextControlForegroundPointerOver", scheme.base[0x05]);
+            setRes(L"TextControlForegroundFocused", scheme.base[0x06]);
+            setRes(L"NavigationViewItemForeground", scheme.base[0x05]);
+            setRes(L"NavigationViewItemForegroundPointerOver", scheme.base[0x06]);
+            setRes(L"NavigationViewItemForegroundSelected", scheme.base[0x0D]);
+
+            setRes(L"DividerStrokeColorDefaultBrush", scheme.base[0x02]);
+            setRes(L"CardStrokeColorDefaultBrush", scheme.base[0x02]);
+            setRes(L"ControlStrokeColorDefaultBrush", scheme.base[0x03], 180);
+            setRes(L"MenuFlyoutPresenterBorderBrush", scheme.base[0x02]);
+            setRes(L"ContentDialogBorderBrush", scheme.base[0x03]);
+            setRes(L"ListViewItemBackgroundSelected", scheme.base[0x02], 220);
+            setRes(L"ListViewItemBackgroundSelectedPointerOver", scheme.base[0x02], 245);
+            setRes(L"ListViewItemBackgroundPointerOver", scheme.base[0x02], 120);
+            setRes(L"AccentFillColorDefaultBrush", scheme.base[0x0D]);
+            setRes(L"AccentTextFillColorPrimaryBrush", scheme.base[0x0D]);
+
+            // Force live ThemeResource re-evaluation across all chrome controls
+            const ElementTheme targetTheme = scheme.isDark ? ElementTheme::Dark : ElementTheme::Light;
+            const ElementTheme bounceTheme = scheme.isDark ? ElementTheme::Light : ElementTheme::Dark;
+            RootGrid().RequestedTheme(bounceTheme);
+            RootGrid().RequestedTheme(targetTheme);
+            ApplyDwmTitleBarTheme(scheme.isDark);
+
+            // Build cached SolidColorBrushes from the Base16 palette
+            m_normalTextBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x05]));
+            m_highlightTextBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x0D]));
+            m_disabledTextBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x03]));
+            m_altRowBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x01], 95));
+            m_destructiveBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x08]));
+            m_resizeGripBrush = SolidColorBrush(ToWinUIColor(scheme.base[0x02], 140));
+
+            // Apply Base16 surfaces to main regions
+            ContentAreaGrid().Background(SolidColorBrush(ToWinUIColor(scheme.base[0x00], 225)));
+            HeaderScrollViewer().Background(SolidColorBrush(ToWinUIColor(scheme.base[0x01], 245)));
+            StatusBarBorder().Background(SolidColorBrush(ToWinUIColor(scheme.base[0x01], 245)));
+            TopToolbarGrid().Background(SolidColorBrush(ToWinUIColor(scheme.base[0x01], 200)));
+        }
+
+        // Re-tint visible rows, headers, and toolbar icons, and sync theme checkmarks
+        BuildColumnHeaders();
         RefreshVisibleRowsInPlace();
         m_lastToolbarActions.clear();
         UpdateQuickActionButtons();
@@ -349,7 +546,25 @@ namespace winrt::pserv6::implementation
         items.Clear();
         m_themeMenuItems.clear();
 
-        const std::string currentName = m_themeSet.Current().name;
+        // System (Default) theme option
+        {
+            ToggleMenuFlyoutItem sysItem;
+            sysItem.Text(L"System (Default)");
+            sysItem.IsChecked(m_activeThemeSetting == "System");
+            sysItem.Click([this](IInspectable const &, RoutedEventArgs const &)
+            {
+                pserv::config::theSettings.application.theme.set("System");
+                if (m_pConfigBackend)
+                {
+                    pserv::config::theSettings.application.save(*m_pConfigBackend);
+                }
+                ApplyTheme("System");
+            });
+            items.Append(sysItem);
+            m_themeMenuItems.emplace_back("System", sysItem);
+            items.Append(MenuFlyoutSeparator());
+        }
+
         const auto allThemes = m_themeSet.Themes();
 
         auto addGroup = [&](const wchar_t *headerTitle, bool darkGroup)
@@ -364,7 +579,7 @@ namespace winrt::pserv6::implementation
 
                 ToggleMenuFlyoutItem item;
                 item.Text(winrt::to_hstring(info.name));
-                item.IsChecked(info.name == currentName);
+                item.IsChecked(info.name == m_activeThemeSetting);
                 std::string capturedName = info.name;
                 item.Click([this, capturedName](IInspectable const &, RoutedEventArgs const &)
                 {
@@ -387,10 +602,9 @@ namespace winrt::pserv6::implementation
 
     void MainWindow::UpdateThemesMenuChecks()
     {
-        const std::string currentName = m_themeSet.Current().name;
         for (auto &[name, item] : m_themeMenuItems)
         {
-            item.IsChecked(name == currentName);
+            item.IsChecked(name == m_activeThemeSetting);
         }
     }
 
@@ -498,6 +712,95 @@ namespace winrt::pserv6::implementation
         }
     }
 
+    void MainWindow::ApplyRemoteMachineToControllers(const std::string &machineName)
+    {
+        for (auto *controller : m_controllers.GetDataControllers())
+        {
+            if (auto *svcCtrl = dynamic_cast<pserv::ServicesDataController *>(controller))
+            {
+                svcCtrl->SetMachineName(machineName);
+            }
+        }
+    }
+
+    void MainWindow::StartAsyncRefresh(bool isAutoRefresh, bool preserveSelection, bool forceReset)
+    {
+        if (!m_pCurrentController)
+            return;
+
+        if (m_bRefreshInFlight)
+        {
+            if (!isAutoRefresh)
+            {
+                ++m_refreshGeneration;
+                m_bPendingRefresh = true;
+                m_pendingPreserveSelection = preserveSelection;
+                m_pendingForceReset = forceReset;
+            }
+            return;
+        }
+
+        if (m_refreshThread.joinable())
+        {
+            m_refreshThread.join();
+        }
+
+        auto freshController = pserv::DataControllerLibrary::CreateFreshController(m_pCurrentController);
+        if (!freshController)
+        {
+            return;
+        }
+
+        pserv::DataController *targetController = m_pCurrentController;
+        const uint64_t generation = ++m_refreshGeneration;
+        m_bRefreshInFlight = true;
+
+        if (!isAutoRefresh)
+        {
+            StatusRefreshTimeText().Text(L"Refreshing...");
+        }
+
+        auto dq = this->DispatcherQueue();
+        auto weakThis = get_weak();
+        auto sharedFresh = std::shared_ptr<pserv::DataController>(std::move(freshController));
+
+        m_refreshThread = std::thread([weakThis, dq, sharedFresh, targetController, generation, isAutoRefresh, preserveSelection, forceReset]()
+        {
+            try
+            {
+                sharedFresh->Refresh(isAutoRefresh);
+            }
+            catch (const std::exception &e)
+            {
+                spdlog::error("Background refresh failed for {}: {}", sharedFresh->GetControllerName(), e.what());
+            }
+
+            dq.TryEnqueue([weakThis, sharedFresh, targetController, generation, isAutoRefresh, preserveSelection, forceReset]()
+            {
+                auto strongThis = weakThis.get();
+                if (!strongThis)
+                    return;
+
+                strongThis->m_bRefreshInFlight = false;
+
+                if (generation == strongThis->m_refreshGeneration &&
+                    strongThis->m_pCurrentController == targetController &&
+                    !(isAutoRefresh && strongThis->m_bDialogOpen))
+                {
+                    targetController->AdoptRefreshResult(*sharedFresh);
+                    targetController->ClearRefreshFlag();
+                    strongThis->RebuildFilteredList(preserveSelection, forceReset);
+                }
+
+                if (strongThis->m_bPendingRefresh)
+                {
+                    strongThis->m_bPendingRefresh = false;
+                    strongThis->StartAsyncRefresh(false, strongThis->m_pendingPreserveSelection, strongThis->m_pendingForceReset);
+                }
+            });
+        });
+    }
+
     void MainWindow::SwitchToController(pserv::DataController *controller)
     {
         if (!controller || m_pCurrentController == controller)
@@ -508,6 +811,10 @@ namespace winrt::pserv6::implementation
         {
             SaveCurrentTableState();
         }
+
+        // Invalidate any in-flight refresh belonging to the previous view
+        ++m_refreshGeneration;
+        m_bPendingRefresh = false;
 
         m_bIsSwitchingController = true;
         m_pCurrentController = controller;
@@ -547,20 +854,7 @@ namespace winrt::pserv6::implementation
         ToolTipService::SetToolTip(RefreshButton(), box_value(winrt::to_hstring(std::format("Refresh {} (F5)", ctrlName))));
         FilterTextBox().PlaceholderText(winrt::to_hstring(std::format("Filter {}... (Ctrl+F)", ctrlName)));
 
-        // Ensure data is loaded
-        if (!controller->IsLoaded())
-        {
-            try
-            {
-                controller->Refresh(false);
-            }
-            catch (const std::exception &e)
-            {
-                spdlog::error("Initial refresh failed for {}: {}", ctrlName, e.what());
-            }
-        }
-
-        // Load saved column widths & sort order
+        // Load saved column widths, order & sort preferences
         LoadColumnStateForController(controller);
         BuildColumnHeaders();
         m_lastToolbarActions.clear();
@@ -569,11 +863,22 @@ namespace winrt::pserv6::implementation
         UpdateStatusBar();
 
         m_bIsSwitchingController = false;
+
+        // Refresh asynchronously so switching to heavy views (Modules, Scheduled Tasks, remote SCM) never blocks UI
+        if (!controller->IsLoaded())
+        {
+            StartAsyncRefresh(false, false, true);
+        }
+        else if (controller->NeedsRefresh())
+        {
+            StartAsyncRefresh(false, true, false);
+        }
     }
 
     void MainWindow::LoadColumnStateForController(pserv::DataController *controller)
     {
         m_columnWidths.clear();
+        m_visibleColumns.clear();
         if (!controller)
             return;
 
@@ -596,6 +901,24 @@ namespace winrt::pserv6::implementation
                 }
             }
 
+            std::istringstream orderStream{section->columnOrder.get()};
+            std::string orderToken;
+            std::unordered_set<int> seenCols;
+            while (std::getline(orderStream, orderToken, ','))
+            {
+                try
+                {
+                    int idx = std::stoi(orderToken);
+                    if (idx >= 0 && idx < static_cast<int>(columns.size()) && seenCols.insert(idx).second)
+                    {
+                        m_visibleColumns.push_back(idx);
+                    }
+                }
+                catch (...)
+                {
+                }
+            }
+
             int32_t savedSortCol = section->sortColumn.get();
             bool savedSortAsc = section->sortAscending.get();
             if (savedSortCol >= 0 && savedSortCol < static_cast<int32_t>(columns.size()))
@@ -605,6 +928,14 @@ namespace winrt::pserv6::implementation
             else if (controller->GetLastSortColumn() < 0 && !columns.empty())
             {
                 controller->Sort(0, true);
+            }
+        }
+
+        if (m_visibleColumns.empty())
+        {
+            for (size_t i = 0; i < columns.size(); ++i)
+            {
+                m_visibleColumns.push_back(static_cast<int>(i));
             }
         }
 
@@ -624,14 +955,27 @@ namespace winrt::pserv6::implementation
         if (!section)
             return;
 
-        std::ostringstream oss;
+        std::ostringstream widthsOss;
         for (size_t i = 0; i < m_columnWidths.size(); ++i)
         {
             if (i > 0)
-                oss << ",";
-            oss << static_cast<int>(m_columnWidths[i]);
+                widthsOss << ",";
+            widthsOss << static_cast<int>(m_columnWidths[i]);
         }
-        section->columnWidths.set(oss.str());
+        section->columnWidths.set(widthsOss.str());
+
+        if (!m_visibleColumns.empty())
+        {
+            std::ostringstream orderOss;
+            for (size_t i = 0; i < m_visibleColumns.size(); ++i)
+            {
+                if (i > 0)
+                    orderOss << ",";
+                orderOss << m_visibleColumns[i];
+            }
+            section->columnOrder.set(orderOss.str());
+        }
+
         section->sortColumn.set(m_pCurrentController->GetLastSortColumn());
         section->sortAscending.set(m_pCurrentController->GetLastSortAscending());
         section->save(*m_pConfigBackend);
@@ -671,10 +1015,14 @@ namespace winrt::pserv6::implementation
         int sortCol = m_pCurrentController->GetLastSortColumn();
         bool sortAsc = m_pCurrentController->GetLastSortAscending();
 
-        for (size_t i = 0; i < columns.size(); ++i)
+        for (size_t displayIdx = 0; displayIdx < m_visibleColumns.size(); ++displayIdx)
         {
-            const auto &col = columns[i];
-            double colWidth = (i < m_columnWidths.size()) ? m_columnWidths[i] : 140.0;
+            const int origColIdx = m_visibleColumns[displayIdx];
+            if (origColIdx < 0 || static_cast<size_t>(origColIdx) >= columns.size())
+                continue;
+
+            const auto &col = columns[static_cast<size_t>(origColIdx)];
+            double colWidth = (static_cast<size_t>(origColIdx) < m_columnWidths.size()) ? m_columnWidths[static_cast<size_t>(origColIdx)] : 140.0;
 
             Grid headerCell;
             headerCell.Width(colWidth);
@@ -705,11 +1053,15 @@ namespace winrt::pserv6::implementation
             titleText.Text(winrt::to_hstring(col.DisplayName));
             titleText.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
             titleText.FontSize(m_fontSize);
+            if (m_cachedFontFamily)
+            {
+                titleText.FontFamily(m_cachedFontFamily);
+            }
             titleText.VerticalAlignment(VerticalAlignment::Center);
             titleText.TextTrimming(TextTrimming::CharacterEllipsis);
             labelPanel.Children().Append(titleText);
 
-            if (static_cast<int>(i) == sortCol)
+            if (origColIdx == sortCol)
             {
                 FontIcon sortIcon;
                 sortIcon.Glyph(sortAsc ? L"\xE70E" : L"\xE70D"); // ChevronUp / ChevronDown
@@ -720,7 +1072,7 @@ namespace winrt::pserv6::implementation
 
             sortBtn.Content(labelPanel);
 
-            int capturedColIndex = static_cast<int>(i);
+            int capturedColIndex = origColIdx;
             sortBtn.Click([this, capturedColIndex](IInspectable const &, RoutedEventArgs const &)
             {
                 if (!m_pCurrentController)
@@ -745,16 +1097,20 @@ namespace winrt::pserv6::implementation
             resizeThumb.Width(6);
             resizeThumb.HorizontalAlignment(HorizontalAlignment::Right);
             resizeThumb.VerticalAlignment(VerticalAlignment::Stretch);
-            resizeThumb.Background(SolidColorBrush(ToWinUIColor(m_themeSet.Current().base[0x02], 140)));
-
-            size_t capturedIdx = i;
-            resizeThumb.DragDelta([this, capturedIdx, headerCell](IInspectable const &, DragDeltaEventArgs const &e)
+            if (m_resizeGripBrush)
             {
-                if (capturedIdx >= m_columnWidths.size())
+                resizeThumb.Background(m_resizeGripBrush);
+            }
+
+            size_t capturedOrigIdx = static_cast<size_t>(origColIdx);
+            uint32_t capturedDisplayIdx = static_cast<uint32_t>(displayIdx);
+            resizeThumb.DragDelta([this, capturedOrigIdx, capturedDisplayIdx, headerCell](IInspectable const &, DragDeltaEventArgs const &e)
+            {
+                if (capturedOrigIdx >= m_columnWidths.size())
                     return;
 
-                double newWidth = std::clamp(m_columnWidths[capturedIdx] + e.HorizontalChange(), 45.0, 1200.0);
-                m_columnWidths[capturedIdx] = newWidth;
+                double newWidth = std::clamp(m_columnWidths[capturedOrigIdx] + e.HorizontalChange(), 45.0, 1200.0);
+                m_columnWidths[capturedOrigIdx] = newWidth;
                 headerCell.Width(newWidth);
                 m_bTableDirty = true;
 
@@ -773,9 +1129,9 @@ namespace winrt::pserv6::implementation
                             if (rowGrid)
                             {
                                 auto colDefs = rowGrid.ColumnDefinitions();
-                                if (capturedIdx < colDefs.Size())
+                                if (capturedDisplayIdx < colDefs.Size())
                                 {
-                                    colDefs.GetAt(static_cast<uint32_t>(capturedIdx)).Width(GridLengthHelper::FromPixels(newWidth));
+                                    colDefs.GetAt(capturedDisplayIdx).Width(GridLengthHelper::FromPixels(newWidth));
                                 }
                             }
                         }
@@ -834,6 +1190,17 @@ namespace winrt::pserv6::implementation
         if (!m_pCurrentController)
             return;
 
+        // Snapshot scroll position so large count changes / refreshes never jump back to the top
+        double savedHOffset = 0.0;
+        double savedVOffset = 0.0;
+        bool restoreScroll = false;
+        if (preserveSelection && !forceReset && m_listScrollViewer)
+        {
+            savedHOffset = m_listScrollViewer.HorizontalOffset();
+            savedVOffset = m_listScrollViewer.VerticalOffset();
+            restoreScroll = true;
+        }
+
         // Collect currently selected stable IDs if preserving selection
         std::unordered_set<std::string> selectedIds;
         if (preserveSelection)
@@ -851,25 +1218,28 @@ namespace winrt::pserv6::implementation
         }
         m_dispatchContext.m_selectedObjects.clear();
 
-        // Filter objects
+        // Filter objects AND cache visual-state counts in a single pass so UpdateStatusBar() is O(1)
         m_filteredObjects.clear();
+        m_cachedHighlightedCount = 0;
+        m_cachedDisabledCount = 0;
+
         const auto &allObjects = m_pCurrentController->GetDataObjects();
         std::string filterStr = winrt::to_string(FilterTextBox().Text());
+        std::string lowerFilter = filterStr.empty() ? std::string{} : pserv::utils::ToLower(filterStr);
 
-        if (!filterStr.empty())
+        m_filteredObjects.reserve(allObjects.GetSize());
+        for (auto *obj : allObjects)
         {
-            std::string lowerFilter = pserv::utils::ToLower(filterStr);
-            for (auto *obj : allObjects)
+            auto state = m_pCurrentController->GetVisualState(obj);
+            if (state == pserv::VisualState::Highlighted)
+                ++m_cachedHighlightedCount;
+            else if (state == pserv::VisualState::Disabled)
+                ++m_cachedDisabledCount;
+
+            if (lowerFilter.empty() || obj->MatchesFilter(lowerFilter))
             {
-                if (obj->MatchesFilter(lowerFilter))
-                {
-                    m_filteredObjects.push_back(obj);
-                }
+                m_filteredObjects.push_back(obj);
             }
-        }
-        else
-        {
-            m_filteredObjects.assign(allObjects.begin(), allObjects.end());
         }
 
         // Compute new selection indices and retain new generation objects
@@ -894,9 +1264,9 @@ namespace winrt::pserv6::implementation
         m_bIsUpdatingSelection = true;
 
         bool didResetSource = false;
-        if (!forceReset && m_listItems && std::abs(diff) <= 16)
+        if (!forceReset && m_listItems && std::abs(diff) <= 64)
         {
-            // Zero-flicker in-place delta update: preserves existing ListViewItem containers
+            // Zero-flicker in-place delta update: preserves existing ListViewItem containers & scroll offset
             while (m_listItems.Size() > targetCount)
             {
                 m_listItems.RemoveAtEnd();
@@ -909,7 +1279,7 @@ namespace winrt::pserv6::implementation
         }
         else
         {
-            // Bulk replace when switching views or large filter count jump
+            // Bulk replace when switching views or very large count jump
             std::vector<IInspectable> boxedIndices;
             boxedIndices.reserve(targetCount);
             for (uint32_t i = 0; i < targetCount; ++i)
@@ -953,6 +1323,24 @@ namespace winrt::pserv6::implementation
             RefreshVisibleRowsInPlace();
         }
         SyncListScrollViewer();
+
+        // Restore scroll position when bulk ItemsSource reset occurred during refresh
+        if (didResetSource && restoreScroll && m_listScrollViewer)
+        {
+            m_listScrollViewer.ChangeView(savedHOffset, savedVOffset, nullptr, true);
+            auto weakThis = get_weak();
+            this->DispatcherQueue().TryEnqueue([weakThis, savedHOffset, savedVOffset]()
+            {
+                if (auto strongThis = weakThis.get())
+                {
+                    if (strongThis->m_listScrollViewer)
+                    {
+                        strongThis->m_listScrollViewer.ChangeView(savedHOffset, savedVOffset, nullptr, true);
+                    }
+                }
+            });
+        }
+
         UpdateQuickActionButtons();
         UpdateStatusBar();
     }
@@ -1011,16 +1399,19 @@ namespace winrt::pserv6::implementation
         }
 
         uint32_t rowSchemaId = unbox_value_or<uint32_t>(rowGrid.Tag(), 0);
-        if (rowSchemaId != m_currentColumnSchemaId || rowGrid.Children().Size() != columns.size())
+        if (rowSchemaId != m_currentColumnSchemaId || rowGrid.Children().Size() != m_visibleColumns.size())
         {
             rowGrid.Children().Clear();
             rowGrid.ColumnDefinitions().Clear();
             rowGrid.Tag(box_value(m_currentColumnSchemaId));
             rowGrid.Height(std::max(26.0, m_fontSize + 13.0));
 
-            for (size_t i = 0; i < columns.size(); ++i)
+            for (size_t displayIdx = 0; displayIdx < m_visibleColumns.size(); ++displayIdx)
             {
-                double colW = (i < m_columnWidths.size()) ? m_columnWidths[i] : 140.0;
+                const int origColIdx = m_visibleColumns[displayIdx];
+                double colW = (origColIdx >= 0 && static_cast<size_t>(origColIdx) < m_columnWidths.size())
+                    ? m_columnWidths[static_cast<size_t>(origColIdx)]
+                    : 140.0;
                 ColumnDefinition colDef;
                 colDef.Width(GridLengthHelper::FromPixels(colW));
                 rowGrid.ColumnDefinitions().Append(colDef);
@@ -1031,8 +1422,14 @@ namespace winrt::pserv6::implementation
                 cellText.TextTrimming(TextTrimming::CharacterEllipsis);
                 cellText.MaxLines(1);
                 cellText.FontSize(m_fontSize);
+                if (m_cachedFontFamily)
+                {
+                    cellText.FontFamily(m_cachedFontFamily);
+                }
 
-                if (columns[i].GetAlignment() == pserv::ColumnAlignment::Right)
+                bool alignRight = (origColIdx >= 0 && static_cast<size_t>(origColIdx) < columns.size() &&
+                                   columns[static_cast<size_t>(origColIdx)].GetAlignment() == pserv::ColumnAlignment::Right);
+                if (alignRight)
                 {
                     cellText.HorizontalAlignment(HorizontalAlignment::Right);
                     cellText.TextAlignment(TextAlignment::Right);
@@ -1043,7 +1440,7 @@ namespace winrt::pserv6::implementation
                     cellText.TextAlignment(TextAlignment::Left);
                 }
 
-                Grid::SetColumn(cellText, static_cast<int32_t>(i));
+                Grid::SetColumn(cellText, static_cast<int32_t>(displayIdx));
                 rowGrid.Children().Append(cellText);
             }
         }
@@ -1079,21 +1476,26 @@ namespace winrt::pserv6::implementation
 
         auto children = rowGrid.Children();
         auto colDefs = rowGrid.ColumnDefinitions();
-        uint32_t count = children.Size();
+        uint32_t count = std::min(children.Size(), static_cast<uint32_t>(m_visibleColumns.size()));
 
-        for (uint32_t i = 0; i < count; ++i)
+        for (uint32_t displayIdx = 0; displayIdx < count; ++displayIdx)
         {
-            if (i < m_columnWidths.size() && i < colDefs.Size())
+            const int origColIdx = m_visibleColumns[displayIdx];
+            if (origColIdx < 0)
+                continue;
+
+            const size_t origIdx = static_cast<size_t>(origColIdx);
+            if (origIdx < m_columnWidths.size() && displayIdx < colDefs.Size())
             {
-                auto colDef = colDefs.GetAt(i);
-                if (colDef.Width().Value != m_columnWidths[i])
+                auto colDef = colDefs.GetAt(displayIdx);
+                if (colDef.Width().Value != m_columnWidths[origIdx])
                 {
-                    colDef.Width(GridLengthHelper::FromPixels(m_columnWidths[i]));
+                    colDef.Width(GridLengthHelper::FromPixels(m_columnWidths[origIdx]));
                 }
             }
-            if (auto tb = children.GetAt(i).try_as<TextBlock>())
+            if (auto tb = children.GetAt(displayIdx).try_as<TextBlock>())
             {
-                winrt::hstring newText = winrt::to_hstring(dataObject->GetProperty(static_cast<int>(i)));
+                winrt::hstring newText = winrt::to_hstring(dataObject->GetProperty(origColIdx));
                 if (tb.Text() != newText)
                 {
                     tb.Text(newText);
@@ -1105,6 +1507,10 @@ namespace winrt::pserv6::implementation
                 if (tb.FontSize() != m_fontSize)
                 {
                     tb.FontSize(m_fontSize);
+                }
+                if (m_cachedFontFamily && tb.FontFamily().Source() != m_cachedFontFamily.Source())
+                {
+                    tb.FontFamily(m_cachedFontFamily);
                 }
             }
         }
@@ -1136,6 +1542,66 @@ namespace winrt::pserv6::implementation
         UpdateStatusBar();
     }
 
+    std::vector<const pserv::DataAction *> MainWindow::GetCommonActionsForSelection(bool includeExportActions) const
+    {
+        std::vector<const pserv::DataAction *> result;
+        if (!m_pCurrentController || m_dispatchContext.m_selectedObjects.empty())
+            return result;
+
+        const auto &selected = m_dispatchContext.m_selectedObjects;
+        auto baseActions = m_pCurrentController->GetActions(selected[0]);
+
+        // Build per-object action sets for multi-selection intersection
+        std::vector<std::unordered_set<const pserv::DataAction *>> otherActionSets;
+        if (selected.size() > 1)
+        {
+            otherActionSets.reserve(selected.size() - 1);
+            for (size_t i = 1; i < selected.size(); ++i)
+            {
+                auto objActions = m_pCurrentController->GetActions(selected[i]);
+                otherActionSets.emplace_back(objActions.begin(), objActions.end());
+            }
+        }
+
+        for (const auto *action : baseActions)
+        {
+            if (!action)
+                continue;
+
+            if (action->IsSeparator())
+            {
+                result.push_back(action);
+                continue;
+            }
+
+            bool availableForAll = true;
+            for (size_t i = 0; i < selected.size(); ++i)
+            {
+                if (i > 0 && !otherActionSets[i - 1].contains(action))
+                {
+                    availableForAll = false;
+                    break;
+                }
+                if (!action->IsAvailableFor(selected[i]))
+                {
+                    availableForAll = false;
+                    break;
+                }
+            }
+
+            if (availableForAll)
+            {
+                result.push_back(action);
+            }
+        }
+
+        if (includeExportActions)
+        {
+            pserv::AddCommonExportActions(result);
+        }
+        return result;
+    }
+
     void MainWindow::UpdateQuickActionButtons()
     {
         bool hasSelection = !m_dispatchContext.m_selectedObjects.empty();
@@ -1144,9 +1610,7 @@ namespace winrt::pserv6::implementation
         std::vector<const pserv::DataAction *> visibleActions;
         if (m_pCurrentController && hasSelection)
         {
-            const pserv::DataObject *firstObj = m_dispatchContext.m_selectedObjects[0];
-            auto actions = m_pCurrentController->GetActions(firstObj);
-
+            auto actions = GetCommonActionsForSelection(false);
             for (const auto *action : actions)
             {
                 if (!action || action->IsSeparator())
@@ -1154,9 +1618,6 @@ namespace winrt::pserv6::implementation
 
                 auto vis = action->GetVisibility();
                 if ((static_cast<int>(vis) & static_cast<int>(pserv::ActionVisibility::PropertiesDialog)) == 0)
-                    continue;
-
-                if (!action->IsAvailableFor(firstObj))
                     continue;
 
                 visibleActions.push_back(action);
@@ -1248,9 +1709,7 @@ namespace winrt::pserv6::implementation
         if (m_dispatchContext.m_selectedObjects.empty())
             return;
 
-        const pserv::DataObject *targetObj = m_dispatchContext.m_selectedObjects[0];
-        auto allActions = m_pCurrentController->GetActions(targetObj);
-        pserv::AddCommonExportActions(allActions);
+        auto allActions = GetCommonActionsForSelection(true);
 
         MenuFlyout flyout;
         bool lastWasSeparator = true;
@@ -1262,9 +1721,6 @@ namespace winrt::pserv6::implementation
 
             auto vis = action->GetVisibility();
             if ((static_cast<int>(vis) & static_cast<int>(pserv::ActionVisibility::ContextMenu)) == 0)
-                continue;
-
-            if (!action->IsAvailableFor(targetObj))
                 continue;
 
             if (action->IsSeparator())
@@ -1345,8 +1801,7 @@ namespace winrt::pserv6::implementation
         if (m_dispatchContext.m_bNeedsRefresh && m_pCurrentController)
         {
             m_dispatchContext.m_bNeedsRefresh = false;
-            m_pCurrentController->Refresh(false);
-            RebuildFilteredList(true);
+            StartAsyncRefresh(false, true, false);
         }
 
         if (m_dispatchContext.m_bOpenPropertiesDialog)
@@ -1377,8 +1832,7 @@ namespace winrt::pserv6::implementation
 
             if (m_pCurrentController)
             {
-                m_pCurrentController->Refresh(false);
-                RebuildFilteredList(true);
+                StartAsyncRefresh(false, true, false);
             }
 
             if (status == pserv::AsyncStatus::Failed && !errorMsg.empty())
@@ -1407,20 +1861,9 @@ namespace winrt::pserv6::implementation
         size_t filteredCount = (totalCount >= visibleCount) ? (totalCount - visibleCount) : 0;
         size_t selectedCount = m_dispatchContext.m_selectedObjects.size();
 
-        size_t highlightedCount = 0;
-        size_t disabledCount = 0;
-        for (const auto *obj : allObjects)
-        {
-            auto state = m_pCurrentController->GetVisualState(obj);
-            if (state == pserv::VisualState::Highlighted)
-                ++highlightedCount;
-            else if (state == pserv::VisualState::Disabled)
-                ++disabledCount;
-        }
-
         StatusVisibleText().Text(winrt::to_hstring(std::format("{} visible", visibleCount)));
-        StatusHighlightedText().Text(winrt::to_hstring(std::format("{} highlighted", highlightedCount)));
-        StatusDisabledText().Text(winrt::to_hstring(std::format("{} disabled", disabledCount)));
+        StatusHighlightedText().Text(winrt::to_hstring(std::format("{} highlighted", m_cachedHighlightedCount)));
+        StatusDisabledText().Text(winrt::to_hstring(std::format("{} disabled", m_cachedDisabledCount)));
         StatusFilteredText().Text(winrt::to_hstring(std::format("{} filtered", filteredCount)));
         StatusTotalText().Text(winrt::to_hstring(std::format("{} total", totalCount)));
         StatusSelectedText().Text(winrt::to_hstring(std::format("{} selected", selectedCount)));
@@ -1455,7 +1898,11 @@ namespace winrt::pserv6::implementation
             StatusAutoRefreshText().Text(L"Auto-refresh: Off");
         }
 
-        if (m_pCurrentController->IsLoaded())
+        if (m_bRefreshInFlight && !m_pCurrentController->IsLoaded())
+        {
+            StatusRefreshTimeText().Text(L"Loading...");
+        }
+        else if (m_pCurrentController->IsLoaded())
         {
             auto refreshTime = m_pCurrentController->GetLastRefreshTime();
             auto timeT = std::chrono::system_clock::to_time_t(refreshTime);
@@ -1485,8 +1932,7 @@ namespace winrt::pserv6::implementation
             m_lastAutoRefreshTime = now;
             if (m_pCurrentController)
             {
-                m_pCurrentController->Refresh(true);
-                RebuildFilteredList(true, false);
+                StartAsyncRefresh(true, true, false);
             }
         }
     }
@@ -1649,7 +2095,7 @@ namespace winrt::pserv6::implementation
         {
             Pivot pivot;
             pivot.MinWidth(540);
-            for (size_t i = 0; i < std::min<size_t>(objects.size(), 15); ++i)
+            for (size_t i = 0; i < objects.size(); ++i)
             {
                 PivotItem pItem;
                 pItem.Header(box_value(winrt::to_hstring(objects[i]->GetItemName())));
@@ -1662,6 +2108,7 @@ namespace winrt::pserv6::implementation
         auto result = co_await dialog.ShowAsync();
         m_bDialogOpen = false;
 
+        std::vector<std::string> failedItems;
         if (result == ContentDialogResult::Primary && !editBuffers->empty())
         {
             bool anyApplied = false;
@@ -1684,18 +2131,214 @@ namespace winrt::pserv6::implementation
                 {
                     anyApplied = true;
                 }
+                else
+                {
+                    failedItems.push_back(obj->GetItemName());
+                }
             }
 
             if (anyApplied)
             {
-                m_pCurrentController->Refresh(false);
-                RebuildFilteredList(true);
+                StartAsyncRefresh(false, true, false);
             }
         }
 
         for (auto *obj : objects)
         {
             obj->Release(REFCOUNT_DEBUG_ARGS);
+        }
+
+        if (!failedItems.empty())
+        {
+            std::string list;
+            for (size_t i = 0; i < failedItems.size(); ++i)
+            {
+                if (i > 0) list += ", ";
+                list += failedItems[i];
+            }
+            co_await ShowErrorDialogAsync(std::format(
+                "Failed to apply property changes for: {}.\n\nCheck that the input is valid, does not collide with an existing item, and that you have sufficient permissions.",
+                list));
+        }
+    }
+
+    IAsyncAction MainWindow::ShowColumnsDialogAsync()
+    {
+        if (m_bDialogOpen || !m_pCurrentController)
+            co_return;
+
+        m_bDialogOpen = true;
+
+        const auto &columns = m_pCurrentController->GetColumns();
+        struct ColumnRow
+        {
+            int index;
+            std::string name;
+            bool visible;
+        };
+        struct DialogState
+        {
+            std::vector<ColumnRow> rows;
+            ListView listView{nullptr};
+            Button moveUpBtn{nullptr};
+            Button moveDownBtn{nullptr};
+            bool isRebuilding{false};
+        };
+
+        auto state = std::make_shared<DialogState>();
+        std::unordered_set<int> visibleSet(m_visibleColumns.begin(), m_visibleColumns.end());
+        for (int idx : m_visibleColumns)
+        {
+            if (idx >= 0 && static_cast<size_t>(idx) < columns.size())
+            {
+                state->rows.push_back({idx, columns[static_cast<size_t>(idx)].DisplayName, true});
+            }
+        }
+        for (size_t i = 0; i < columns.size(); ++i)
+        {
+            int idx = static_cast<int>(i);
+            if (!visibleSet.contains(idx))
+            {
+                state->rows.push_back({idx, columns[i].DisplayName, false});
+            }
+        }
+
+        auto rebuildList = [state](int selectIndex)
+        {
+            state->isRebuilding = true;
+            auto items = state->listView.Items();
+            items.Clear();
+            for (size_t i = 0; i < state->rows.size(); ++i)
+            {
+                CheckBox cb;
+                cb.Content(box_value(winrt::to_hstring(state->rows[i].name)));
+                cb.IsChecked(state->rows[i].visible);
+                cb.HorizontalAlignment(HorizontalAlignment::Stretch);
+
+                size_t rowIdx = i;
+                cb.Checked([state, rowIdx](IInspectable const &, RoutedEventArgs const &)
+                {
+                    if (!state->isRebuilding && rowIdx < state->rows.size())
+                        state->rows[rowIdx].visible = true;
+                });
+                cb.Unchecked([state, rowIdx](IInspectable const &, RoutedEventArgs const &)
+                {
+                    if (!state->isRebuilding && rowIdx < state->rows.size())
+                        state->rows[rowIdx].visible = false;
+                });
+                items.Append(cb);
+            }
+            if (selectIndex >= 0 && static_cast<size_t>(selectIndex) < state->rows.size())
+            {
+                state->listView.SelectedIndex(selectIndex);
+            }
+            state->isRebuilding = false;
+        };
+
+        ListView colList;
+        colList.Height(320);
+        colList.MinWidth(320);
+        colList.SelectionMode(ListViewSelectionMode::Single);
+        state->listView = colList;
+
+        Button moveUpBtn;
+        moveUpBtn.Content(box_value(L"Move Up"));
+        moveUpBtn.HorizontalAlignment(HorizontalAlignment::Stretch);
+        state->moveUpBtn = moveUpBtn;
+
+        Button moveDownBtn;
+        moveDownBtn.Content(box_value(L"Move Down"));
+        moveDownBtn.HorizontalAlignment(HorizontalAlignment::Stretch);
+        state->moveDownBtn = moveDownBtn;
+
+        Button resetBtn;
+        resetBtn.Content(box_value(L"Reset Defaults"));
+        resetBtn.HorizontalAlignment(HorizontalAlignment::Stretch);
+
+        moveUpBtn.Click([state, rebuildList](IInspectable const &, RoutedEventArgs const &)
+        {
+            int idx = state->listView.SelectedIndex();
+            if (idx > 0 && static_cast<size_t>(idx) < state->rows.size())
+            {
+                std::swap(state->rows[static_cast<size_t>(idx)], state->rows[static_cast<size_t>(idx - 1)]);
+                rebuildList(idx - 1);
+            }
+        });
+
+        moveDownBtn.Click([state, rebuildList](IInspectable const &, RoutedEventArgs const &)
+        {
+            int idx = state->listView.SelectedIndex();
+            if (idx >= 0 && static_cast<size_t>(idx + 1) < state->rows.size())
+            {
+                std::swap(state->rows[static_cast<size_t>(idx)], state->rows[static_cast<size_t>(idx + 1)]);
+                rebuildList(idx + 1);
+            }
+        });
+
+        resetBtn.Click([state, rebuildList, columns](IInspectable const &, RoutedEventArgs const &)
+        {
+            state->rows.clear();
+            for (size_t i = 0; i < columns.size(); ++i)
+            {
+                state->rows.push_back({static_cast<int>(i), columns[i].DisplayName, true});
+            }
+            rebuildList(0);
+        });
+
+        rebuildList(state->rows.empty() ? -1 : 0);
+
+        StackPanel buttonCol;
+        buttonCol.Spacing(8);
+        buttonCol.Width(130);
+        buttonCol.Children().Append(moveUpBtn);
+        buttonCol.Children().Append(moveDownBtn);
+        buttonCol.Children().Append(resetBtn);
+
+        Grid layout;
+        layout.ColumnSpacing(12);
+        ColumnDefinition c0;
+        c0.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+        ColumnDefinition c1;
+        c1.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Auto));
+        layout.ColumnDefinitions().Append(c0);
+        layout.ColumnDefinitions().Append(c1);
+        Grid::SetColumn(colList, 0);
+        Grid::SetColumn(buttonCol, 1);
+        layout.Children().Append(colList);
+        layout.Children().Append(buttonCol);
+
+        ContentDialog dialog;
+        dialog.XamlRoot(RootGrid().XamlRoot());
+        dialog.RequestedTheme(RootGrid().RequestedTheme());
+        dialog.Title(box_value(winrt::to_hstring(std::format("Columns — {}", m_pCurrentController->GetControllerName()))));
+        dialog.Content(layout);
+        dialog.PrimaryButtonText(L"Apply");
+        dialog.CloseButtonText(L"Cancel");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        auto result = co_await dialog.ShowAsync();
+        m_bDialogOpen = false;
+
+        if (result == ContentDialogResult::Primary)
+        {
+            std::vector<int> nextVisible;
+            for (const auto &row : state->rows)
+            {
+                if (row.visible)
+                {
+                    nextVisible.push_back(row.index);
+                }
+            }
+            if (nextVisible.empty())
+            {
+                co_await ShowErrorDialogAsync("At least one column must remain visible.");
+                co_return;
+            }
+            m_visibleColumns = std::move(nextVisible);
+            m_bTableDirty = true;
+            SaveCurrentTableState();
+            BuildColumnHeaders();
+            RebuildFilteredList(true, true);
         }
     }
 
@@ -1734,32 +2377,68 @@ namespace winrt::pserv6::implementation
         if (result == ContentDialogResult::Primary)
         {
             std::string targetMachine = winrt::to_string(machineInput.Text());
+            // Trim leading/trailing whitespace
+            auto first = targetMachine.find_first_not_of(" \t\r\n");
+            auto last = targetMachine.find_last_not_of(" \t\r\n");
+            targetMachine = (first == std::string::npos) ? std::string{} : targetMachine.substr(first, last - first + 1);
+
             if (!targetMachine.empty())
             {
-                pserv::ServiceManager testConn(targetMachine);
-                if (!testConn.IsConnected())
+                if (m_connectThread.joinable())
                 {
-                    co_await ShowErrorDialogAsync(std::format(
-                        "Failed to connect to '{}'. Ensure the machine is reachable and you have administrative access.",
-                        targetMachine));
-                    co_return;
+                    m_connectThread.join();
                 }
 
-                const auto &controllers = m_controllers.GetDataControllers();
-                if (!controllers.empty())
+                AsyncProgressBanner().Visibility(Visibility::Visible);
+                AsyncProgressBar().IsIndeterminate(true);
+                AsyncProgressMessageText().Text(winrt::to_hstring(std::format("Connecting to '{}'...", targetMachine)));
+                AsyncCancelButton().IsEnabled(false);
+
+                auto dq = this->DispatcherQueue();
+                auto weakThis = get_weak();
+
+                m_connectThread = std::thread([weakThis, dq, targetMachine]()
                 {
-                    auto *servicesCtrl = static_cast<pserv::ServicesDataController *>(controllers[0]);
-                    pserv::config::theSettings.application.serviceMachineName.set(targetMachine);
-                    servicesCtrl->SetMachineName(targetMachine);
-                    if (m_pConfigBackend)
+                    pserv::ServiceManager testConn(targetMachine);
+                    bool connected = testConn.IsConnected();
+
+                    dq.TryEnqueue([weakThis, targetMachine, connected]()
                     {
-                        pserv::config::theSettings.save(*m_pConfigBackend);
-                    }
-                    UpdateRemoteModeUI();
-                    SwitchToController(servicesCtrl);
-                    static_cast<pserv::DataController *>(servicesCtrl)->Refresh(false);
-                    RebuildFilteredList(false);
-                }
+                        auto strongThis = weakThis.get();
+                        if (!strongThis)
+                            return;
+
+                        strongThis->AsyncProgressBar().IsIndeterminate(false);
+                        strongThis->AsyncCancelButton().IsEnabled(true);
+                        strongThis->AsyncProgressBanner().Visibility(Visibility::Collapsed);
+
+                        if (!connected)
+                        {
+                            strongThis->ShowErrorDialogAsync(std::format(
+                                "Failed to connect to '{}'. Ensure the machine is reachable and you have administrative access.",
+                                targetMachine));
+                            return;
+                        }
+
+                        pserv::config::theSettings.application.serviceMachineName.set(targetMachine);
+                        strongThis->ApplyRemoteMachineToControllers(targetMachine);
+                        if (strongThis->m_pConfigBackend)
+                        {
+                            pserv::config::theSettings.save(*strongThis->m_pConfigBackend);
+                        }
+                        strongThis->UpdateRemoteModeUI();
+
+                        const auto &controllers = strongThis->m_controllers.GetDataControllers();
+                        bool currentSupportsRemote = strongThis->m_pCurrentController &&
+                            (strongThis->m_pCurrentController->GetControllerName() == pserv::SERVICES_DATA_CONTROLLER_NAME ||
+                             strongThis->m_pCurrentController->GetControllerName() == pserv::DEVICES_DATA_CONTROLLER_NAME);
+                        if (!currentSupportsRemote && !controllers.empty())
+                        {
+                            strongThis->SwitchToController(controllers[0]);
+                        }
+                        strongThis->StartAsyncRefresh(false, false, true);
+                    });
+                });
             }
         }
     }
@@ -1804,9 +2483,15 @@ namespace winrt::pserv6::implementation
         {
             std::string varName = winrt::to_string(nameBox.Text());
             std::string varValue = winrt::to_string(valueBox.Text());
-            if (varName.empty())
+            if (!pserv::EnvironmentVariableManager::IsValidVariableName(varName))
             {
-                co_await ShowErrorDialogAsync("Variable name cannot be empty.");
+                co_await ShowErrorDialogAsync("Variable name cannot be empty or contain '='.");
+                co_return;
+            }
+            if (pserv::EnvironmentVariableManager::VariableExists(varName, scope))
+            {
+                co_await ShowErrorDialogAsync(std::format(
+                    "{} environment variable '{}' already exists. Edit the existing variable instead.", scopeStr, varName));
                 co_return;
             }
 
@@ -1814,8 +2499,7 @@ namespace winrt::pserv6::implementation
             {
                 if (m_pCurrentController)
                 {
-                    m_pCurrentController->Refresh(false);
-                    RebuildFilteredList(true);
+                    StartAsyncRefresh(false, true, false);
                 }
             }
             else
@@ -1890,16 +2574,7 @@ namespace winrt::pserv6::implementation
     {
         if (m_pCurrentController)
         {
-            try
-            {
-                m_pCurrentController->Refresh(false);
-                m_pCurrentController->ClearRefreshFlag();
-                RebuildFilteredList(true);
-            }
-            catch (const std::exception &e)
-            {
-                spdlog::error("Refresh failed: {}", e.what());
-            }
+            StartAsyncRefresh(false, true, false);
         }
     }
 
@@ -1913,22 +2588,16 @@ namespace winrt::pserv6::implementation
 
     void MainWindow::OnConnectLocalClick(IInspectable const &, RoutedEventArgs const &)
     {
-        const auto &controllers = m_controllers.GetDataControllers();
-        if (!controllers.empty())
+        pserv::config::theSettings.application.serviceMachineName.set("");
+        ApplyRemoteMachineToControllers("");
+        if (m_pConfigBackend)
         {
-            auto *servicesCtrl = static_cast<pserv::ServicesDataController *>(controllers[0]);
-            pserv::config::theSettings.application.serviceMachineName.set("");
-            servicesCtrl->SetMachineName("");
-            if (m_pConfigBackend)
-            {
-                pserv::config::theSettings.save(*m_pConfigBackend);
-            }
-            UpdateRemoteModeUI();
-            if (m_pCurrentController == servicesCtrl)
-            {
-                static_cast<pserv::DataController *>(servicesCtrl)->Refresh(false);
-                RebuildFilteredList(false);
-            }
+            pserv::config::theSettings.save(*m_pConfigBackend);
+        }
+        UpdateRemoteModeUI();
+        if (dynamic_cast<pserv::ServicesDataController *>(m_pCurrentController) != nullptr)
+        {
+            StartAsyncRefresh(false, false, true);
         }
     }
 
@@ -1976,6 +2645,19 @@ namespace winrt::pserv6::implementation
         }
     }
 
+    void MainWindow::ApplyFontSettings()
+    {
+        m_cachedFontFamily = FontFamily(winrt::to_hstring(m_fontFamily));
+        pserv::config::theSettings.application.fontFamily.set(m_fontFamily);
+        pserv::config::theSettings.application.fontSizeScaled.set(static_cast<int32_t>(std::round(m_fontSize * 100.0)));
+        if (m_pConfigBackend)
+        {
+            pserv::config::theSettings.application.save(*m_pConfigBackend);
+        }
+        BuildColumnHeaders();
+        RefreshVisibleRowsInPlace();
+    }
+
     void MainWindow::ChangeFontSize(double delta)
     {
         double nextSize = std::clamp(m_fontSize + delta, 9.0, 28.0);
@@ -1983,13 +2665,7 @@ namespace winrt::pserv6::implementation
             return;
 
         m_fontSize = nextSize;
-        pserv::config::theSettings.application.fontSizeScaled.set(static_cast<int32_t>(m_fontSize * 100.0));
-        if (m_pConfigBackend)
-        {
-            pserv::config::theSettings.application.save(*m_pConfigBackend);
-        }
-        BuildColumnHeaders();
-        RefreshVisibleRowsInPlace();
+        ApplyFontSettings();
     }
 
     void MainWindow::OnIncreaseFontSizeClick(IInspectable const &, RoutedEventArgs const &)
@@ -2000,6 +2676,55 @@ namespace winrt::pserv6::implementation
     void MainWindow::OnDecreaseFontSizeClick(IInspectable const &, RoutedEventArgs const &)
     {
         ChangeFontSize(-1.0);
+    }
+
+    void MainWindow::OnResetFontSizeClick(IInspectable const &, RoutedEventArgs const &)
+    {
+        m_fontSize = 13.0;
+        ApplyFontSettings();
+    }
+
+    void MainWindow::OnFontClick(IInspectable const &, RoutedEventArgs const &)
+    {
+        if (m_bDialogOpen || !m_hWnd)
+            return;
+
+        m_bDialogOpen = true;
+        UINT dpi = GetDpiForWindow(m_hWnd);
+        if (dpi == 0) dpi = 96;
+
+        LOGFONTW lf{};
+        lf.lfHeight = -static_cast<LONG>(std::round(m_fontSize * static_cast<double>(dpi) / 96.0));
+        lf.lfWeight = FW_NORMAL;
+        lf.lfCharSet = DEFAULT_CHARSET;
+        std::wstring wFamily = pserv::utils::Utf8ToWide(m_fontFamily);
+        wcsncpy_s(lf.lfFaceName, wFamily.c_str(), _TRUNCATE);
+
+        CHOOSEFONTW cf{};
+        cf.lStructSize = sizeof(cf);
+        cf.hwndOwner = m_hWnd;
+        cf.lpLogFont = &lf;
+        cf.Flags = CF_INITTOLOGFONTSTRUCT | CF_SCREENFONTS | CF_FORCEFONTEXIST | CF_NOSCRIPTSEL;
+
+        if (ChooseFontW(&cf))
+        {
+            std::string chosenFamily = pserv::utils::WideToUtf8(lf.lfFaceName);
+            if (!chosenFamily.empty())
+            {
+                m_fontFamily = chosenFamily;
+            }
+            if (cf.iPointSize > 0)
+            {
+                m_fontSize = std::clamp((static_cast<double>(cf.iPointSize) / 10.0) * (96.0 / 72.0), 9.0, 28.0);
+            }
+            ApplyFontSettings();
+        }
+        m_bDialogOpen = false;
+    }
+
+    void MainWindow::OnColumnsClick(IInspectable const &, RoutedEventArgs const &)
+    {
+        ShowColumnsDialogAsync();
     }
 
     void MainWindow::OnRootPointerWheelChanged(IInspectable const &, PointerRoutedEventArgs const &e)
@@ -2069,6 +2794,23 @@ namespace winrt::pserv6::implementation
             return;
         }
 
+        if (ctrlDown && key == VirtualKey::C && m_pCurrentController && !m_dispatchContext.m_selectedObjects.empty())
+        {
+            auto focused = FocusManager::GetFocusedElement(RootGrid().XamlRoot());
+            if (!focused || !focused.try_as<TextBox>())
+            {
+                for (const auto *action : GetCommonActionsForSelection(true))
+                {
+                    if (action && action->GetName() == "Copy as Plain Text")
+                    {
+                        ExecuteAction(action);
+                        e.Handled(true);
+                        return;
+                    }
+                }
+            }
+        }
+
         if (key == VirtualKey::Delete && m_pCurrentController && !m_dispatchContext.m_selectedObjects.empty())
         {
             // Do not hijack Delete while typing inside a TextBox (e.g. FilterTextBox)
@@ -2078,8 +2820,7 @@ namespace winrt::pserv6::implementation
                 return;
             }
 
-            const auto *firstSelected = m_dispatchContext.m_selectedObjects[0];
-            for (const auto *action : m_pCurrentController->GetActions(firstSelected))
+            for (const auto *action : GetCommonActionsForSelection(false))
             {
                 if (action && (action->GetName() == "Delete" || action->GetName() == "Terminate Process"))
                 {

@@ -141,6 +141,16 @@ namespace pserv
         m_objects.Sort(columnIndex, ascending, dataType);
     }
 
+    void DataController::AdoptRefreshResult(DataController &source)
+    {
+        m_objects = std::move(source.m_objects);
+        m_bLoaded = source.m_bLoaded;
+        m_bNeedsRefresh = source.m_bNeedsRefresh;
+        m_lastRefreshTime = source.m_lastRefreshTime;
+        m_lastSortColumn = source.m_lastSortColumn;
+        m_lastSortAscending = source.m_lastSortAscending;
+    }
+
     void DataController::Clear()
     {
         m_objects.Clear();

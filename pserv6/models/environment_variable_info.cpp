@@ -5,10 +5,11 @@
 namespace pserv
 {
 
-    EnvironmentVariableInfo::EnvironmentVariableInfo(std::string name, std::string value, EnvironmentVariableScope scope)
+    EnvironmentVariableInfo::EnvironmentVariableInfo(std::string name, std::string value, EnvironmentVariableScope scope, DWORD regType)
         : m_name{std::move(name)},
           m_value{std::move(value)},
-          m_scope{scope}
+          m_scope{scope},
+          m_regType{regType == REG_EXPAND_SZ ? REG_EXPAND_SZ : REG_SZ}
     {
     }
 

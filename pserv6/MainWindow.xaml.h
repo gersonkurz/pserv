@@ -31,6 +31,9 @@ namespace winrt::pserv6::implementation
         void OnAutoRefreshIntervalClick(winrt::Windows::Foundation::IInspectable const &sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const &e);
         void OnIncreaseFontSizeClick(winrt::Windows::Foundation::IInspectable const &sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const &e);
         void OnDecreaseFontSizeClick(winrt::Windows::Foundation::IInspectable const &sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const &e);
+        void OnResetFontSizeClick(winrt::Windows::Foundation::IInspectable const &sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const &e);
+        void OnFontClick(winrt::Windows::Foundation::IInspectable const &sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const &e);
+        void OnColumnsClick(winrt::Windows::Foundation::IInspectable const &sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const &e);
         void OnAboutClick(winrt::Windows::Foundation::IInspectable const &sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const &e);
         void OnDocumentationClick(winrt::Windows::Foundation::IInspectable const &sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const &e);
         void OnFilterTextChanged(winrt::Windows::Foundation::IInspectable const &sender, winrt::Microsoft::UI::Xaml::Controls::TextChangedEventArgs const &e);
@@ -48,10 +51,15 @@ namespace winrt::pserv6::implementation
         void PopulateThemesMenu();
         void UpdateThemesMenuChecks();
         void ApplyTheme(const std::string &themeName);
+        void ClearCustomThemeResources();
+        void ApplyDwmTitleBarTheme(bool isDark);
         void ChangeFontSize(double delta);
+        void ApplyFontSettings();
         std::wstring GetThemesDirectory() const;
 
+        void ApplyRemoteMachineToControllers(const std::string &machineName);
         void SwitchToController(pserv::DataController *controller);
+        void StartAsyncRefresh(bool isAutoRefresh, bool preserveSelection = true, bool forceReset = false);
         void BuildColumnHeaders();
         void LoadColumnStateForController(pserv::DataController *controller);
         void SaveCurrentTableState();
@@ -62,12 +70,14 @@ namespace winrt::pserv6::implementation
         void UpdateRowVisuals(winrt::Microsoft::UI::Xaml::Controls::Grid const &rowGrid, pserv::DataObject *dataObject);
         void SyncListScrollViewer();
         void UpdateStatusBar();
+        std::vector<const pserv::DataAction *> GetCommonActionsForSelection(bool includeExportActions) const;
         void UpdateQuickActionButtons();
         void UpdateRemoteModeUI();
 
         void ExecuteAction(const pserv::DataAction *action);
         void HandlePostActionContext();
         winrt::Windows::Foundation::IAsyncAction ShowPropertiesDialogAsync();
+        winrt::Windows::Foundation::IAsyncAction ShowColumnsDialogAsync();
         winrt::Windows::Foundation::IAsyncAction ShowRemoteMachineDialogAsync();
         winrt::Windows::Foundation::IAsyncAction ShowAddEnvironmentVariableDialogAsync(int scope);
         winrt::Windows::Foundation::IAsyncAction ShowErrorDialogAsync(std::string message);
@@ -93,9 +103,13 @@ namespace winrt::pserv6::implementation
         std::vector<const pserv::DataAction *> m_lastToolbarActions;
         std::vector<std::pair<std::string, winrt::Microsoft::UI::Xaml::Controls::ToggleMenuFlyoutItem>> m_themeMenuItems;
         std::vector<double> m_columnWidths;
+        std::vector<int> m_visibleColumns;
         uint32_t m_currentColumnSchemaId{0};
         double m_fontSize{13.0};
+        std::string m_fontFamily{"Segoe UI Variable"};
+        winrt::Microsoft::UI::Xaml::Media::FontFamily m_cachedFontFamily{nullptr};
 
+        std::string m_activeThemeSetting;
         pserv::theme::ThemeSet m_themeSet;
         winrt::Microsoft::UI::Xaml::Media::SolidColorBrush m_normalTextBrush{nullptr};
         winrt::Microsoft::UI::Xaml::Media::SolidColorBrush m_highlightTextBrush{nullptr};
@@ -103,10 +117,21 @@ namespace winrt::pserv6::implementation
         winrt::Microsoft::UI::Xaml::Media::SolidColorBrush m_altRowBrush{nullptr};
         winrt::Microsoft::UI::Xaml::Media::SolidColorBrush m_transparentBrush{nullptr};
         winrt::Microsoft::UI::Xaml::Media::SolidColorBrush m_destructiveBrush{nullptr};
+        winrt::Microsoft::UI::Xaml::Media::SolidColorBrush m_resizeGripBrush{nullptr};
 
         winrt::Microsoft::UI::Xaml::Controls::ScrollViewer m_listScrollViewer{nullptr};
         winrt::Microsoft::UI::Xaml::DispatcherTimer m_periodicTimer{nullptr};
         std::chrono::steady_clock::time_point m_lastAutoRefreshTime;
+
+        std::thread m_refreshThread;
+        std::thread m_connectThread;
+        uint64_t m_refreshGeneration{0};
+        size_t m_cachedHighlightedCount{0};
+        size_t m_cachedDisabledCount{0};
+        bool m_bRefreshInFlight{false};
+        bool m_bPendingRefresh{false};
+        bool m_pendingPreserveSelection{true};
+        bool m_pendingForceReset{false};
 
         bool m_bIsSwitchingController{false};
         bool m_bIsUpdatingSelection{false};

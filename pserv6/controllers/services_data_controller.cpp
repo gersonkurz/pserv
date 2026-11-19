@@ -2,6 +2,7 @@
 #include <actions/service_actions.h>
 #include <controllers/services_data_controller.h>
 #include <core/async_operation.h>
+#include <core/data_action.h>
 #include <utils/string_utils.h>
 #include <windows_api/service_manager.h>
 #include <models/service_info.h>
@@ -75,11 +76,22 @@ namespace pserv
 
     std::vector<const DataAction *> ServicesDataController::GetActions(const DataObject *dataObject) const
     {
-
         const auto service = dynamic_cast<const ServiceInfo *>(dataObject);
         const auto currentState = service->GetCurrentState();
         const auto controlsAccepted = service->GetControlsAccepted();
-        return CreateServiceActions(currentState, controlsAccepted);
+        auto actions = CreateServiceActions(currentState, controlsAccepted);
+        if (!m_machineName.empty())
+        {
+            std::erase_if(actions, [](const DataAction *a)
+            {
+                if (!a || a->IsSeparator())
+                    return false;
+                const auto &name = a->GetName();
+                return name == "Open in Registry Editor" || name == "Open in Explorer" ||
+                       name == "Open Terminal Here" || name == "Delete Registry Key";
+            });
+        }
+        return actions;
     }
 
 #ifdef PSERV_CONSOLE_BUILD
@@ -142,11 +154,11 @@ namespace pserv
         }
 
         // Column indices based on constructor order:
-        // 0=DisplayName, 1=Name, 2=Status, 3=StartType, 4=ProcessId, 5=ServiceType, 6=BinaryPathName, 7=Description
+        // 0=Name (read-only), 1=DisplayName, 2=Status, 3=StartType, 4=ProcessId, 5=ServiceType, 6=BinaryPathName, 7=Description
 
         switch (columnIndex)
         {
-        case 0: // DisplayName
+        case 1: // DisplayName
             m_editBuffer.displayName = newValue;
             spdlog::debug("Set DisplayName = {}", newValue);
             return true;
@@ -206,12 +218,19 @@ namespace pserv
         {
             spdlog::info("Committing property edits for service: {}", service->GetName());
 
-            // Call ChangeServiceConfig with all accumulated changes
-            ServiceManager::ChangeServiceConfig(service->GetName(),
-                m_editBuffer.displayName,
-                m_editBuffer.description,
-                m_editBuffer.startTypeValue,
-                m_editBuffer.binaryPathName);
+            // Call ChangeServiceConfig with all accumulated changes on the target machine
+            if (!ServiceManager::ChangeServiceConfig(service->GetName(),
+                    m_editBuffer.displayName,
+                    m_editBuffer.description,
+                    m_editBuffer.startTypeValue,
+                    m_editBuffer.binaryPathName,
+                    m_machineName))
+            {
+                spdlog::error("Failed to commit property edits for service '{}' on {}",
+                    service->GetName(), m_machineName.empty() ? "local machine" : m_machineName);
+                m_editingObject = nullptr;
+                return false;
+            }
 
             // Update local service object with new values
             service->SetDisplayName(m_editBuffer.displayName);

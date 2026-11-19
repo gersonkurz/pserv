@@ -9,9 +9,8 @@ set windows-shell := ["cmd.exe", "/c"]
 
 solution := "pserv6\\pserv6.slnx"
 
-# Map %PROCESSOR_ARCHITECTURE% / %PROCESSOR_ARCHITEW6432% to the native solution platform: AMD64 → x64, ARM64 → ARM64.
-_arch := env_var_or_default("PROCESSOR_ARCHITEW6432", env_var_or_default("PROCESSOR_ARCHITECTURE", "AMD64"))
-platform := if _arch == "ARM64" { "ARM64" } else { "x64" }
+# Detect true native host architecture (even when just runs under x64 emulation on ARM64)
+platform := trim(`powershell -NoProfile -ExecutionPolicy Bypass -File scripts\native-platform.ps1`)
 
 # Default: show available recipes
 default:
@@ -67,8 +66,16 @@ version VERSION:
 
 # --- Packaging (MSIS 3.x → MSI + multi-arch bundle) -------------------------
 
-# Build the full release: x64 + x86 + ARM64 MSIs and the multi-arch bundle .exe, into setup\.
-release: package-all bundle
+# Run automated C++ regression tests against shared core, controllers, themes, and config
+test: _require-devshell
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-tests.ps1
+
+# Build the full release: x64 + x86 + ARM64 MSIs, multi-arch bundle .exe, and verification
+release: package-all bundle verify-release
+
+# Verify staged payloads, PE headers, bundled VC145 CRT DLLs, MSI tables, and bundle integrity
+verify-release:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify-release.ps1
 
 # Build all three per-architecture MSIs.
 package-all: package-x64 package-x86 package-arm64

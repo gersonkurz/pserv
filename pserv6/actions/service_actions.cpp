@@ -1,4 +1,5 @@
 #include "precomp.h"
+#include <controllers/services_data_controller.h>
 #include <core/async_operation.h>
 #include <core/data_action.h>
 #include <core/data_action_dispatch_context.h>
@@ -11,9 +12,6 @@
 namespace pserv
 {
 
-    // Forward declare to avoid circular dependency
-    class ServicesDataController;
-
     namespace
     {
 
@@ -21,6 +19,31 @@ namespace pserv
         inline const ServiceInfo *GetServiceInfo(const DataObject *obj)
         {
             return static_cast<const ServiceInfo *>(obj);
+        }
+
+        // Helper function to get target machine name from the active controller (empty = local)
+        inline std::string GetTargetMachineName(const DataActionDispatchContext &ctx)
+        {
+            if (const auto *svcController = dynamic_cast<const ServicesDataController *>(ctx.m_pController))
+            {
+                return svcController->GetMachineName();
+            }
+            return {};
+        }
+
+        inline const char *StartupTypeDisplayName(DWORD dwStartupAction)
+        {
+            switch (dwStartupAction)
+            {
+            case SERVICE_AUTO_START:
+                return "Automatic";
+            case SERVICE_DEMAND_START:
+                return "Manual";
+            case SERVICE_DISABLED:
+                return "Disabled";
+            default:
+                return "Requested";
+            }
         }
 
         // ============================================================================
@@ -48,7 +71,8 @@ namespace pserv
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
-                spdlog::info("Starting async operation: Start {} service(s)", serviceNames.size());
+                const std::string machineName = GetTargetMachineName(ctx);
+                spdlog::info("Starting async operation: Start {} service(s) on {}", serviceNames.size(), machineName.empty() ? "local machine" : machineName);
 
                 if (ctx.m_pAsyncOp)
                 {
@@ -60,7 +84,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -74,12 +98,14 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Starting service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                bool success = ServiceManager::StartServiceByName(serviceName,
+                                bool success = ServiceManager::StartServiceByName(
+                                    serviceName,
                                     [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -90,7 +116,7 @@ namespace pserv
                                 op->ReportProgress(1.0f, std::format("Failed to start {} service(s)", total));
                             else
                                 op->ReportProgress(1.0f, std::format("Started {} of {} service(s)", successCount, total));
-                            return successCount > 0;
+                            return successCount == total;
                         }
                         catch (const std::exception &e)
                         {
@@ -123,7 +149,8 @@ namespace pserv
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
-                spdlog::info("Starting async operation: Stop {} service(s)", serviceNames.size());
+                const std::string machineName = GetTargetMachineName(ctx);
+                spdlog::info("Starting async operation: Stop {} service(s) on {}", serviceNames.size(), machineName.empty() ? "local machine" : machineName);
 
                 if (ctx.m_pAsyncOp)
                 {
@@ -135,7 +162,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -149,12 +176,14 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Stopping service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                bool success = ServiceManager::StopServiceByName(serviceName,
+                                bool success = ServiceManager::StopServiceByName(
+                                    serviceName,
                                     [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -165,7 +194,7 @@ namespace pserv
                                 op->ReportProgress(1.0f, std::format("Failed to stop {} service(s)", total));
                             else
                                 op->ReportProgress(1.0f, std::format("Stopped {} of {} service(s)", successCount, total));
-                            return successCount > 0;
+                            return successCount == total;
                         }
                         catch (const std::exception &e)
                         {
@@ -197,7 +226,8 @@ namespace pserv
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
-                spdlog::info("Starting async operation: Restart {} service(s)", serviceNames.size());
+                const std::string machineName = GetTargetMachineName(ctx);
+                spdlog::info("Starting async operation: Restart {} service(s) on {}", serviceNames.size(), machineName.empty() ? "local machine" : machineName);
 
                 if (ctx.m_pAsyncOp)
                 {
@@ -209,7 +239,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -223,12 +253,14 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Restarting service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                bool success = ServiceManager::RestartServiceByName(serviceName,
+                                bool success = ServiceManager::RestartServiceByName(
+                                    serviceName,
                                     [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -239,7 +271,7 @@ namespace pserv
                                 op->ReportProgress(1.0f, std::format("Failed to restart {} service(s)", total));
                             else
                                 op->ReportProgress(1.0f, std::format("Restarted {} of {} service(s)", successCount, total));
-                            return successCount > 0;
+                            return successCount == total;
                         }
                         catch (const std::exception &e)
                         {
@@ -272,7 +304,8 @@ namespace pserv
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
-                spdlog::info("Starting async operation: Pause {} service(s)", serviceNames.size());
+                const std::string machineName = GetTargetMachineName(ctx);
+                spdlog::info("Starting async operation: Pause {} service(s) on {}", serviceNames.size(), machineName.empty() ? "local machine" : machineName);
 
                 if (ctx.m_pAsyncOp)
                 {
@@ -284,7 +317,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -298,12 +331,14 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Pausing service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                bool success = ServiceManager::PauseServiceByName(serviceName,
+                                bool success = ServiceManager::PauseServiceByName(
+                                    serviceName,
                                     [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -314,7 +349,7 @@ namespace pserv
                                 op->ReportProgress(1.0f, std::format("Failed to pause {} service(s)", total));
                             else
                                 op->ReportProgress(1.0f, std::format("Paused {} of {} service(s)", successCount, total));
-                            return successCount > 0;
+                            return successCount == total;
                         }
                         catch (const std::exception &e)
                         {
@@ -346,7 +381,8 @@ namespace pserv
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
-                spdlog::info("Starting async operation: Resume {} service(s)", serviceNames.size());
+                const std::string machineName = GetTargetMachineName(ctx);
+                spdlog::info("Starting async operation: Resume {} service(s) on {}", serviceNames.size(), machineName.empty() ? "local machine" : machineName);
 
                 if (ctx.m_pAsyncOp)
                 {
@@ -358,7 +394,7 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -372,12 +408,14 @@ namespace pserv
 
                                 op->ReportProgress(baseProgress, std::format("Resuming service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                bool success = ServiceManager::ResumeServiceByName(serviceName,
+                                bool success = ServiceManager::ResumeServiceByName(
+                                    serviceName,
                                     [op, baseProgress, progressRange](float progress, std::string message) -> bool
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machineName);
                                 if (success)
                                     successCount++;
                             }
@@ -388,7 +426,7 @@ namespace pserv
                                 op->ReportProgress(1.0f, std::format("Failed to resume {} service(s)", total));
                             else
                                 op->ReportProgress(1.0f, std::format("Resumed {} of {} service(s)", successCount, total));
-                            return successCount > 0;
+                            return successCount == total;
                         }
                         catch (const std::exception &e)
                         {
@@ -427,7 +465,9 @@ namespace pserv
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
-                spdlog::info("Starting async operation: Set startup type to {} for {} service(s)", m_dwStartupAction, serviceNames.size());
+                const std::string machineName = GetTargetMachineName(ctx);
+                spdlog::info("Starting async operation: Set startup type to {} for {} service(s) on {}",
+                    StartupTypeDisplayName(m_dwStartupAction), serviceNames.size(), machineName.empty() ? "local machine" : machineName);
 
                 if (ctx.m_pAsyncOp)
                 {
@@ -441,23 +481,33 @@ namespace pserv
                 DWORD dwStartupAction{m_dwStartupAction};
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames, dwStartupAction](AsyncOperation *op) -> bool
+                    [serviceNames, dwStartupAction, machineName](AsyncOperation *op) -> bool
                     {
                         try
                         {
                             size_t total = serviceNames.size();
+                            size_t successCount = 0;
+                            const char *label = StartupTypeDisplayName(dwStartupAction);
                             for (size_t i = 0; i < total; ++i)
                             {
                                 const std::string &serviceName = serviceNames[i];
                                 float progress = static_cast<float>(i) / static_cast<float>(total);
 
-                                op->ReportProgress(progress, std::format("Setting startup type for '{}'... ({}/{})", serviceName, i + 1, total));
+                                op->ReportProgress(progress, std::format("Setting startup type ({}) for '{}'... ({}/{})", label, serviceName, i + 1, total));
 
-                                ServiceManager::ChangeServiceStartType(serviceName, dwStartupAction);
+                                if (ServiceManager::ChangeServiceStartType(serviceName, dwStartupAction, machineName))
+                                {
+                                    successCount++;
+                                }
                             }
 
-                            op->ReportProgress(1.0f, std::format("Set startup type to Automatic for {} service(s)", total));
-                            return true;
+                            if (successCount == total)
+                                op->ReportProgress(1.0f, std::format("Set startup type to {} for {} service(s)", label, total));
+                            else if (successCount == 0)
+                                op->ReportProgress(1.0f, std::format("Failed to set startup type to {} for {} service(s)", label, total));
+                            else
+                                op->ReportProgress(1.0f, std::format("Set startup type to {} for {} of {} service(s)", label, successCount, total));
+                            return successCount == total;
                         }
                         catch (const std::exception &e)
                         {
@@ -514,6 +564,11 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                if (!GetTargetMachineName(ctx).empty())
+                {
+                    spdlog::warn("Open in Registry Editor is not supported for remote machines");
+                    return;
+                }
                 std::string serviceName = GetServiceInfo(ctx.m_selectedObjects[0])->GetName();
                 std::string regPath = std::format("SYSTEM\\CurrentControlSet\\Services\\{}", serviceName);
 
@@ -559,6 +614,11 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                if (!GetTargetMachineName(ctx).empty())
+                {
+                    spdlog::warn("Open in Explorer is not supported for remote machines");
+                    return;
+                }
                 std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
                 if (!installLocation.empty())
                 {
@@ -592,6 +652,11 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                if (!GetTargetMachineName(ctx).empty())
+                {
+                    spdlog::warn("Open Terminal Here is not supported for remote machines");
+                    return;
+                }
                 std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
                 if (!installLocation.empty())
                 {
@@ -640,24 +705,29 @@ namespace pserv
                     serviceNames.push_back(GetServiceInfo(svc)->GetName());
                 }
 
+                const std::string machineName = GetTargetMachineName(ctx);
+                const std::string targetDesc = machineName.empty() ? "the local machine" : std::format("remote machine '{}'", machineName);
+
                 // Show confirmation dialog
                 std::string confirmMsg;
                 if (serviceNames.size() == 1)
                 {
-                    confirmMsg =
-                        std::format("Are you sure you want to delete the service '{}'?\n\nThis will remove the service from the system.", serviceNames[0]);
+                    confirmMsg = std::format(
+                        "Are you sure you want to delete the service '{}' on {}?\n\nThis will remove the service from the system.",
+                        serviceNames[0], targetDesc);
                 }
                 else
                 {
                     confirmMsg = std::format(
-                        "Are you sure you want to delete {} services?\n\nThis will remove all selected services from the system.", serviceNames.size());
+                        "Are you sure you want to delete {} services on {}?\n\nThis will remove all selected services from the system.",
+                        serviceNames.size(), targetDesc);
                 }
 
                 int result = MessageBoxA(ctx.m_hWnd, confirmMsg.c_str(), "Confirm Service Deletion", MB_YESNO | MB_ICONWARNING);
                 if (result != IDYES)
                     return;
 
-                spdlog::info("Starting async operation: Delete {} service(s)", serviceNames.size());
+                spdlog::info("Starting async operation: Delete {} service(s) on {}", serviceNames.size(), machineName.empty() ? "local machine" : machineName);
 
                 if (ctx.m_pAsyncOp)
                 {
@@ -669,11 +739,12 @@ namespace pserv
                 ctx.m_bShowProgressDialog = true;
 
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machineName](AsyncOperation *op) -> bool
                     {
                         try
                         {
                             size_t total = serviceNames.size();
+                            size_t successCount = 0;
                             for (size_t i = 0; i < total; ++i)
                             {
                                 const std::string &serviceName = serviceNames[i];
@@ -681,11 +752,19 @@ namespace pserv
 
                                 op->ReportProgress(progress, std::format("Deleting service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::DeleteService(serviceName);
+                                if (ServiceManager::DeleteService(serviceName, machineName))
+                                {
+                                    successCount++;
+                                }
                             }
 
-                            op->ReportProgress(1.0f, std::format("Deleted {} service(s) successfully", total));
-                            return true;
+                            if (successCount == total)
+                                op->ReportProgress(1.0f, std::format("Deleted {} service(s) successfully", total));
+                            else if (successCount == 0)
+                                op->ReportProgress(1.0f, std::format("Failed to delete {} service(s)", total));
+                            else
+                                op->ReportProgress(1.0f, std::format("Deleted {} of {} service(s)", successCount, total));
+                            return successCount == total;
                         }
                         catch (const std::exception &e)
                         {
@@ -716,6 +795,11 @@ namespace pserv
 
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                if (!GetTargetMachineName(ctx).empty())
+                {
+                    spdlog::warn("Delete Registry Key is not supported for remote machines");
+                    return;
+                }
                 std::vector<std::string> serviceNames;
                 for (const auto *svc : ctx.m_selectedObjects)
                 {

@@ -68,19 +68,68 @@ namespace pserv
             auto info = doc->GetByStableId<EnvironmentVariableInfo>(stableId);
             if (info == nullptr)
             {
-                info = doc->Append<EnvironmentVariableInfo>(DBG_NEW EnvironmentVariableInfo{name, value, scope});
+                info = doc->Append<EnvironmentVariableInfo>(DBG_NEW EnvironmentVariableInfo{name, value, scope, valueType});
             }
             else
             {
                 info->SetValue(value);
+                info->SetRegType(valueType);
             }
         }
     }
 
-    bool EnvironmentVariableManager::SetEnvironmentVariable(const std::string &name, const std::string &value, EnvironmentVariableScope scope)
+    bool EnvironmentVariableManager::IsValidVariableName(const std::string &name)
     {
+        if (name.empty())
+        {
+            return false;
+        }
+        bool hasNonWhitespace = false;
+        for (unsigned char ch : name)
+        {
+            if (ch == '=' || ch == '\0')
+            {
+                return false;
+            }
+            if (!std::isspace(ch))
+            {
+                hasNonWhitespace = true;
+            }
+        }
+        return hasNonWhitespace;
+    }
+
+    bool EnvironmentVariableManager::VariableExists(const std::string &name, EnvironmentVariableScope scope)
+    {
+        if (!IsValidVariableName(name))
+        {
+            return false;
+        }
+
         wil::unique_hkey hKey;
-        LSTATUS status = RegOpenKeyExW(GetRegistryRoot(scope), GetRegistryPath(scope).c_str(), 0, KEY_SET_VALUE, &hKey);
+        LSTATUS status = RegOpenKeyExW(GetRegistryRoot(scope), GetRegistryPath(scope).c_str(), 0, KEY_QUERY_VALUE, &hKey);
+        if (status != ERROR_SUCCESS)
+        {
+            return false;
+        }
+
+        std::wstring wName = utils::Utf8ToWide(name);
+        DWORD type = 0;
+        status = RegQueryValueExW(hKey.get(), wName.c_str(), nullptr, &type, nullptr, nullptr);
+        return status == ERROR_SUCCESS;
+    }
+
+    bool EnvironmentVariableManager::SetEnvironmentVariable(
+        const std::string &name, const std::string &value, EnvironmentVariableScope scope, DWORD regType)
+    {
+        if (!IsValidVariableName(name))
+        {
+            spdlog::error("Invalid environment variable name '{}'", name);
+            return false;
+        }
+
+        wil::unique_hkey hKey;
+        LSTATUS status = RegOpenKeyExW(GetRegistryRoot(scope), GetRegistryPath(scope).c_str(), 0, KEY_QUERY_VALUE | KEY_SET_VALUE, &hKey);
         if (status != ERROR_SUCCESS)
         {
             LogWin32ErrorCode("RegOpenKeyExW", status, "opening environment key for scope {} to set '{}'",
@@ -91,7 +140,22 @@ namespace pserv
         std::wstring wName = utils::Utf8ToWide(name);
         std::wstring wValue = utils::Utf8ToWide(value);
 
-        status = RegSetValueExW(hKey.get(), wName.c_str(), 0, REG_SZ,
+        DWORD writeType = regType;
+        if (writeType != REG_SZ && writeType != REG_EXPAND_SZ)
+        {
+            DWORD existingType = 0;
+            if (RegQueryValueExW(hKey.get(), wName.c_str(), nullptr, &existingType, nullptr, nullptr) == ERROR_SUCCESS &&
+                (existingType == REG_SZ || existingType == REG_EXPAND_SZ))
+            {
+                writeType = existingType;
+            }
+            else
+            {
+                writeType = (value.find('%') != std::string::npos) ? REG_EXPAND_SZ : REG_SZ;
+            }
+        }
+
+        status = RegSetValueExW(hKey.get(), wName.c_str(), 0, writeType,
             reinterpret_cast<const BYTE *>(wValue.c_str()),
             static_cast<DWORD>((wValue.length() + 1) * sizeof(wchar_t)));
 
@@ -102,8 +166,122 @@ namespace pserv
         }
 
         BroadcastEnvironmentChange();
-        spdlog::info("Set environment variable '{}' = '{}' (scope: {})", name, value,
-            scope == EnvironmentVariableScope::System ? "System" : "User");
+        spdlog::info("Set environment variable '{}' = '{}' (scope: {}, type: {})", name, value,
+            scope == EnvironmentVariableScope::System ? "System" : "User",
+            writeType == REG_EXPAND_SZ ? "REG_EXPAND_SZ" : "REG_SZ");
+        return true;
+    }
+
+    bool EnvironmentVariableManager::RenameEnvironmentVariable(const std::string &oldName,
+        const std::string &newName,
+        const std::string &value,
+        EnvironmentVariableScope scope,
+        DWORD preferredRegType)
+    {
+        if (!IsValidVariableName(oldName) || !IsValidVariableName(newName))
+        {
+            spdlog::error("Invalid environment variable rename '{}' -> '{}'", oldName, newName);
+            return false;
+        }
+
+        wil::unique_hkey hKey;
+        LSTATUS status = RegOpenKeyExW(GetRegistryRoot(scope), GetRegistryPath(scope).c_str(), 0, KEY_QUERY_VALUE | KEY_SET_VALUE, &hKey);
+        if (status != ERROR_SUCCESS)
+        {
+            LogWin32ErrorCode("RegOpenKeyExW", status, "opening environment key for scope {} to rename '{}' -> '{}'",
+                scope == EnvironmentVariableScope::System ? "System" : "User", oldName, newName);
+            return false;
+        }
+
+        std::wstring wOldName = utils::Utf8ToWide(oldName);
+        std::wstring wNewName = utils::Utf8ToWide(newName);
+        std::wstring wValue = utils::Utf8ToWide(value);
+
+        // Preserve the existing registry value type (REG_SZ vs REG_EXPAND_SZ) and snapshot original bytes for rollback.
+        DWORD existingType = 0;
+        DWORD existingDataSize = 0;
+        LSTATUS queryOldStatus = RegQueryValueExW(hKey.get(), wOldName.c_str(), nullptr, &existingType, nullptr, &existingDataSize);
+        if (queryOldStatus != ERROR_SUCCESS)
+        {
+            LogWin32ErrorCode("RegQueryValueExW", queryOldStatus, "querying existing environment variable '{}'", oldName);
+            return false;
+        }
+
+        DWORD writeType = preferredRegType;
+        if (writeType != REG_SZ && writeType != REG_EXPAND_SZ)
+        {
+            writeType = (existingType == REG_EXPAND_SZ || existingType == REG_SZ) ? existingType : REG_SZ;
+        }
+
+        bool isCaseOnlyRename = (_wcsicmp(wOldName.c_str(), wNewName.c_str()) == 0);
+        if (!isCaseOnlyRename)
+        {
+            // Refuse to overwrite an existing variable with the same name (case-insensitive in registry).
+            DWORD collisionType = 0;
+            if (RegQueryValueExW(hKey.get(), wNewName.c_str(), nullptr, &collisionType, nullptr, nullptr) == ERROR_SUCCESS)
+            {
+                spdlog::error("Cannot rename environment variable '{}' to '{}': target variable already exists in scope {}",
+                    oldName, newName, scope == EnvironmentVariableScope::System ? "System" : "User");
+                return false;
+            }
+
+            // Write the new value FIRST so the original is never lost if writing fails.
+            status = RegSetValueExW(hKey.get(), wNewName.c_str(), 0, writeType,
+                reinterpret_cast<const BYTE *>(wValue.c_str()),
+                static_cast<DWORD>((wValue.length() + 1) * sizeof(wchar_t)));
+            if (status != ERROR_SUCCESS)
+            {
+                LogWin32ErrorCode("RegSetValueExW", status, "writing renamed environment variable '{}'", newName);
+                return false;
+            }
+
+            // Delete the old value only after the new value is safely persisted.
+            status = RegDeleteValueW(hKey.get(), wOldName.c_str());
+            if (status != ERROR_SUCCESS)
+            {
+                LogWin32ErrorCode("RegDeleteValueW", status, "removing old environment variable '{}' after rename", oldName);
+                // Roll back the new value so we do not leave duplicate entries behind.
+                RegDeleteValueW(hKey.get(), wNewName.c_str());
+                return false;
+            }
+        }
+        else
+        {
+            // Case-only rename: read original data so we can roll back if re-creating with new casing fails.
+            std::vector<BYTE> originalData(existingDataSize);
+            if (existingDataSize > 0)
+            {
+                LSTATUS readStatus = RegQueryValueExW(hKey.get(), wOldName.c_str(), nullptr, &existingType, originalData.data(), &existingDataSize);
+                if (readStatus != ERROR_SUCCESS)
+                {
+                    LogWin32ErrorCode("RegQueryValueExW", readStatus, "reading backup of environment variable '{}'", oldName);
+                    return false;
+                }
+            }
+
+            status = RegDeleteValueW(hKey.get(), wOldName.c_str());
+            if (status != ERROR_SUCCESS)
+            {
+                LogWin32ErrorCode("RegDeleteValueW", status, "removing '{}' for case-only rename", oldName);
+                return false;
+            }
+
+            status = RegSetValueExW(hKey.get(), wNewName.c_str(), 0, writeType,
+                reinterpret_cast<const BYTE *>(wValue.c_str()),
+                static_cast<DWORD>((wValue.length() + 1) * sizeof(wchar_t)));
+            if (status != ERROR_SUCCESS)
+            {
+                LogWin32ErrorCode("RegSetValueExW", status, "writing case-renamed environment variable '{}'", newName);
+                // Attempt rollback to original name & bytes.
+                RegSetValueExW(hKey.get(), wOldName.c_str(), 0, existingType, originalData.data(), existingDataSize);
+                return false;
+            }
+        }
+
+        BroadcastEnvironmentChange();
+        spdlog::info("Renamed environment variable '{}' -> '{}' (scope: {}, type: {})",
+            oldName, newName, scope == EnvironmentVariableScope::System ? "System" : "User",
+            writeType == REG_EXPAND_SZ ? "REG_EXPAND_SZ" : "REG_SZ");
         return true;
     }
 

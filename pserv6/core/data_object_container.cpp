@@ -106,26 +106,23 @@ namespace pserv
 
     void DataObjectContainer::FinishRefresh()
     {
-        bool repeat = true;
-        while (repeat)
+        size_t writeIndex = 0;
+        for (size_t i = 0; i < m_vector.size(); ++i)
         {
-            repeat = false;
-            uint32_t index = 0;
-            for (auto dataObject : m_vector)
+            DataObject *dataObject = m_vector[i];
+            if (dataObject->m_LastSeenGeneration != m_LastSeenGeneration)
             {
-                if (dataObject->m_LastSeenGeneration != m_LastSeenGeneration)
-                {
-                    // Not seen in this generation, remove it
-                    const auto stableId{dataObject->GetStableID()};
-                    m_lookup.erase(stableId);
-                    m_vector.erase(m_vector.begin() + index);
-                    dataObject->Release(REFCOUNT_DEBUG_ARGS);
-                    repeat = true;
-                    break;
-                }
-                ++index;
+                // Not seen in this generation, remove it
+                const auto stableId{dataObject->GetStableID()};
+                m_lookup.erase(stableId);
+                dataObject->Release(REFCOUNT_DEBUG_ARGS);
+            }
+            else
+            {
+                m_vector[writeIndex++] = dataObject;
             }
         }
+        m_vector.resize(writeIndex);
     }
 
     DataObjectContainer::DataObjectContainer(const DataObjectContainer& copySrc)
@@ -160,6 +157,7 @@ namespace pserv
     {
         m_lookup = std::move(moveSrc.m_lookup);
         m_vector = std::move(moveSrc.m_vector);
+        m_LastSeenGeneration = moveSrc.m_LastSeenGeneration;
         moveSrc.m_lookup.clear();
         moveSrc.m_vector.clear();
     }
@@ -171,6 +169,7 @@ namespace pserv
             Clear();
             m_lookup = std::move(moveSrc.m_lookup);
             m_vector = std::move(moveSrc.m_vector);
+            m_LastSeenGeneration = moveSrc.m_LastSeenGeneration;
             moveSrc.m_lookup.clear();
             moveSrc.m_vector.clear();
         }

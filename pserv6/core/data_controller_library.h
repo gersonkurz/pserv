@@ -37,5 +37,9 @@ namespace pserv
 
         /// @brief Destroy all controllers and release resources.
         void Clear();
+
+        /// @brief Create a fresh standalone controller matching an existing controller's type and settings
+        ///        (used for off-thread background refresh snapshots).
+        static std::unique_ptr<DataController> CreateFreshController(const DataController *existing);
     };
 } // namespace pserv

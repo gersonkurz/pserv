@@ -26,12 +26,33 @@ namespace pserv
         /// @param doc Container to populate with EnvironmentVariableInfo objects.
         static void EnumerateEnvironmentVariables(DataObjectContainer *doc);
 
+        /// @brief Validate an environment variable name.
+        static bool IsValidVariableName(const std::string &name);
+
+        /// @brief Check whether a variable exists in the specified scope (case-insensitive).
+        static bool VariableExists(const std::string &name, EnvironmentVariableScope scope);
+
         /// @brief Create or update an environment variable.
         /// @param name Variable name.
         /// @param value Variable value.
         /// @param scope User or System scope.
+        /// @param regType Registry value type (REG_SZ, REG_EXPAND_SZ, or 0 to preserve existing / auto-detect).
         /// @return true on success.
-        static bool SetEnvironmentVariable(const std::string &name, const std::string &value, EnvironmentVariableScope scope);
+        static bool SetEnvironmentVariable(
+            const std::string &name, const std::string &value, EnvironmentVariableScope scope, DWORD regType = 0);
+
+        /// @brief Safely rename and update an environment variable without data loss or clobbering collisions.
+        /// @param oldName Existing variable name.
+        /// @param newName Replacement variable name.
+        /// @param value Replacement variable value.
+        /// @param scope User or System scope.
+        /// @param preferredRegType Preferred registry type (0 to preserve existing).
+        /// @return true on success.
+        static bool RenameEnvironmentVariable(const std::string &oldName,
+            const std::string &newName,
+            const std::string &value,
+            EnvironmentVariableScope scope,
+            DWORD preferredRegType = 0);
 
         /// @brief Delete an environment variable.
         /// @param name Variable name.

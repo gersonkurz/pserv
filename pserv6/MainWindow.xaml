@@ -62,6 +62,17 @@
                 </MenuBarItem>
 
                 <MenuBarItem x:Name="ViewMenuBarItem" Title="View">
+                    <MenuFlyoutItem Text="Columns..." Click="OnColumnsClick">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE8FD;" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="Font..." Click="OnFontClick">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE8D2;" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutSeparator />
                     <MenuFlyoutSubItem x:Name="AutoRefreshSubMenu" Text="Auto-Refresh">
                         <ToggleMenuFlyoutItem x:Name="MenuAutoRefreshToggle" Text="Enabled" Click="OnAutoRefreshToggleClick">
                             <ToggleMenuFlyoutItem.KeyboardAccelerators>
@@ -83,6 +94,11 @@
                     <MenuFlyoutItem Text="Decrease Font Size" KeyboardAcceleratorTextOverride="Ctrl+-" Click="OnDecreaseFontSizeClick">
                         <MenuFlyoutItem.Icon>
                             <FontIcon Glyph="&#xE71F;" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="Reset Font Size" Click="OnResetFontSizeClick">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE777;" />
                         </MenuFlyoutItem.Icon>
                     </MenuFlyoutItem>
                     <MenuFlyoutSeparator />
@@ -173,10 +189,11 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <!-- Sticky Synchronized Column Header Bar -->
+                    <!-- Sticky Synchronized Column Header Bar (right margin reserves space for vertical scrollbar) -->
                     <ScrollViewer
                         x:Name="HeaderScrollViewer"
                         Grid.Row="0"
+                        Margin="0,0,16,0"
                         HorizontalScrollBarVisibility="Hidden"
                         VerticalScrollBarVisibility="Disabled"
                         HorizontalScrollMode="Disabled"
@@ -186,24 +203,71 @@
                         <StackPanel x:Name="HeaderStackPanel" Orientation="Horizontal" Height="34" />
                     </ScrollViewer>
 
-                    <!-- Hardware-Virtualized ListView -->
+                    <!-- Hardware-Virtualized ListView with Always-Visible Non-Overlaying Scrollbars -->
                     <ListView
                         x:Name="DataListView"
                         Grid.Row="1"
                         SelectionMode="Extended"
+                        IsMultiSelectCheckBoxEnabled="False"
                         IsItemClickEnabled="False"
                         ShowsScrollingPlaceholders="False"
                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
                         ScrollViewer.HorizontalScrollMode="Enabled"
-                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        ScrollViewer.VerticalScrollBarVisibility="Visible"
                         ScrollViewer.VerticalScrollMode="Enabled"
                         ContainerContentChanging="OnContainerContentChanging"
                         SelectionChanged="OnListSelectionChanged"
                         DoubleTapped="OnListDoubleTapped"
                         RightTapped="OnListRightTapped">
+                        <ListView.Resources>
+                            <Style TargetType="ScrollViewer" BasedOn="{StaticResource DefaultScrollViewerStyle}">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ScrollViewer">
+                                            <Grid Background="{TemplateBinding Background}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <ScrollContentPresenter x:Name="ScrollContentPresenter" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="{TemplateBinding Padding}" />
+                                                <ScrollBar
+                                                    x:Name="VerticalScrollBar"
+                                                    Grid.Column="1"
+                                                    Width="16"
+                                                    IsTabStop="False"
+                                                    IndicatorMode="MouseIndicator"
+                                                    Orientation="Vertical"
+                                                    Maximum="{TemplateBinding ScrollableHeight}"
+                                                    Value="{TemplateBinding VerticalOffset}"
+                                                    ViewportSize="{TemplateBinding ViewportHeight}"
+                                                    Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+                                                <ScrollBar
+                                                    x:Name="HorizontalScrollBar"
+                                                    Grid.Row="1"
+                                                    Height="16"
+                                                    IsTabStop="False"
+                                                    IndicatorMode="MouseIndicator"
+                                                    Orientation="Horizontal"
+                                                    Maximum="{TemplateBinding ScrollableWidth}"
+                                                    Value="{TemplateBinding HorizontalOffset}"
+                                                    ViewportSize="{TemplateBinding ViewportWidth}"
+                                                    Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" />
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListView.Resources>
+                        <ListView.ItemContainerTransitions>
+                            <TransitionCollection />
+                        </ListView.ItemContainerTransitions>
                         <ListView.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <ItemsStackPanel Orientation="Vertical" CacheLength="2.0" />
+                                <ItemsStackPanel Orientation="Vertical" CacheLength="2.0" ItemsUpdatingScrollMode="KeepScrollOffset" />
                             </ItemsPanelTemplate>
                         </ListView.ItemsPanel>
                         <ListView.ItemTemplate>

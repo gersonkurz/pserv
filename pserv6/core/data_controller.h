@@ -145,6 +145,16 @@ namespace pserv
         /// @param ascending True for ascending, false for descending.
         void Sort(int columnIndex, bool ascending);
 
+        /// @brief Copy sort preferences from another controller (e.g. before background refresh).
+        void CopySortStateFrom(const DataController &other)
+        {
+            m_lastSortColumn = other.m_lastSortColumn;
+            m_lastSortAscending = other.m_lastSortAscending;
+        }
+
+        /// @brief Adopt refreshed data and metadata produced by a background snapshot controller.
+        virtual void AdoptRefreshResult(DataController &source);
+
         /// @name Property Editing Transaction
         /// Override these methods to support in-place editing in the properties dialog.
         /// @{

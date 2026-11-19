@@ -30,6 +30,7 @@ namespace pserv
 #endif
 
         VisualState GetVisualState(const DataObject *dataObject) const override;
+        void AdoptRefreshResult(DataController &source) override;
 
     private:
         std::string m_currentUserName; ///< Cached username for highlighting own processes.

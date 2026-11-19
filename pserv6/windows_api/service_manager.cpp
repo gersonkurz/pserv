@@ -216,86 +216,72 @@ namespace pserv
             spdlog::info("Enumerated {} services", doc->GetSize());
     }
 
-    bool ServiceManager::StartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    namespace
     {
-        spdlog::info("Starting service: {}", serviceName);
+        wil::unique_schandle OpenTargetScm(const std::string &machineName, DWORD desiredAccess)
+        {
+            if (machineName.empty())
+            {
+                return wil::unique_schandle{OpenSCManagerW(nullptr, nullptr, desiredAccess)};
+            }
+            std::wstring wMachine = utils::Utf8ToWide(machineName);
+            return wil::unique_schandle{OpenSCManagerW(wMachine.c_str(), nullptr, desiredAccess)};
+        }
+    } // namespace
 
-        // Open SCM
-        SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+    bool ServiceManager::StartServiceByName(
+        const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
+    {
+        spdlog::info("Starting service '{}' on {}", serviceName, machineName.empty() ? "local machine" : machineName);
+
+        wil::unique_schandle hScManager = OpenTargetScm(machineName, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine '{}'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
-        // Convert service name to wide string
         std::wstring wServiceName = utils::Utf8ToWide(serviceName);
-
-        // Open service
-        SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_START | SERVICE_QUERY_STATUS);
+        wil::unique_schandle hService{OpenServiceW(hScManager.get(), wServiceName.c_str(), SERVICE_START | SERVICE_QUERY_STATUS)};
         if (!hService)
         {
-            CloseServiceHandle(hScManager);
             LogWin32Error("OpenServiceW", "service '{}'", serviceName);
             return false;
         }
 
-        // Start the service
-        BOOL result = StartServiceW(hService, 0, nullptr);
+        BOOL result = StartServiceW(hService.get(), 0, nullptr);
         DWORD error = GetLastError();
 
         if (!result && error != ERROR_SERVICE_ALREADY_RUNNING)
         {
-            CloseServiceHandle(hService);
-            CloseServiceHandle(hScManager);
-            LogWin32Error("StartServiceW", "service '{}'", serviceName);
+            LogWin32ErrorCode("StartServiceW", error, "service '{}'", serviceName);
             return false;
         }
 
-        // Wait for service to reach running state
-        SERVICE_STATUS_PROCESS ssp;
-        DWORD bytesNeeded;
-        const int maxWaitTime = 30000; // 30 seconds max
-        const int pollInterval = 1000; // Check every 1 second for progress updates
+        SERVICE_STATUS_PROCESS ssp{};
+        DWORD bytesNeeded = 0;
+        const int maxWaitTime = 30000;
+        const int pollInterval = 1000;
         int totalWait = 0;
         DWORD estimatedWaitTime = 0;
         bool cancelled = false;
 
         while (totalWait < maxWaitTime)
         {
-            if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded))
+            if (!QueryServiceStatusEx(hService.get(), SC_STATUS_PROCESS_INFO, reinterpret_cast<LPBYTE>(&ssp), sizeof(ssp), &bytesNeeded))
             {
-                CloseServiceHandle(hService);
-                CloseServiceHandle(hScManager);
                 LogWin32Error("QueryServiceStatusEx", "service '{}'", serviceName);
                 return false;
             }
 
-            // Get service state string
             std::string stateStr = GetServiceStateString(ssp.dwCurrentState);
-
-            // Use wait hint for progress calculation (hint is in milliseconds)
-            // Add 5 second buffer because dwWaitHint is often unreliable
-            if (ssp.dwWaitHint > 0)
-            {
-                estimatedWaitTime = ssp.dwWaitHint + 5000;
-            }
-            else
-            {
-                estimatedWaitTime = maxWaitTime; // Default if no hint
-            }
-
-            // Calculate progress based on elapsed time vs estimated time
+            estimatedWaitTime = (ssp.dwWaitHint > 0) ? (ssp.dwWaitHint + 5000) : maxWaitTime;
             float progress = std::min(0.95f, static_cast<float>(totalWait) / static_cast<float>(estimatedWaitTime));
 
-            // Report progress and check for cancellation
-            if (progressCallback)
+            if (progressCallback && !progressCallback(progress, std::format("Service state: {}", stateStr)))
             {
-                if (!progressCallback(progress, std::format("Service state: {}", stateStr)))
-                {
-                    cancelled = true;
-                    break;
-                }
+                cancelled = true;
+                break;
             }
 
             if (ssp.dwCurrentState == SERVICE_RUNNING)
@@ -309,8 +295,6 @@ namespace pserv
 
             if (ssp.dwCurrentState == SERVICE_STOPPED)
             {
-                CloseServiceHandle(hService);
-                CloseServiceHandle(hScManager);
                 spdlog::error("Service '{}' stopped unexpectedly during start", serviceName);
                 return false;
             }
@@ -318,9 +302,6 @@ namespace pserv
             Sleep(pollInterval);
             totalWait += pollInterval;
         }
-
-        CloseServiceHandle(hService);
-        CloseServiceHandle(hScManager);
 
         if (cancelled)
         {
@@ -338,86 +319,59 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::StopServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    bool ServiceManager::StopServiceByName(
+        const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
     {
-        spdlog::info("Stopping service: {}", serviceName);
+        spdlog::info("Stopping service '{}' on {}", serviceName, machineName.empty() ? "local machine" : machineName);
 
-        // Open SCM
-        SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+        wil::unique_schandle hScManager = OpenTargetScm(machineName, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine '{}'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
-        // Convert service name to wide string
         std::wstring wServiceName = utils::Utf8ToWide(serviceName);
-
-        // Open service
-        SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_STOP | SERVICE_QUERY_STATUS);
+        wil::unique_schandle hService{OpenServiceW(hScManager.get(), wServiceName.c_str(), SERVICE_STOP | SERVICE_QUERY_STATUS)};
         if (!hService)
         {
-            CloseServiceHandle(hScManager);
             LogWin32Error("OpenServiceW", "service '{}'", serviceName);
             return false;
         }
 
-        // Stop the service
-        SERVICE_STATUS_PROCESS ssp;
-        BOOL result = ControlService(hService, SERVICE_CONTROL_STOP, (LPSERVICE_STATUS)&ssp);
+        SERVICE_STATUS_PROCESS ssp{};
+        BOOL result = ControlService(hService.get(), SERVICE_CONTROL_STOP, reinterpret_cast<LPSERVICE_STATUS>(&ssp));
         DWORD error = GetLastError();
 
         if (!result && error != ERROR_SERVICE_NOT_ACTIVE)
         {
-            CloseServiceHandle(hService);
-            CloseServiceHandle(hScManager);
-            LogWin32Error("ControlService(STOP)", "service '{}'", serviceName);
+            LogWin32ErrorCode("ControlService(STOP)", error, "service '{}'", serviceName);
             return false;
         }
 
-        // Wait for service to reach stopped state
-        DWORD bytesNeeded;
-        const int maxWaitTime = 30000; // 30 seconds max
-        const int pollInterval = 1000; // Check every 1 second for progress updates
+        DWORD bytesNeeded = 0;
+        const int maxWaitTime = 30000;
+        const int pollInterval = 1000;
         int totalWait = 0;
         DWORD estimatedWaitTime = 0;
         bool cancelled = false;
 
         while (totalWait < maxWaitTime)
         {
-            if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded))
+            if (!QueryServiceStatusEx(hService.get(), SC_STATUS_PROCESS_INFO, reinterpret_cast<LPBYTE>(&ssp), sizeof(ssp), &bytesNeeded))
             {
-                CloseServiceHandle(hService);
-                CloseServiceHandle(hScManager);
                 LogWin32Error("QueryServiceStatusEx", "service '{}'", serviceName);
                 return false;
             }
 
-            // Get service state string
             std::string stateStr = GetServiceStateString(ssp.dwCurrentState);
-
-            // Use wait hint for progress calculation (hint is in milliseconds)
-            // Add 5 second buffer because dwWaitHint is often unreliable
-            if (ssp.dwWaitHint > 0)
-            {
-                estimatedWaitTime = ssp.dwWaitHint + 5000;
-            }
-            else
-            {
-                estimatedWaitTime = maxWaitTime; // Default if no hint
-            }
-
-            // Calculate progress based on elapsed time vs estimated time
+            estimatedWaitTime = (ssp.dwWaitHint > 0) ? (ssp.dwWaitHint + 5000) : maxWaitTime;
             float progress = std::min(0.95f, static_cast<float>(totalWait) / static_cast<float>(estimatedWaitTime));
 
-            // Report progress and check for cancellation
-            if (progressCallback)
+            if (progressCallback && !progressCallback(progress, std::format("Service state: {}", stateStr)))
             {
-                if (!progressCallback(progress, std::format("Service state: {}", stateStr)))
-                {
-                    cancelled = true;
-                    break;
-                }
+                cancelled = true;
+                break;
             }
 
             if (ssp.dwCurrentState == SERVICE_STOPPED)
@@ -432,9 +386,6 @@ namespace pserv
             Sleep(pollInterval);
             totalWait += pollInterval;
         }
-
-        CloseServiceHandle(hService);
-        CloseServiceHandle(hScManager);
 
         if (cancelled)
         {
@@ -452,45 +403,37 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::PauseServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    bool ServiceManager::PauseServiceByName(
+        const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
     {
-        spdlog::info("Pausing service: {}", serviceName);
+        spdlog::info("Pausing service '{}' on {}", serviceName, machineName.empty() ? "local machine" : machineName);
 
-        // Open SCM
-        SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+        wil::unique_schandle hScManager = OpenTargetScm(machineName, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine '{}'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
-        // Convert service name to wide string
         std::wstring wServiceName = utils::Utf8ToWide(serviceName);
-
-        // Open service
-        SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_STATUS);
+        wil::unique_schandle hService{OpenServiceW(hScManager.get(), wServiceName.c_str(), SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_STATUS)};
         if (!hService)
         {
-            CloseServiceHandle(hScManager);
             LogWin32Error("OpenServiceW", "service '{}'", serviceName);
             return false;
         }
 
-        // Pause the service
-        SERVICE_STATUS_PROCESS ssp;
-        BOOL result = ControlService(hService, SERVICE_CONTROL_PAUSE, (LPSERVICE_STATUS)&ssp);
+        SERVICE_STATUS_PROCESS ssp{};
+        BOOL result = ControlService(hService.get(), SERVICE_CONTROL_PAUSE, reinterpret_cast<LPSERVICE_STATUS>(&ssp));
         DWORD error = GetLastError();
 
         if (!result)
         {
-            CloseServiceHandle(hService);
-            CloseServiceHandle(hScManager);
-            LogWin32Error("ControlService(PAUSE)", "service '{}'", serviceName);
+            LogWin32ErrorCode("ControlService(PAUSE)", error, "service '{}'", serviceName);
             return false;
         }
 
-        // Wait for service to reach paused state
-        DWORD bytesNeeded;
+        DWORD bytesNeeded = 0;
         const int maxWaitTime = 30000;
         const int pollInterval = 1000;
         int totalWait = 0;
@@ -499,34 +442,20 @@ namespace pserv
 
         while (totalWait < maxWaitTime)
         {
-            if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded))
+            if (!QueryServiceStatusEx(hService.get(), SC_STATUS_PROCESS_INFO, reinterpret_cast<LPBYTE>(&ssp), sizeof(ssp), &bytesNeeded))
             {
-                CloseServiceHandle(hService);
-                CloseServiceHandle(hScManager);
                 LogWin32Error("QueryServiceStatusEx", "service '{}'", serviceName);
                 return false;
             }
 
             std::string stateStr = GetServiceStateString(ssp.dwCurrentState);
-
-            if (ssp.dwWaitHint > 0)
-            {
-                estimatedWaitTime = ssp.dwWaitHint + 5000;
-            }
-            else
-            {
-                estimatedWaitTime = maxWaitTime;
-            }
-
+            estimatedWaitTime = (ssp.dwWaitHint > 0) ? (ssp.dwWaitHint + 5000) : maxWaitTime;
             float progress = std::min(0.95f, static_cast<float>(totalWait) / static_cast<float>(estimatedWaitTime));
 
-            if (progressCallback)
+            if (progressCallback && !progressCallback(progress, std::format("Service state: {}", stateStr)))
             {
-                if (!progressCallback(progress, std::format("Service state: {}", stateStr)))
-                {
-                    cancelled = true;
-                    break;
-                }
+                cancelled = true;
+                break;
             }
 
             if (ssp.dwCurrentState == SERVICE_PAUSED)
@@ -541,9 +470,6 @@ namespace pserv
             Sleep(pollInterval);
             totalWait += pollInterval;
         }
-
-        CloseServiceHandle(hService);
-        CloseServiceHandle(hScManager);
 
         if (cancelled)
         {
@@ -561,45 +487,37 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::ResumeServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    bool ServiceManager::ResumeServiceByName(
+        const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
     {
-        spdlog::info("Resuming service: {}", serviceName);
+        spdlog::info("Resuming service '{}' on {}", serviceName, machineName.empty() ? "local machine" : machineName);
 
-        // Open SCM
-        SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+        wil::unique_schandle hScManager = OpenTargetScm(machineName, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine '{}'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
-        // Convert service name to wide string
         std::wstring wServiceName = utils::Utf8ToWide(serviceName);
-
-        // Open service
-        SC_HANDLE hService = OpenServiceW(hScManager, wServiceName.c_str(), SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_STATUS);
+        wil::unique_schandle hService{OpenServiceW(hScManager.get(), wServiceName.c_str(), SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_STATUS)};
         if (!hService)
         {
-            CloseServiceHandle(hScManager);
             LogWin32Error("OpenServiceW", "service '{}'", serviceName);
             return false;
         }
 
-        // Resume the service
-        SERVICE_STATUS_PROCESS ssp;
-        BOOL result = ControlService(hService, SERVICE_CONTROL_CONTINUE, (LPSERVICE_STATUS)&ssp);
+        SERVICE_STATUS_PROCESS ssp{};
+        BOOL result = ControlService(hService.get(), SERVICE_CONTROL_CONTINUE, reinterpret_cast<LPSERVICE_STATUS>(&ssp));
         DWORD error = GetLastError();
 
         if (!result)
         {
-            CloseServiceHandle(hService);
-            CloseServiceHandle(hScManager);
-            LogWin32Error("ControlService(CONTINUE)", "service '{}'", serviceName);
+            LogWin32ErrorCode("ControlService(CONTINUE)", error, "service '{}'", serviceName);
             return false;
         }
 
-        // Wait for service to reach running state
-        DWORD bytesNeeded;
+        DWORD bytesNeeded = 0;
         const int maxWaitTime = 30000;
         const int pollInterval = 1000;
         int totalWait = 0;
@@ -608,34 +526,20 @@ namespace pserv
 
         while (totalWait < maxWaitTime)
         {
-            if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &bytesNeeded))
+            if (!QueryServiceStatusEx(hService.get(), SC_STATUS_PROCESS_INFO, reinterpret_cast<LPBYTE>(&ssp), sizeof(ssp), &bytesNeeded))
             {
-                CloseServiceHandle(hService);
-                CloseServiceHandle(hScManager);
                 LogWin32Error("QueryServiceStatusEx", "service '{}'", serviceName);
                 return false;
             }
 
             std::string stateStr = GetServiceStateString(ssp.dwCurrentState);
-
-            if (ssp.dwWaitHint > 0)
-            {
-                estimatedWaitTime = ssp.dwWaitHint + 5000;
-            }
-            else
-            {
-                estimatedWaitTime = maxWaitTime;
-            }
-
+            estimatedWaitTime = (ssp.dwWaitHint > 0) ? (ssp.dwWaitHint + 5000) : maxWaitTime;
             float progress = std::min(0.95f, static_cast<float>(totalWait) / static_cast<float>(estimatedWaitTime));
 
-            if (progressCallback)
+            if (progressCallback && !progressCallback(progress, std::format("Service state: {}", stateStr)))
             {
-                if (!progressCallback(progress, std::format("Service state: {}", stateStr)))
-                {
-                    cancelled = true;
-                    break;
-                }
+                cancelled = true;
+                break;
             }
 
             if (ssp.dwCurrentState == SERVICE_RUNNING)
@@ -650,9 +554,6 @@ namespace pserv
             Sleep(pollInterval);
             totalWait += pollInterval;
         }
-
-        CloseServiceHandle(hService);
-        CloseServiceHandle(hScManager);
 
         if (cancelled)
         {
@@ -670,56 +571,43 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::RestartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    bool ServiceManager::RestartServiceByName(
+        const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
     {
-        spdlog::info("Restarting service: {}", serviceName);
+        spdlog::info("Restarting service '{}' on {}", serviceName, machineName.empty() ? "local machine" : machineName);
 
-        // Stop the service (0-50% progress)
-        if (progressCallback)
+        if (progressCallback && !progressCallback(0.0f, "Stopping service..."))
         {
-            if (!progressCallback(0.0f, "Stopping service..."))
-            {
-                spdlog::info("Service '{}' restart cancelled by user", serviceName);
-                return false;
-            }
+            spdlog::info("Service '{}' restart cancelled by user", serviceName);
+            return false;
         }
 
-        bool stopSuccess = StopServiceByName(serviceName,
+        bool stopSuccess = StopServiceByName(
+            serviceName,
             [progressCallback](float progress, std::string message) -> bool
             {
-                if (progressCallback)
-                {
-                    // Map 0-100% to 0-50%
-                    return progressCallback(progress * 0.5f, message);
-                }
-                return true;
-            });
+                return progressCallback ? progressCallback(progress * 0.5f, std::move(message)) : true;
+            },
+            machineName);
 
         if (!stopSuccess)
         {
             return false;
         }
 
-        // Start the service (50-100% progress)
-        if (progressCallback)
+        if (progressCallback && !progressCallback(0.5f, "Starting service..."))
         {
-            if (!progressCallback(0.5f, "Starting service..."))
-            {
-                spdlog::info("Service '{}' restart cancelled by user", serviceName);
-                return false;
-            }
+            spdlog::info("Service '{}' restart cancelled by user", serviceName);
+            return false;
         }
 
-        bool startSuccess = StartServiceByName(serviceName,
+        bool startSuccess = StartServiceByName(
+            serviceName,
             [progressCallback](float progress, std::string message) -> bool
             {
-                if (progressCallback)
-                {
-                    // Map 0-100% to 50-100%
-                    return progressCallback(0.5f + progress * 0.5f, message);
-                }
-                return true;
-            });
+                return progressCallback ? progressCallback(0.5f + progress * 0.5f, std::move(message)) : true;
+            },
+            machineName);
 
         if (!startSuccess)
         {
@@ -730,31 +618,25 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::ChangeServiceStartType(const std::string &serviceName, DWORD startType)
+    bool ServiceManager::ChangeServiceStartType(const std::string &serviceName, DWORD startType, const std::string &machineName)
     {
-        spdlog::info("Changing startup type for service '{}' to {}", serviceName, startType);
+        spdlog::info("Changing startup type for service '{}' on {} to {}", serviceName, machineName.empty() ? "local machine" : machineName, startType);
 
-        // Convert service name to wide string
         std::wstring wServiceName = utils::Utf8ToWide(serviceName);
-
-        // Open SC Manager
-        wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
+        wil::unique_schandle hScManager = OpenTargetScm(machineName, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine '{}'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
-        // Open the service with change config access
         wil::unique_schandle hService(OpenServiceW(hScManager.get(), wServiceName.c_str(), SERVICE_CHANGE_CONFIG | SERVICE_QUERY_CONFIG));
-
         if (!hService)
         {
             LogWin32Error("OpenServiceW", "service '{}'", serviceName);
             return false;
         }
 
-        // Change the service configuration
         if (!::ChangeServiceConfigW(hService.get(),
                 SERVICE_NO_CHANGE, // dwServiceType
                 startType,         // dwStartType
@@ -776,31 +658,25 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::DeleteService(const std::string &serviceName)
+    bool ServiceManager::DeleteService(const std::string &serviceName, const std::string &machineName)
     {
-        spdlog::info("Deleting service '{}'", serviceName);
+        spdlog::info("Deleting service '{}' on {}", serviceName, machineName.empty() ? "local machine" : machineName);
 
-        // Convert service name to wide string
         std::wstring wServiceName = utils::Utf8ToWide(serviceName);
-
-        // Open SC Manager
-        wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
+        wil::unique_schandle hScManager = OpenTargetScm(machineName, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine '{}'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
-        // Open the service with delete access
         wil::unique_schandle hService(OpenServiceW(hScManager.get(), wServiceName.c_str(), DELETE));
-
         if (!hService)
         {
             LogWin32Error("OpenServiceW", "service '{}'", serviceName);
             return false;
         }
 
-        // Delete the service
         if (!::DeleteService(hService.get()))
         {
             LogWin32Error("DeleteService", "service '{}'", serviceName);
@@ -811,35 +687,34 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::ChangeServiceConfig(
-        const std::string &serviceName, const std::string &displayName, const std::string &description, DWORD startType, const std::string &binaryPathName)
+    bool ServiceManager::ChangeServiceConfig(const std::string &serviceName,
+        const std::string &displayName,
+        const std::string &description,
+        DWORD startType,
+        const std::string &binaryPathName,
+        const std::string &machineName)
     {
-        spdlog::info("Changing configuration for service '{}'", serviceName);
+        spdlog::info("Changing configuration for service '{}' on {}", serviceName, machineName.empty() ? "local machine" : machineName);
 
-        // Convert strings to wide strings
         std::wstring wServiceName = utils::Utf8ToWide(serviceName);
         std::wstring wDisplayName = utils::Utf8ToWide(displayName);
         std::wstring wDescription = utils::Utf8ToWide(description);
         std::wstring wBinaryPathName = utils::Utf8ToWide(binaryPathName);
 
-        // Open SC Manager
-        wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
+        wil::unique_schandle hScManager = OpenTargetScm(machineName, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine '{}'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
-        // Open the service with change config access
         wil::unique_schandle hService(OpenServiceW(hScManager.get(), wServiceName.c_str(), SERVICE_CHANGE_CONFIG | SERVICE_QUERY_CONFIG));
-
         if (!hService)
         {
             LogWin32Error("OpenServiceW", "service '{}'", serviceName);
             return false;
         }
 
-        // Change the service configuration
         if (!::ChangeServiceConfigW(hService.get(),
                 SERVICE_NO_CHANGE,                                           // dwServiceType
                 startType,                                                   // dwStartType
@@ -857,17 +732,13 @@ namespace pserv
             return false;
         }
 
-        // Update description using ChangeServiceConfig2W
-        if (!description.empty())
-        {
-            SERVICE_DESCRIPTIONW sd;
-            sd.lpDescription = const_cast<wchar_t *>(wDescription.c_str());
+        SERVICE_DESCRIPTIONW sd{};
+        sd.lpDescription = const_cast<wchar_t *>(wDescription.c_str());
 
-            if (!::ChangeServiceConfig2W(hService.get(), SERVICE_CONFIG_DESCRIPTION, &sd))
-            {
-                LogWin32Error("ChangeServiceConfig2W", "service '{}' description", serviceName);
-                return false;
-            }
+        if (!::ChangeServiceConfig2W(hService.get(), SERVICE_CONFIG_DESCRIPTION, &sd))
+        {
+            LogWin32Error("ChangeServiceConfig2W", "service '{}' description", serviceName);
+            return false;
         }
 
         spdlog::info("Service '{}' configuration changed successfully", serviceName);

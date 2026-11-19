@@ -38,6 +38,10 @@ namespace pserv
             ModuleManager::EnumerateModules(&m_objects, static_cast<ProcessInfo*>(proc)->GetPid());
         }
         m_objects.FinishRefresh();
+        if (m_lastSortColumn >= 0)
+        {
+            Sort(m_lastSortColumn, m_lastSortAscending);
+        }
         spdlog::info("Refreshed {} modules from {} processes", m_objects.GetSize(), processes.GetSize());
         SetLoaded();
     }

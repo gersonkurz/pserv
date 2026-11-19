@@ -101,6 +101,11 @@ namespace pserv
         switch (columnIndex)
         {
         case 0: // Name
+            if (!EnvironmentVariableManager::IsValidVariableName(newValue))
+            {
+                spdlog::warn("Rejected invalid environment variable name: '{}'", newValue);
+                return false;
+            }
             m_editBuffer.name = newValue;
             spdlog::debug("Set Name = {}", newValue);
             return true;
@@ -130,22 +135,21 @@ namespace pserv
         {
             spdlog::info("Committing property edits for environment variable: {}", envVar->GetName());
 
-            // If name changed, we need to delete old and create new
+            bool success = false;
             if (m_editBuffer.name != envVar->GetName())
             {
-                // Delete old variable
-                if (!EnvironmentVariableManager::DeleteEnvironmentVariable(envVar->GetName(), envVar->GetScope()))
-                {
-                    spdlog::error("Failed to delete old environment variable");
-                    m_editingObject = nullptr;
-                    return false;
-                }
+                success = EnvironmentVariableManager::RenameEnvironmentVariable(
+                    envVar->GetName(), m_editBuffer.name, m_editBuffer.value, envVar->GetScope(), envVar->GetRegType());
+            }
+            else
+            {
+                success = EnvironmentVariableManager::SetEnvironmentVariable(
+                    m_editBuffer.name, m_editBuffer.value, envVar->GetScope(), envVar->GetRegType());
             }
 
-            // Set the variable (either update existing or create renamed one)
-            if (!EnvironmentVariableManager::SetEnvironmentVariable(m_editBuffer.name, m_editBuffer.value, envVar->GetScope()))
+            if (!success)
             {
-                spdlog::error("Failed to set environment variable");
+                spdlog::error("Failed to persist environment variable edits for '{}'", envVar->GetName());
                 m_editingObject = nullptr;
                 return false;
             }

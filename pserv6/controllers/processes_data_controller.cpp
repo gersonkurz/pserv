@@ -120,5 +120,14 @@ namespace pserv
 
         return VisualState::Normal;
     }
+
+    void ProcessesDataController::AdoptRefreshResult(DataController &source)
+    {
+        DataController::AdoptRefreshResult(source);
+        if (auto *procSource = dynamic_cast<ProcessesDataController *>(&source))
+        {
+            m_currentUserName = procSource->m_currentUserName;
+        }
+    }
    
 } // namespace pserv
