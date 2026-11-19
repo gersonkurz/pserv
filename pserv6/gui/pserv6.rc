@@ -1,0 +1,7 @@
+// pserv6.exe resources: application icon and version information.
+#include <windows.h>
+
+// The first icon resource is what Explorer, the taskbar and shortcuts show.
+1 ICON "pserv6.ico"
+
+#include "version.rc2"

@@ -23,11 +23,15 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 
 7. **[task] Pre-existing CLI parser indexing selects the wrong parser after Services.** [pservc.cpp:66](C:/Projects/pserv-claude/pserv5/pservc/pservc.cpp:66) indexes `subparsers` by controller ordinal, but [data_controller.cpp:124](C:/Projects/pserv-claude/pserv5/core/data_controller.cpp:124) inserts action parsers into that same vector between controller parsers. Consequently, later controllers read options and search for actions on an unrelated parser, explaining the ignored Processes format/filter options and potentially preventing action dispatch. Both implementations are present in HEAD. Associate each controller with its actual parser and verify listing options and read-only action dispatch. This is deferrable because repairing existing CLI dispatch is outside Phase 0.
 
+    **Resolved (Phase 1, 2026-11-19):** `RegisterControllerArguments` returns the controller's own parser, and dispatch uses it (verified by the Phase 1 CLI matrix).
+
 ## Deferred checks (owner-accepted)
 
 8. **Execute the MSI major upgrade from an installed pserv5 5.2.0 to a 6.x package.** The 6.0.0 version stamp (2026-11-19) keeps the per-arch UpgradeCode `{672E9734-DC0A-4FD9-B25E-8544C621B230}`, and Windows Installer lists the installed 5.2.0 ARM64 product as related to it. So the lineage is as intended, but no upgrade has been executed. The owner declined running it on the dev box ("Do not update the install … focus on the actual app functionality at this point", 2026-11-19). Covered by the plan's Phase 3/7 installer exit criteria at the latest.
 
 9. **Execute the ImGui GUI checklist for the Phase 1 dispatch changes:** properties edit, "Add User Variable" (new parameter modal), copy, "Export to JSON..." (save dialog collected before dispatch), and confirm-delete of a throwaway variable. Phase 1 changed how the ImGui frontend dispatches actions (pre-dispatch confirmation and parameters, `IActionHost`, the properties dialog owning its selection). It is verified to build and link only; the interactive paths are unexecuted. The owner chose to defer this (2026-11-19: "Defer it"), because the ImGui frontend is deleted in Phase 7 and the effort goes to the WinUI app.
+
+    **Void (2026-11-19):** the ImGui frontend was removed at the owner's request. The same paths are covered by pserv6's Phase 5 action checks.
 
 ## From the pserv6 Phase 1 review (Codex, 2026-11-19, thread 01a1f3ef)
 
@@ -43,8 +47,20 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 
 12. **[task]** [main_window.cpp:372](/C:/Projects/pserv-claude/pserv5/main_window.cpp:372): Pre-existing initialization defect: `CreateRenderTarget()` logs failures without propagating them, so `InitializeDirectX()` reports success with no render target. `Render()` then returns immediately at line 930, leaving a non-rendering window. Propagate initial render-target creation failure to initialization. Deferrable because this behavior predates the diff and is separate from the missing-debug-layer fallback.
 
+    **Void (2026-11-19):** `main_window.cpp` was removed with the ImGui frontend.
+
 ## From the pserv6 Phase 2 review (Codex, 2026-11-19, thread 01a1f410)
 
 13. **[task] Pre-existing: service edits report success after configuration failure.** [services_data_controller.cpp:187](/C:/Projects/pserv-claude/pserv5/controllers/services_data_controller.cpp:187) ignores the Boolean result of `ServiceManager::ChangeServiceConfig`, updates the live object, and returns success even when the API wrapper reports failure. Users can be shown settings that were never applied. Check the result and preserve failure reporting. Deferrable because this unchanged edit-transaction defect predates the off-thread refresh task. *(Same defect as item 6.)*
 
 14. **[task] Pre-existing: environment-variable rename can lose the original value.** [environment_variables_data_controller.cpp:115](/C:/Projects/pserv-claude/pserv5/controllers/environment_variables_data_controller.cpp:115) deletes the original variable before creating the replacement. If the subsequent write fails, it returns failure without restoring the deleted value. Make rename failure preserve the original data and verify with a throwaway variable and injected write failure. Deferrable because this unchanged mutation path is outside Phase 2. *(Same defect as item 8 in the first section.)*
+
+## Open after Phase 4 part 1 and the pserv5 removal (2026-11-19)
+
+15. **Mouse probe of the grid header is flaky (unexplained).** Across the Release runs of the header probe (click sorts, drag reorders, gripper resizes), roughly 1 run in 5 lost the click or ended the resize early through a lost pointer capture. It could not be reproduced with header debug logging in place (4/4). It may be injected-input loss on the dev VM or a real lost release. Keyboard sorting (Alt+S) is unaffected. The header logs press, release and capture loss at debug level for a future report.
+
+16. **Phase 4 exit not yet met.** The section 7 budgets: frame max while scrolling is over 50 ms, and the first-visit switch is over 150 ms for slow enumerations. Still to do: the WPR investigations of long frames and view-switch latency, an elevated self-test run (the owner's), and the full keyboard-only checklist.
+
+17. **GUI manual and screenshot.** `docs/pserv6.md` is to be written (Phase 6). `docs/main.png`, still referenced by the README, shows pserv5.
+
+18. **Installer exit criteria of Phase 3/7 still need a disposable environment:** install over pserv5, the pserv6-to-pserv6 upgrade, uninstall leaving nothing behind. On the dev box, MSIs are checked only by `just check-msi` (administrative extract plus a self-test of the extracted payload).

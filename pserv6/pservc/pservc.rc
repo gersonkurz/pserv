@@ -1,0 +1,5 @@
+// pservc.exe resources: version information.
+#include <windows.h>
+
+#define PSERV_RC_CONSOLE
+#include "version.rc2"

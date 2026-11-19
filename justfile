@@ -1,16 +1,16 @@
-# Build automation for pserv — Windows system administration tool
-# GUIs pserv6.exe (WinUI 3; x64 and ARM64 only) and pserv5.exe (Dear ImGui, until Phase 7) and
-# the CLI pservc.exe, all on the shared pserv_core library, plus pserv_core_tests.
+# Build automation for pserv6 — Windows system administration tool
+# The GUI pserv6.exe (WinUI 3) and the CLI pservc.exe, both on the shared pserv_core library,
+# plus pserv_core_tests. Platforms: ARM64 and x64.
 # Requires: just, msbuild on PATH (VS 2026 Developer shell).
 #
-# Builds drive off the solution so $(SolutionDir) resolves correctly — the
-# projects derive OutDir/IntDir from it. Output lands in pserv5\bin\<Platform>\<Config>\
-# (pserv6: pserv5\bin\pserv6\<Platform>\<Config>\, beside its WinAppSDK runtime files).
+# Builds drive off the solution so $(SolutionDir) resolves correctly — the projects derive
+# OutDir/IntDir from it. pserv6.exe (with its WinAppSDK runtime files) and pservc.exe land in
+# pserv6\bin\<Platform>\<Config>\, which is the release payload; the tests in pserv6\bin\tests\.
 # Packaging: `just release` (needs MSIS 3.x on PATH). Direction: docs/pserv6-plan.md.
 
 set windows-shell := ["cmd.exe", "/c"]
 
-solution := "pserv5\\pserv5.slnx"
+solution := "pserv6\\pserv6.slnx"
 
 # Native solution platform: ARM64 on ARM64 hardware, x64 otherwise. An x64 build of just itself
 # runs emulated on ARM64 and sees PROCESSOR_ARCHITECTURE=AMD64, so PROCESSOR_IDENTIFIER
@@ -43,92 +43,92 @@ build: (_msbuild "Debug" platform)
 # Build Release (native arch)
 build-release: (_msbuild "Release" platform)
 
-# Build everything: Debug+Release across x64, x86, ARM64
-build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug" "x86") (_msbuild "Release" "x86") (_msbuild "Debug" "ARM64") (_msbuild "Release" "ARM64")
+# Build everything: Debug+Release for x64 and ARM64
+build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug" "ARM64") (_msbuild "Release" "ARM64")
 
 # Build Debug (native arch), run pserv_core_tests, and check that every built pserv6.exe
 # requires administrator (plan F6); exits non-zero if any check fails
 test: build
-    @pserv5\bin\tests\{{platform}}\Debug\pserv_core_tests.exe
+    @pserv6\bin\tests\{{platform}}\Debug\pserv_core_tests.exe
     @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-manifest.ps1
 
 # Build pserv_core + tests with AddressSanitizer (Debug, native arch, separate "-asan" output
 # folders) and run the tests with the 50-round background-refresh stress run
 test-asan: _require-devshell
     msbuild {{solution}} /restore /t:pserv_core_tests /p:Configuration=Debug /p:Platform={{platform}} /p:EnableASAN=true /p:PservBuildVariant=-asan /m /nologo /v:minimal
-    @set "PATH=%VCToolsInstallDir%bin\{{_asan_bin}};%PATH%" && pserv5\bin\tests\{{platform}}\Debug-asan\pserv_core_tests.exe --stress 50
+    @set "PATH=%VCToolsInstallDir%bin\{{_asan_bin}};%PATH%" && pserv6\bin\tests\{{platform}}\Debug-asan\pserv_core_tests.exe --stress 50
 
-# Build Debug + launch the GUI (native arch)
+# Build Debug + launch pserv6 (native arch; from an elevated shell: it requires administrator)
 run: build
-    @pserv5\bin\{{platform}}\Debug\pserv5.exe
-
-# Build Debug + launch pserv6 (native arch; needs an elevated shell, it requires administrator)
-run6: build
-    @pserv5\bin\pserv6\{{platform}}\Debug\pserv6.exe
+    @pserv6\bin\{{platform}}\Debug\pserv6.exe
 
 # Build Release (native arch) and run `pserv6 --selftest`: every view loaded, scrolled and
 # refreshed, with timings against the plan's budgets. Elevated shell for the real figures;
 # `just selftest -RunAsInvoker` measures unelevated.
 selftest *ARGS: build-release
-    @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\selftest.ps1 -Exe pserv5\bin\pserv6\{{platform}}\Release\pserv6.exe {{ARGS}}
+    @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\selftest.ps1 -Exe pserv6\bin\{{platform}}\Release\pserv6.exe {{ARGS}}
 
 # Build Debug + launch the CLI (native arch); pass args after `--`, e.g. `just run-cli -- services`
 run-cli *ARGS: build
-    @pserv5\bin\{{platform}}\Debug\pservc.exe {{ARGS}}
+    @pserv6\bin\{{platform}}\Debug\pservc.exe {{ARGS}}
 
 # Clean + rebuild Debug (native arch)
 rebuild: clean build
 
 # Clean all build + packaging output (bin\, temp\, dist\)
 clean:
-    if exist pserv5\bin rmdir /s /q pserv5\bin
-    if exist pserv5\temp rmdir /s /q pserv5\temp
+    if exist pserv6\bin rmdir /s /q pserv6\bin
+    if exist pserv6\temp rmdir /s /q pserv6\temp
     if exist dist rmdir /s /q dist
 
-# Set the version (X.Y.Z) in version.h and every setup\*.msis (pserv5.rc reads version.h).
+# Set the version (X.Y.Z) in version.h and every setup\*.msis (the .rc files read version.h).
 version VERSION:
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\set-version.ps1 {{VERSION}}
 
 # --- Packaging (MSIS 3.x → MSI + multi-arch bundle) -------------------------
 
-# Build the full release: x64 + x86 + ARM64 MSIs and the multi-arch bundle .exe, into setup\.
+# Build the full release: x64 + ARM64 MSIs and the multi-arch bundle .exe, into setup\.
 release: package-all bundle
 
-# Build all three per-architecture MSIs.
-package-all: package-x64 package-x86 package-arm64
+# Build both per-architecture MSIs.
+package-all: package-x64 package-arm64
 
-# Build the x64 MSI.
-package-x64: (_stage "x64" "x64" "x64" "Release") (_stage_symbols "x64" "x64" "Release") (_package "pserv5-x64.msis")
+# Build the x64 MSI and its symbols zip.
+package-x64: (_stage "x64" "x64") (_package "pserv6-x64.msis") (_symbols_zip "x64")
 
-# Build the x86 MSI (the x86 solution platform builds into bin\Win32\).
-package-x86: (_stage "x86" "Win32" "x86" "Release") (_stage_symbols "Win32" "x86" "Release") (_package "pserv5-x86.msis")
+# Build the ARM64 MSI and its symbols zip.
+package-arm64: (_stage "ARM64" "arm64") (_package "pserv6-arm64.msis") (_symbols_zip "arm64")
 
-# Build the ARM64 MSI.
-package-arm64: (_stage "ARM64" "ARM64" "arm64" "Release") (_stage_symbols "ARM64" "arm64" "Release") (_package "pserv5-arm64.msis")
-
-# Build the multi-architecture bundle .exe (requires the three MSIs built first).
+# Build the multi-architecture bundle .exe (requires both MSIs built first).
 bundle:
     msis /BUILD setup\setup-bundle.msis
 
+# Check an MSI without installing it: administrative extract into dist\extract\<arch>\,
+# compared file by file with dist\stage\<arch>\ (the payload it was built from).
+check-msi arch:
+    @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-msi.ps1 -Arch {{arch}}
+
 # --- internal packaging machinery (hidden from `just --list`) ---------------
 
-# Stage the Release payload (pserv5.exe + pservc.exe + themes\) for one arch.
-# Args: <solution-platform> <bin-dir> <stage-name> <configuration>.
+# Stage one arch's Release payload: pserv6.exe, its WinAppSDK runtime files and pservc.exe into
+# dist\stage\<arch>\ (no .pdb/.lib/.exp/.ilk/.winmd), the .pdb files into dist\symbols\<arch>\
+# (zipped by _symbols_zip; not part of the MSI).
+# Args: <solution-platform> <stage-name>.
 [private]
-_stage msplatform bindir stagename configuration: (_msbuild configuration msplatform)
+_stage msplatform stagename: (_msbuild "Release" msplatform)
     @if exist dist\stage\{{stagename}} rmdir /s /q dist\stage\{{stagename}}
-    @mkdir dist\stage\{{stagename}}
-    @robocopy pserv5\bin\{{bindir}}\{{configuration}} dist\stage\{{stagename}} /E /XF *.pdb *.exp *.lib *.ilk >nul & if errorlevel 8 exit /b 1
-
-# Stage the Release debug symbols for one arch (optional installer feature).
-# Args: <bin-dir> <stage-name> <configuration>.
-[private]
-_stage_symbols bindir stagename configuration:
     @if exist dist\symbols\{{stagename}} rmdir /s /q dist\symbols\{{stagename}}
+    @mkdir dist\stage\{{stagename}}
     @mkdir dist\symbols\{{stagename}}
-    @copy /Y pserv5\bin\{{bindir}}\{{configuration}}\*.pdb dist\symbols\{{stagename}}\ >nul
+    @robocopy pserv6\bin\{{msplatform}}\Release dist\stage\{{stagename}} /E /XF *.pdb *.exp *.lib *.ilk *.winmd >nul & if errorlevel 8 exit /b 1
+    @copy /Y pserv6\bin\{{msplatform}}\Release\*.pdb dist\symbols\{{stagename}}\ >nul
 
 # Build one MSI from setup\ (standalone — the bundle adds prerequisites).
 [private]
 _package script:
     @cd setup&& msis /BUILD /STANDALONE {{script}}
+
+# Zip one arch's staged .pdb files next to the MSIs (they are not part of the MSI).
+[private]
+_symbols_zip stagename:
+    @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\zip-symbols.ps1 -Arch {{stagename}}

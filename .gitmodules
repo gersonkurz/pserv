@@ -1,6 +1,3 @@
-[submodule "imgui"]
-	path = imgui
-	url = https://github.com/ocornut/imgui.git
 [submodule "spdlog"]
 	path = spdlog
 	url = https://github.com/gabime/spdlog.git
@@ -16,6 +13,3 @@
 [submodule "argparse"]
 	path = argparse
 	url = https://github.com/p-ranav/argparse.git
-[submodule "fkYAML"]
-	path = fkYAML
-	url = https://github.com/fktn-k/fkYAML.git

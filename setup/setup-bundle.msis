@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  MSIS Bundle Setup - combines the x64, x86 and ARM64 installers into one .exe
-  that auto-selects the correct architecture for the target system.
+  MSIS Bundle Setup - combines the x64 and ARM64 installers into one .exe that auto-selects
+  the correct architecture for the target system. pserv6 has no x86 build.
 -->
 <setup>
   <!-- Product identification -->
   <set name="PRODUCT_NAME" value="pserv6"/>
   <set name="PRODUCT_VERSION" value="6.0.0"/>
   <set name="MANUFACTURER" value="https://github.com/gersonkurz/pserv"/>
+  <!-- pserv5's bundle UpgradeCode (plan D12: one lineage) -->
   <set name="UPGRADE_CODE" value="{1EF9E5CE-E3CA-44D3-97B2-EE7BAA1DCADB}"/>
 
   <!-- Output bundle executable -->
-  <set name="BUILD_TARGET" value="setup\pserv{{PRODUCT_VERSION}}.exe"/>
+  <set name="BUILD_TARGET" value="setup\pserv6-{{PRODUCT_VERSION}}.exe"/>
 
   <!-- Install folder name (under Program Files) -->
-  <set name="INSTALLDIR" value="pserv5"/>
+  <set name="INSTALLDIR" value="pserv6"/>
 
   <!-- License -->
   <set name="LICENSE_URL" value="https://github.com/gersonkurz/pserv/blob/main/LICENSE"/>
 
-  <!-- Offer a "Launch pserv5" button on the success page. [InstallFolder] is computed
-       by the bundle template from INSTALLDIR ([ProgramFiles6432Folder]\pserv5). -->
-  <set name="LAUNCH_TARGET" value="[InstallFolder]\pserv5.exe"/>
+  <!-- Offer a "Launch pserv6" button on the success page. [InstallFolder] is computed
+       by the bundle template from INSTALLDIR ([ProgramFiles6432Folder]\pserv6). -->
+  <set name="LAUNCH_TARGET" value="[InstallFolder]\pserv6.exe"/>
 
   <!-- Combine the per-arch MSIs; filenames match each per-arch BUILD_TARGET. -->
   <bundle>
-    <msi source_64bit="pserv{{PRODUCT_VERSION}} x64.msi"
-         source_32bit="pserv{{PRODUCT_VERSION}} x86.msi"
-         source_arm64="pserv{{PRODUCT_VERSION}} ARM64.msi"/>
+    <msi source_64bit="pserv6-{{PRODUCT_VERSION}}-x64.msi"
+         source_arm64="pserv6-{{PRODUCT_VERSION}}-arm64.msi"/>
   </bundle>
 </setup>

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**pserv5** is a Windows system administration tool (C++20, ImGui, DirectX 11) for managing services, devices, processes, windows, modules, installed programs, environment variables, startup programs, network connections, and scheduled tasks. Originally from 1998, this is the 5th iteration.
+**pserv6** is a Windows system administration tool (C++, WinUI 3) for managing services, devices, processes, windows, modules, installed programs, environment variables, startup programs, network connections, and scheduled tasks, with a console companion `pservc`. Originally from 1998, this is the 6th iteration; pserv5's Dear ImGui frontend was removed in favour of pserv6 (see `docs/pserv6-plan.md`).
 
 ## Build Instructions
 
@@ -16,23 +16,25 @@ Build with `just` (recipes in the repo-root `justfile`) from a **Visual Studio 2
 - `just test` — `just build`, then run `pserv_core_tests` and check that every built `pserv6.exe` embeds `requireAdministrator` (exit code 0 = all checks pass)
 - `just test-asan` — `pserv_core` + tests under AddressSanitizer (Debug, native arch, `-asan` output folders), with the 50-round background-refresh stress run. Native ARM64 on ARM64 hardware: the x64 ASan runtime does not start under emulation.
 - `just build-release` — Release, native arch
-- `just build-all` — Debug+Release across x64, x86, ARM64
-- `just run` / `just run-cli [-- args]` — build Debug + launch GUI / CLI
-- `just run6` — build Debug + launch pserv6 (from an elevated shell: it requires administrator)
-- `just selftest [-RunAsInvoker]` — build Release + run `pserv6 --selftest` (every view loaded, scrolled, refreshed; timing log vs. the plan's section 7 budgets; exit 1 unless `RESULT: PASS`)
+- `just build-all` — Debug+Release for x64 and ARM64
+- `just run` / `just run-cli [-- args]` — build Debug + launch pserv6 (from an elevated shell: it requires administrator) / pservc
+- `just selftest [-RunAsInvoker]` — build Release + run `pserv6 --selftest` (every view loaded, scrolled, refreshed; grid checks; timing log vs. the plan's section 7 budgets; exit 1 unless `RESULT: PASS` and exit code 0)
 - `just clean`, `just rebuild`
-- `just release` — build x64+x86+ARM64 Release, then the 3 MSIs + multi-arch bundle `.exe`
-- `just version X.Y.Z` — stamp `pserv5/version.h` + `setup/*.msis` (the `.rc` reads `version.h`)
+- `just release` — build x64+ARM64 Release, then the 2 MSIs + the multi-arch bundle `.exe`
+- `just check-msi <x64|arm64>` — check a built MSI without installing it (administrative extract compared with the staged payload); `scripts\check-msi.ps1 -SelfTest` also runs the extracted pserv6
+- `just version X.Y.Z` — stamp `pserv6/version.h` + `setup/*.msis` (the `.rc` files read `version.h`)
 
-Builds are solution-driven (`pserv5/pserv5.slnx`) so `$(SolutionDir)` resolves — building a bare `.vcxproj` leaves output paths undefined. The `CopyThemes` MSBuild target copies `pserv5/themes/*.yaml` into the output dir next to the exe.
+Builds are solution-driven (`pserv6/pserv6.slnx`) so `$(SolutionDir)` resolves — building a bare `.vcxproj` leaves output paths undefined.
 
-Solution: `pserv5/pserv5.slnx` (projects: `pserv6/pserv6.vcxproj` the WinUI 3 GUI (x64 and ARM64 only; the solution skips it for x86), `pserv5.vcxproj` the ImGui GUI (until Phase 7), `pservc/pservc.vcxproj` CLI, `pserv_core/pserv_core.vcxproj` shared core static library linked by the GUIs, the CLI and the tests, `tests/pserv_core_tests.vcxproj`). The core is frontend-neutral: one compiled library, no frontend macros (see AGENTS.md).
-Output: `pserv5/bin/<Platform>/<Config>/` — e.g. `pserv5/bin/x64/Release/pserv5.exe` (GUI), `pservc.exe` (CLI). Note the x86 solution platform builds into `bin/Win32/`. `pserv_core_tests.exe` builds into `pserv5/bin/tests/<Platform>/<Config>/`, outside the folder `just` stages into the installers. pserv6 builds into `pserv5/bin/pserv6/<Platform>/<Config>/` together with its self-contained WinAppSDK runtime (unpackaged; the WinUI build recipe and its pitfalls are Appendix A of `docs/pserv6-plan.md`). pserv6 keeps its settings in `%APPDATA%\pserv6\config.toml` and imports pserv5's on first run.
-Platforms: x64, x86, arm64.
+Solution: `pserv6/pserv6.slnx` (projects: `gui/pserv6.vcxproj` the WinUI 3 GUI, `pservc/pservc.vcxproj` CLI, `pserv_core/pserv_core.vcxproj` shared core static library linked by the GUI, the CLI and the tests, `tests/pserv_core_tests.vcxproj`). The core is frontend-neutral: one compiled library, no frontend macros (see AGENTS.md).
+Output: `pserv6/bin/<Platform>/<Config>/` — `pserv6.exe` with its self-contained WinAppSDK runtime files (unpackaged; the WinUI build recipe and its pitfalls are Appendix A of `docs/pserv6-plan.md`) and `pservc.exe`; this folder is the release payload. `pserv_core_tests.exe` builds into `pserv6/bin/tests/<Platform>/<Config>/`, outside it.
+Platforms: x64, ARM64 (no x86).
+
+Settings: `%APPDATA%\pserv6\config.toml`, shared by pserv6 (reads and saves) and pservc (reads only); on the first run pserv5's `%LOCALAPPDATA%\pserv5\pserv5.toml` is imported. Logs: `pserv6.log` and `pservc.log` in the same folder.
 
 ### Packaging (MSI via MSIS 3.x)
 
-Installers are built with [MSIS](https://github.com/gersonkurz/msis) (`msis` on PATH) from `.msis` scripts in `setup/`: per-arch `pserv5-{x64,x86,arm64}.msis` (share one product `UPGRADE_CODE`) and `setup-bundle.msis` (combines all three into one arch-selecting `.exe`). `just release` stages each Release payload — `pserv5.exe` + `pservc.exe` + `themes/` — into `dist/stage/<arch>/`, builds an MSI per arch (standalone, with vcredist launch conditions), then the bundle. Output lands in `setup/` (MSIs + `pserv5-<ver>.exe`); `dist/` and the generated `.msi`/`.exe` are gitignored. (Replaced the former NSIS `.nsi`/`rebuild-*.cmd` scripts.)
+Installers are built with [MSIS](https://github.com/gersonkurz/msis) (`msis` on PATH) from `.msis` scripts in `setup/`: per-arch `pserv6-{x64,arm64}.msis` and `setup-bundle.msis` (one arch-selecting `.exe`). They keep **pserv5's UpgradeCodes** (plan D12: one lineage), so installing pserv6 upgrades an installed pserv5 away — test installs belong in a disposable environment, not on a dev box. `just release` stages each Release payload into `dist/stage/<arch>/` (symbols into `dist/symbols/<arch>/`), builds an MSI per arch (standalone, with vcredist launch conditions), then the bundle. Output lands in `setup/` (`pserv6-<ver>-<arch>.msi`, `pserv6-<ver>.exe`); `dist/` and the generated `.msi`/`.exe` are gitignored.
 
 ## Architecture
 
@@ -46,7 +48,7 @@ Every feature follows Model/Controller/Action separation:
    - `MatchesFilter(string)` - Filter matching
 
 2. **DataController** (`controllers/`) - Business logic, UI-independent
-   - `Refresh()` - Load data from Windows APIs
+   - `Collect(target, request)` - Enumerate from Windows APIs (on the refresh worker)
    - `GetColumns()` - Column definitions
    - `GetActions()` - Available actions for selection
    - `GetVisualState()` - Row rendering state
@@ -59,16 +61,18 @@ Every feature follows Model/Controller/Action separation:
 ### Key Directories
 
 ```
-pserv5/
-├── core/           # Base classes: DataObject, DataController, DataAction
+pserv6/
+├── gui/            # pserv6.exe: WinUI 3 window, grid, self-test
+├── pservc/         # pservc.exe: console application
+├── core/           # Base classes: DataObject, DataController, DataAction, refresh coordinator
 ├── models/         # Data objects (ServiceInfo, ProcessInfo, etc.)
 ├── controllers/    # Business logic (ServicesDataController, etc.)
 ├── actions/        # Action implementations
 ├── windows_api/    # Windows API wrappers (ServiceManager, etc.)
 ├── config/         # TOML-based configuration system
-├── utils/          # Logging, string conversion, error handling
-├── dialogs/        # UI dialogs
-└── pservc/         # Console application (shares core with GUI)
+├── utils/          # Logging, string conversion, error handling, app bootstrap
+├── pserv_core/     # The core's static-library project
+└── tests/          # pserv_core_tests
 ```
 
 ## Coding Conventions
@@ -88,30 +92,33 @@ pserv5/
 
 ## Adding a New View
 
-1. Create model in `models/` (derive from `DataObject`)
+1. Create model in `models/` (derive from `CloneableDataObject`)
 2. Create Windows API wrapper in `windows_api/`
 3. Create controller in `controllers/` (derive from `DataController`)
 4. Create actions in `actions/` (derive from `DataAction`)
 5. Register in `core/data_controller_library.cpp`
 6. Add config section in `config/settings.h`
 
-Console support is automatic - controllers register themselves in pservc.
+Both frontends pick up registered controllers automatically.
 
 ## Dependencies (Git Submodules)
 
-- ImGui - GUI framework
 - spdlog - Logging
 - WIL - Windows Implementation Library (RAII handles, COM pointers)
 - toml++ - Configuration
 - RapidJSON - JSON export
 - argparse - CLI parsing
 
+The GUI also uses NuGet packages (Windows App SDK WinUI + Foundation, C++/WinRT), restored by `/restore`.
+
 ## Key Files
 
 - `core/data_object.h` - Base class for all data items
 - `core/data_controller.h` - Base controller class
 - `core/data_action.h` - Base action class
-- `main_window.h/.cpp` - Main UI window
+- `core/refresh_coordinator.h` - Background refresh protocol
+- `gui/MainWindow.xaml.h/.cpp` - Main window
+- `gui/data_grid.h/.cpp` - The grid
 - `config/settings.h` - Global configuration
 - `utils/win32_error.h` - Error handling macros
 - `utils/string_utils.h` - UTF-8/UTF-16 conversion

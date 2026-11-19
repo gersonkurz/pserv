@@ -370,6 +370,16 @@ and its performance is assumed to match ARM64 (owner, 2026-11-18; R4).
 ### Phase 7 — Release and removal
 - Remove the ImGui frontend (`main_window.*`, `dialogs/`, `theme/`, `pserv5.vcxproj`), the
   `imgui` submodule, `fkYAML` and `themes/` (D11); update `AGENTS.md`/`CLAUDE.md`.
+- *As implemented (2026-11-19, at the owner's request ahead of Phases 5–6):*
+  - **Removal and rename:** the removal above is done. The source folder is now `pserv6/`, with
+    the GUI in `pserv6/gui/` and the solution `pserv6/pserv6.slnx` (x64 and ARM64; x86 dropped).
+    pserv6 and pservc build into one folder, `pserv6/bin/<Platform>/<Config>/`, which is the
+    payload. Both executables carry VERSIONINFO, and pserv6 carries the icon.
+  - **Settings:** pservc now shares pserv6's settings (read-only) and logs to `pservc.log`; the
+    `LogFilePath` setting is gone.
+  - **Phase 3's installer part:** `setup/pserv6-{x64,arm64}.msis` plus the two-arch bundle, with
+    pserv5's UpgradeCodes. `just check-msi` checks an MSI by administrative extract instead of
+    installing it.
 - **Exit**, in disposable environments, ARM64 executed and x64 under emulation:
   - an upgrade from installed pserv5 5.2 (native arch, and pserv5 x86 on x64) to pserv6;
   - an upgrade from one pserv6 version to the next;

@@ -1,7 +1,7 @@
 # Fails unless every built pserv6.exe embeds a manifest with requireAdministrator
 # (docs/pserv6-plan.md F6: with ApplicationType=Windows Store, a missing EnableUAC silently drops
 # UACExecutionLevel, and the app would start unelevated). Needs mt.exe (VS Developer shell).
-param([string]$BinRoot = "pserv5\bin\pserv6")
+param([string]$BinRoot = "pserv6\bin")
 
 $ErrorActionPreference = "Stop"
 $exes = @(Get-ChildItem -Path $BinRoot -Recurse -Filter pserv6.exe -ErrorAction SilentlyContinue)
