@@ -46,6 +46,10 @@ namespace winrt::pserv6::implementation
         button.Content(icon);
         button.Width(36);
         button.Height(32);
+        // Text-button padding leaves too little room for a 16px glyph at this width.
+        button.Padding(Thickness{0});
+        button.HorizontalContentAlignment(HorizontalAlignment::Center);
+        button.VerticalContentAlignment(VerticalAlignment::Center);
         Automation::AutomationProperties::SetName(button, label);
         ToolTipService::SetToolTip(button, box_value(label));
     }
