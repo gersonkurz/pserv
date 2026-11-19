@@ -34,9 +34,9 @@ Run recipes from the repository root with `just` in a **Visual Studio 2026 Devel
 - `just run-cli services` — build Release and list services through the CLI.
 - `just --list` — current public recipes.
 
-Recipes build `pserv6/pserv6.slnx`, containing `ui/pserv6.vcxproj` and `cli/pserv6c.vcxproj`. Build the solution: projects depend on `$(SolutionDir)`. Output is `pserv6/bin/<Platform>/<Configuration>/`; x86 uses `Win32`. Intermediates live under `pserv6/temp/`. `scripts/native-platform.ps1` queries IsWow64Process2, selecting ARM64 on ARM64 hosts even under x64 emulation. Do not use PROCESSOR_ARCHITECTURE or .NET Framework OSArchitecture for this detection.
+Recipes build `pserv6/pserv6.slnx`, containing `ui/pserv6.vcxproj`, its native static library `core/pserv6-core.vcxproj`, and `cli/pserv6c.vcxproj`. The static library compiles the GUI's shared sources with `precomp.h`; WinUI sources use `ui/pch.h`. Keep separate projects because the XAML generators assume one PCH header per project. The CLI keeps its console-specific compilation. Build the solution: projects depend on `$(SolutionDir)`. Output is `pserv6/bin/<Platform>/<Configuration>/`; x86 uses `Win32`. Intermediates live under `pserv6/temp/`. `scripts/native-platform.ps1` queries IsWow64Process2, selecting ARM64 on ARM64 hosts even under x64 emulation. Do not use PROCESSOR_ARCHITECTURE or .NET Framework OSArchitecture for this detection.
 
-Verify changes compile before handing off. `just test` runs service-edit, environment-edit, row-reconciliation and actual WinRT cell-collection regression checks; it requires a Developer shell targeting the native OS architecture. For behavior changes, exercise the affected GUI or CLI path in addition to building and report what was actually checked. CLI help and listing commands provide read-only smoke checks, for example `pserv6/bin/x64/Debug/pserv6c.exe --help` (adjust for the built architecture). Build success alone does not verify UI behavior.
+Verify changes compile before handing off. `just test` runs service-edit, environment-edit, row-reconciliation, actual WinRT cell-collection, keyboard-routing and static-library exporter checks; it requires a Developer shell targeting the native OS architecture. These tests do not create an application window or change system services/variables. For behavior changes, exercise the affected GUI or CLI path in addition to building when the user permits runtime checks, and report what was actually checked. CLI help and listing commands provide read-only smoke checks, for example `pserv6/bin/x64/Debug/pserv6c.exe --help` (adjust for the built architecture). Build success alone does not verify UI behavior.
 
 `just clean` removes all of `pserv6/bin/`, `pserv6/temp/`, and `dist/`; `just rebuild` performs that cleanup before building Debug. Prefer incremental builds unless cleanup is needed.
 
@@ -76,7 +76,7 @@ When adding a view:
 1. Add the model, controller, Windows API wrapper, and actions as needed, following a comparable existing view.
 2. Register the controller in `core/data_controller_library.cpp`; add its name constant in `core/data_controller.h`.
 3. Add the per-view settings in `config/settings.h` and the lookup in `config/settings.cpp`.
-4. Add source/header entries to the relevant `.vcxproj` files and maintain their `.filters` files. Shared sources must be included in both projects; they are not discovered automatically.
+4. Add source/header entries to the relevant `.vcxproj` files and maintain their `.filters` files. Shared sources must be included in the native core and CLI projects; they are not discovered automatically.
 5. Check CLI argument/action registration and behavior. The CLI enumerates the shared controller library, but frontend-specific action handling may still be required.
 6. Update the relevant user manual when behavior or commands change.
 

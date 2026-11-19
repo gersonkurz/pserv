@@ -1,24 +1,9 @@
 #include "precomp.h"
-#include <core/exporters/exporter_registry.h>
 #include <core/exporters/plaintext_exporter.h>
 #include <core/data_object.h>
 
 namespace pserv
 {
-
-    namespace
-    {
-        // Static registration - runs during static initialization
-        struct PlainTextExporterRegistration
-        {
-            PlainTextExporterRegistration()
-            {
-                ExporterRegistry::Instance().RegisterExporter(DBG_NEW PlainTextExporter());
-            }
-        };
-        static PlainTextExporterRegistration g_plainTextExporterRegistration;
-    } // namespace
-
     std::string PlainTextExporter::ExportSingle(const DataObject *object, const std::vector<DataObjectColumn> &columns) const
     {
         if (!object)

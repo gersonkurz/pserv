@@ -12,7 +12,7 @@ just run            # Build and launch native Release GUI
 just run-cli services
 just build          # Debug GUI and CLI
 just run-debug
-just test           # Four regression checks; use a native-target Developer shell
+just test           # Six regression checks; use a native-target Developer shell
 just package-all    # x64, x86, ARM64 MSIs AND the final bundle; requires MSIS 3.x
 ```
 
@@ -25,11 +25,13 @@ Output: `pserv6/bin/<Platform>/<Configuration>/`; x86 uses `Win32`. Keep all adj
 The navigation pane offers Services, Devices (driver services), Processes, Windows, Modules, Installed programs, Environment variables, Startup programs, Network connections and Scheduled tasks.
 
 - Search matches all item properties, case-insensitively. Ctrl+F focuses search.
+- Ctrl+1 through Ctrl+9 select the first nine views; Ctrl+0 selects Scheduled tasks. Remote mode and active operations still restrict view switching. View shortcuts do not intercept text-field editing.
 - Click a header to sort; click again to reverse. Sorting uses typed values, including numeric PIDs. Drag the header's right edge to resize.
 - View → Columns selects visible columns and their order. At least one must remain visible.
 - Ctrl/Shift select multiple rows. Ctrl+A selects all; Ctrl+C copies plain text. Edit also offers JSON copy. More actions and the row context menu expose file export and provider commands.
 - Toolbar buttons use icons, tooltips and accessible names. Common commands, Elevate, Refresh and search share one row.
 - Properties opens with its icon, double-click or Enter. Editable properties use controller metadata; Close discards edits and Apply changes submits changed fields. Read-only providers have no Apply button.
+- Delete invokes an available Delete/Terminate Process action when the table has focus, using the normal confirmation flow. It does not delete objects while editing text or with a dialog open.
 - Disabled services are grey. Running services use the Windows accent or Base16 green. Disabled state takes precedence over running.
 - F5/Refresh reads a snapshot. The refresh toggle pauses/resumes live updates; Ctrl+R toggles it. View → Refresh interval offers 1, 2, 5, 10, 30 or 60 seconds. Windows, Modules and Scheduled tasks use manual refresh by controller policy.
 - Refresh preserves row identity, selection and scroll position for surviving rows. The footer separates the last refresh time from elapsed snapshot time. Counts of highlighted/disabled items describe the complete provider, independently of search.
@@ -43,7 +45,7 @@ Themes → Dark themes / Light themes includes all **20 original bundled Base16 
 
 View → Font opens the native Windows font dialog, including proportional fonts and a sample preview. Apply previews the font throughout the application; OK saves it, Cancel restores the previous appearance. Font family, size, weight and italic style apply to text; icon glyphs retain their icon font. The OS title bar and native system dialogs use Windows appearance settings.
 
-Ctrl+mousewheel scales the whole interface (8–32 base font-size range); Ctrl+0 or Reset zoom restores the default size. Theme, font, zoom, window placement, active view, refresh interval and each view's search/sort/column layout/live preference persist in `%LOCALAPPDATA%/pserv6/appearance.toml`.
+Ctrl+mousewheel or Ctrl+plus/minus scales the whole interface (8–32 base font-size range); Ctrl+Shift+0 or Reset zoom restores the default size. The plus/minus shortcuts also support the numeric keypad and leave text-field editing alone. Theme, font, zoom, window placement, active view, refresh interval and each view's search/sort/column layout/live preference persist in `%LOCALAPPDATA%/pserv6/appearance.toml`.
 
 ## Permissions and remote computers
 

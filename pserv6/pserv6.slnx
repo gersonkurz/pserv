@@ -6,4 +6,5 @@
   </Configurations>
   <Project Path="ui/pserv6.vcxproj" Id="B96AB4A2-5217-4F46-91A5-EC6B2C4B8E25" />
   <Project Path="cli/pserv6c.vcxproj" Id="fff6295f-5877-4b5b-a65e-5d32080ff0da" />
+  <Project Path="core/pserv6-core.vcxproj" Id="D5EAFEDB-99F1-4B16-9646-37F5262377FA" />
 </Solution>

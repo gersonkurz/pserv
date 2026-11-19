@@ -46,6 +46,8 @@ test: build-release
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test-environment-edits.ps1
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test-winui-rows.ps1
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test-winui-cell-collection.ps1 -Platform {{platform}}
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test-keyboard-shortcuts.ps1
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test-exporter-link.ps1 -Platform {{platform}}
 
 rebuild: clean build
 

@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <ItemGroup>
+    <ClCompile Include="..\core\data_controller.cpp" />
+    <ClCompile Include="..\core\data_object_container.cpp" />
+    <ClCompile Include="..\core\data_action.cpp" />
+    <ClCompile Include="..\core\data_action_dispatch_context.cpp" />
+    <ClCompile Include="..\core\async_operation.cpp" />
+    <ClCompile Include="..\controllers\services_data_controller.cpp" />
+    <ClCompile Include="..\actions\service_actions.cpp" />
+    <ClCompile Include="..\models\service_info.cpp" />
+    <ClCompile Include="..\windows_api\service_manager.cpp" />
+    <ClCompile Include="..\controllers\environment_variables_data_controller.cpp" />
+    <ClCompile Include="..\controllers\modules_data_controller.cpp" />
+    <ClCompile Include="..\controllers\network_connections_data_controller.cpp" />
+    <ClCompile Include="..\controllers\processes_data_controller.cpp" />
+    <ClCompile Include="..\controllers\scheduled_tasks_data_controller.cpp" />
+    <ClCompile Include="..\controllers\startup_programs_data_controller.cpp" />
+    <ClCompile Include="..\controllers\uninstaller_data_controller.cpp" />
+    <ClCompile Include="..\controllers\windows_data_controller.cpp" />
+    <ClCompile Include="..\models\environment_variable_info.cpp" />
+    <ClCompile Include="..\models\installed_program_info.cpp" />
+    <ClCompile Include="..\models\module_info.cpp" />
+    <ClCompile Include="..\models\network_connection_info.cpp" />
+    <ClCompile Include="..\models\process_info.cpp" />
+    <ClCompile Include="..\models\scheduled_task_info.cpp" />
+    <ClCompile Include="..\models\startup_program_info.cpp" />
+    <ClCompile Include="..\models\window_info.cpp" />
+    <ClCompile Include="..\actions\environment_variable_actions.cpp" />
+    <ClCompile Include="..\actions\module_actions.cpp" />
+    <ClCompile Include="..\actions\network_connection_actions.cpp" />
+    <ClCompile Include="..\actions\process_actions.cpp" />
+    <ClCompile Include="..\actions\scheduled_task_actions.cpp" />
+    <ClCompile Include="..\actions\startup_program_actions.cpp" />
+    <ClCompile Include="..\actions\uninstaller_actions.cpp" />
+    <ClCompile Include="..\actions\window_actions.cpp" />
+    <ClCompile Include="..\windows_api\environment_variable_manager.cpp" />
+    <ClCompile Include="..\windows_api\module_manager.cpp" />
+    <ClCompile Include="..\windows_api\network_connection_manager.cpp" />
+    <ClCompile Include="..\windows_api\process_manager.cpp" />
+    <ClCompile Include="..\windows_api\scheduled_task_manager.cpp" />
+    <ClCompile Include="..\windows_api\startup_program_manager.cpp" />
+    <ClCompile Include="..\windows_api\uninstaller_manager.cpp" />
+    <ClCompile Include="..\windows_api\window_manager.cpp" />
+    <ClCompile Include="..\theme\base16_theme.cpp" />
+    <ClCompile Include="..\actions\common_actions.cpp" />
+    <ClCompile Include="..\core\exporters\exporter_registry.cpp" />
+    <ClCompile Include="..\core\exporters\json_exporter.cpp" />
+    <ClCompile Include="..\core\exporters\plaintext_exporter.cpp" />
+    <ClCompile Include="..\utils\file_dialogs.cpp" />
+    <ClCompile Include="..\precomp.cpp" />
+  </ItemGroup>
+</Project>

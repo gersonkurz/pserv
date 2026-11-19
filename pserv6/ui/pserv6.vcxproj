@@ -1,7 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version='1.0' encoding='utf-8'?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="15.0" DefaultTargets="Build">
   <PropertyGroup Label="Globals">
     <CppWinRTOptimized>true</CppWinRTOptimized>
+    <CppWinRTPrecompiledHeader>pch.h</CppWinRTPrecompiledHeader>
     <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
     <MinimalCoreWin>true</MinimalCoreWin>
     <ProjectGuid>{B96AB4A2-5217-4F46-91A5-EC6B2C4B8E25}</ProjectGuid>
@@ -15,7 +16,9 @@
     <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>18.0</MinimumVisualStudioVersion>
     <AppContainerApplication>false</AppContainerApplication>
-    <AppxPackage>false</AppxPackage><WindowsPackageType>None</WindowsPackageType><WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <AppxPackage>false</AppxPackage>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <ApplicationType>Windows Store</ApplicationType>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
     <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
@@ -27,7 +30,6 @@
     <IntDir>$(SolutionDir)temp\pserv6\$(Platform)\$(Configuration)\</IntDir>
     <GeneratedFilesDir>$(IntDir)Generated Files\</GeneratedFilesDir>
   </PropertyGroup>
-
   <Import Project="packages\Microsoft.Windows.AI.MachineLearning.2.5.96\build\native\Microsoft.Windows.AI.MachineLearning.props" />
   <Import Project="packages\Microsoft.Windows.CppWinRT.2.0.250303.1\build\native\Microsoft.Windows.CppWinRT.props" />
   <Import Project="packages\Microsoft.Windows.SDK.BuildTools.10.0.26100.4654\build\Microsoft.Windows.SDK.BuildTools.props" />
@@ -94,12 +96,14 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>PSERV_WINUI_BUILD;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions><PrecompiledHeader>Use</PrecompiledHeader>
+      <PreprocessorDefinitions>PSERV_WINUI_BUILD;SPDLOG_USE_STD_FORMAT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
       <WarningLevel>Level4</WarningLevel>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions><AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..;$(MSBuildThisFileDirectory)..\..\spdlog\include;$(MSBuildThisFileDirectory)..\..\wil\include;$(MSBuildThisFileDirectory)..\..\rapidjson\include;$(MSBuildThisFileDirectory)..\..\tomlplusplus\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..;$(MSBuildThisFileDirectory)..\..\spdlog\include;$(MSBuildThisFileDirectory)..\..\wil\include;$(MSBuildThisFileDirectory)..\..\rapidjson\include;$(MSBuildThisFileDirectory)..\..\tomlplusplus\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -155,17 +159,14 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Midl>
   </ItemGroup>
-
-
   <!--
     Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
     Tools extension to be activated for this project even if the Windows App SDK Nuget
     package has not yet been restored.
   -->
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
-    <ProjectCapability Include="Msix"/>
+    <ProjectCapability Include="Msix" />
   </ItemGroup>
-
   <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
     Explorer "Package and Publish" context menu entry to be enabled for this project even if
@@ -174,10 +175,13 @@
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
-
   <ItemDefinitionGroup>
-    <ClCompile><AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions></ClCompile>
-    <Link><AdditionalDependencies>advapi32.lib;shell32.lib;user32.lib;ole32.lib;dwmapi.lib;psapi.lib;iphlpapi.lib;ws2_32.lib;oleaut32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+    <ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>advapi32.lib;shell32.lib;user32.lib;ole32.lib;dwmapi.lib;psapi.lib;iphlpapi.lib;ws2_32.lib;oleaut32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DataRow.cpp" />
@@ -185,75 +189,32 @@
     <ClInclude Include="reconcile_rows.h" />
     <Midl Include="DataRow.idl" />
     <None Include="packages.config" />
-    <ClCompile Include="..\core\data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\core\data_object_container.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\core\data_action.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\core\data_action_dispatch_context.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\core\async_operation.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\controllers\services_data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\service_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\models\service_info.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\windows_api\service_manager.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="providers.cpp"></ClCompile>
-    <ClCompile Include="clipboard.cpp"></ClCompile>
-    <ClCompile Include="DataCell.cpp"></ClCompile>
-    <ClCompile Include="..\controllers\environment_variables_data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\controllers\modules_data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\controllers\network_connections_data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\controllers\processes_data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\controllers\scheduled_tasks_data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\controllers\startup_programs_data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\controllers\uninstaller_data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\controllers\windows_data_controller.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\models\environment_variable_info.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\models\installed_program_info.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\models\module_info.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\models\network_connection_info.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\models\process_info.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\models\scheduled_task_info.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\models\startup_program_info.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\models\window_info.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\environment_variable_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\module_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\network_connection_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\process_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\scheduled_task_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\startup_program_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\uninstaller_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\window_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\windows_api\environment_variable_manager.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\windows_api\module_manager.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\windows_api\network_connection_manager.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\windows_api\process_manager.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\windows_api\scheduled_task_manager.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\windows_api\startup_program_manager.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\windows_api\uninstaller_manager.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\windows_api\window_manager.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
+    <ClCompile Include="providers.cpp" />
+    <ClCompile Include="clipboard.cpp" />
+    <ClCompile Include="DataCell.cpp" />
     <ClInclude Include="providers.h" />
     <ClInclude Include="DataCell.h" />
     <Midl Include="DataCell.idl" />
   </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ItemDefinitionGroup>
-    <ClCompile><AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\..\fkYAML\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories></ClCompile>
-    <Link><AdditionalDependencies>comdlg32.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\..\fkYAML\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>comdlg32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ResourceCompile Include="pserv6.rc" />
     <ClCompile Include="MainWindow.commands.cpp" />
-    <ClCompile Include="..\theme\base16_theme.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\actions\common_actions.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\core\exporters\exporter_registry.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\core\exporters\json_exporter.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\core\exporters\plaintext_exporter.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
-    <ClCompile Include="..\utils\file_dialogs.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
     <ThemeFile Include="..\themes\*.yaml" />
     <ManualFile Include="..\..\docs\pserv6.md" />
     <ManualFile Include="..\..\docs\pserv6c.md" />
     <ManualFile Include="..\..\docs\release-review.md" />
   </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="CopyFrontendAssets" AfterTargets="Build">
     <Copy SourceFiles="@(ThemeFile)" DestinationFolder="$(OutDir)themes" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(ManualFile)" DestinationFolder="$(OutDir)docs" SkipUnchangedFiles="true" />
@@ -270,7 +231,6 @@
     <Error Condition="'@(CRTFile)'==''" Text="The matching VS 2026 redistributable CRT was not found under $(CRTRedistRoot). Install the v145 C++ tools and redistributable files." />
     <Copy SourceFiles="@(CRTFile)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
-
   <Import Project="packages\Microsoft.Web.WebView2.1.0.3719.77\build\native\Microsoft.Web.WebView2.targets" />
   <Import Project="packages\Microsoft.Windows.AI.MachineLearning.2.5.96\build\native\Microsoft.Windows.AI.MachineLearning.targets" />
   <Import Project="packages\Microsoft.Windows.CppWinRT.2.0.250303.1\build\native\Microsoft.Windows.CppWinRT.targets" />
@@ -289,5 +249,15 @@
   <Import Project="packages\Microsoft.WindowsAppSDK.WinUI.2.7.0\build\native\Microsoft.WindowsAppSDK.WinUI.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
-  <ItemGroup><ClInclude Include="..\core\environment_edit.h" /></ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\core\environment_edit.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\core\pserv6-core.vcxproj">
+      <Project>{D5EAFEDB-99F1-4B16-9646-37F5262377FA}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="keyboard_shortcuts.h" />
+  </ItemGroup>
 </Project>

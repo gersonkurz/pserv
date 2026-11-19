@@ -10,6 +10,9 @@ namespace pserv::winui
         std::shared_ptr<DataController> (*create)();
         std::vector<int> preferredColumns;
         std::vector<std::string> toolbarActions;
+        bool supportsRemote{false};
+        bool supportsAddVariable{false};
+        bool labelsDisabledState{false};
     };
     const std::vector<Provider>& Providers();
 }

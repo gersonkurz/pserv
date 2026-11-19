@@ -72,7 +72,7 @@ namespace winrt::pserv6::implementation
         m_machineName = std::move(name);
         UpdateMachineLabel();
         for (uint32_t i = 0; i < Navigation().MenuItems().Size(); ++i)
-            Navigation().MenuItems().GetAt(i).as<NavigationViewItem>().IsEnabled(m_machineName.empty() || i <= 1);
+            Navigation().MenuItems().GetAt(i).as<NavigationViewItem>().IsEnabled(m_machineName.empty() || pserv::winui::Providers().at(i).supportsRemote);
         m_activeProvider = -1;
         SelectProvider(0);
         Navigation().SelectedItem(Navigation().MenuItems().GetAt(0));
@@ -153,13 +153,13 @@ namespace winrt::pserv6::implementation
                 m_fontWeight = static_cast<uint16_t>(std::clamp(settings["font_weight"].value_or(400), 100, 900));
                 m_fontItalic = settings["font_italic"].value_or(false);
                 m_refreshInterval = std::clamp(settings["refresh_ms"].value_or(5000), 1000, 60000);
-                m_startProvider = std::clamp(settings["active_view"].value_or(0), 0, 9);
+                m_startProvider = std::clamp(settings["active_view"].value_or(0), 0, static_cast<int>(pserv::winui::Providers().size()) - 1);
                 if (auto views = settings["views"].as_array())
                     for (auto const& node : *views)
                     {
                         toml::node_view<const toml::node> entry{node};
                         int index = entry["id"].value_or(-1);
-                        if (index < 0 || index > 9) continue;
+                        if (index < 0 || index >= static_cast<int>(pserv::winui::Providers().size())) continue;
                         ViewSettings view;
                         view.filter = to_hstring(entry["filter"].value_or(std::string{}));
                         view.sortColumn = entry["sort"].value_or(0);

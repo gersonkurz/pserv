@@ -13,6 +13,7 @@
 #include <winrt/Microsoft.UI.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include "reconcile_rows.h"
+#include "keyboard_shortcuts.h"
 
 using namespace winrt;
 using namespace winrt::Microsoft::UI::Xaml;
@@ -173,26 +174,48 @@ namespace winrt::pserv6::implementation
         });
         Root().KeyDown([weak = get_weak()](auto const&, Input::KeyRoutedEventArgs const& e)
         {
-            if (auto self = weak.get(); self && e.Key() == Windows::System::VirtualKey::F5)
+            auto self = weak.get();
+            if (!self || e.Handled()) return;
+            auto focused = Input::FocusManager::GetFocusedElement(self->Root().XamlRoot());
+            bool textInput = focused && (focused.try_as<TextBox>() || focused.try_as<RichEditBox>() || focused.try_as<PasswordBox>());
+            auto node = focused.try_as<DependencyObject>();
+            while (node && node != self->Rows()) node = Media::VisualTreeHelper::GetParent(node);
+            using pserv::winui::Shortcut;
+            auto shortcut = pserv::winui::DecodeShortcut(static_cast<int>(e.Key()),
+                (GetKeyState(VK_CONTROL) & 0x8000) != 0, (GetKeyState(VK_SHIFT) & 0x8000) != 0,
+                (GetKeyState(VK_MENU) & 0x8000) != 0, textInput, node != nullptr, self->m_dialogOpen);
+            switch (shortcut.command)
             {
-                self->Refresh();
-                e.Handled(true);
-            }
-            else if (self && (GetKeyState(VK_CONTROL) & 0x8000) && e.Key() == Windows::System::VirtualKey::F)
-            {
-                self->SearchBox().Focus(FocusState::Keyboard); e.Handled(true);
-            }
-            else if (self && (GetKeyState(VK_CONTROL) & 0x8000) && e.Key() == Windows::System::VirtualKey::R)
-            {
+            case Shortcut::Refresh: self->Refresh(); break;
+            case Shortcut::Search:
+                self->SearchBox().Focus(FocusState::Keyboard);
+                self->SearchBox().SelectAll();
+                break;
+            case Shortcut::ToggleRefresh:
                 if (self->AutoRefresh().IsEnabled()) self->AutoRefresh().IsOn(!self->AutoRefresh().IsOn());
-                e.Handled(true);
-            }
-            else if (self && (GetKeyState(VK_CONTROL) & 0x8000) && e.Key() == Windows::System::VirtualKey::Number0)
-            {
-                self->m_fontSize = 13;
+                break;
+            case Shortcut::Provider:
+                self->SelectProvider(shortcut.provider);
+                // A remote/busy view may reject the change; keep navigation consistent.
+                if (self->m_activeProvider == shortcut.provider)
+                    self->Navigation().SelectedItem(self->Navigation().MenuItems().GetAt(shortcut.provider));
+                break;
+            case Shortcut::ZoomIn: case Shortcut::ZoomOut: case Shortcut::ResetZoom:
+                self->m_fontSize = shortcut.command == Shortcut::ResetZoom ? 13 :
+                    std::clamp(self->m_fontSize + (shortcut.command == Shortcut::ZoomIn ? 1 : -1), 8.0, 32.0);
                 self->ApplyZoom();
-                e.Handled(true);
+                break;
+            case Shortcut::DeleteSelection:
+                for (auto action : self->AvailableActions())
+                    if (action->GetName() == "Delete" || action->GetName() == "Terminate Process")
+                    {
+                        self->ExecuteAction(action->GetName()); // Existing availability and confirmation path.
+                        break;
+                    }
+                break;
+            default: return;
             }
+            e.Handled(true);
         });
         m_timer.Start();
         SelectProvider(m_startProvider);
@@ -244,7 +267,7 @@ namespace winrt::pserv6::implementation
     void MainWindow::SelectProvider(int index)
     {
         auto const& providers = pserv::winui::Providers();
-        if (index < 0 || index >= static_cast<int>(providers.size()) || index == m_activeProvider || ActionBusy() || m_dialogOpen || (!m_machineName.empty() && index > 1)) return;
+        if (index < 0 || index >= static_cast<int>(providers.size()) || index == m_activeProvider || ActionBusy() || m_dialogOpen || (!m_machineName.empty() && !providers[index].supportsRemote)) return;
         if (m_activeProvider >= 0)
             SaveCurrentView();
         m_switching = true;
@@ -293,7 +316,7 @@ namespace winrt::pserv6::implementation
         AutoRefresh().IsEnabled(m_controller->SupportsAutoRefresh());
         AutoRefresh().IsOn(m_controller->SupportsAutoRefresh() && saved.live);
         AutoRefresh().OffContent(box_value(m_controller->SupportsAutoRefresh() ? L"Paused" : L"Manual refresh"));
-        AddVariableButton().Visibility(index == 6 ? Visibility::Visible : Visibility::Collapsed);
+        AddVariableButton().Visibility(provider.supportsAddVariable ? Visibility::Visible : Visibility::Collapsed);
         PrimaryActions().Children().Clear();
         for (auto const& name : provider.toolbarActions)
         {
@@ -596,7 +619,15 @@ namespace winrt::pserv6::implementation
         auto actions = AvailableActions();
         auto has = [&](std::string_view name) { return std::ranges::any_of(actions, [&](auto a) { return a->GetName() == name; }); };
         for (auto const& element : PrimaryActions().Children())
-            if (auto button = element.try_as<Button>()) button.IsEnabled(has(Narrow(unbox_value<hstring>(button.Tag()))));
+            if (auto button = element.try_as<Button>())
+            {
+                auto name = Narrow(unbox_value<hstring>(button.Tag()));
+                button.IsEnabled(std::ranges::any_of(actions, [&](auto action)
+                {
+                    return action->GetName() == name &&
+                        (static_cast<int>(action->GetVisibility()) & static_cast<int>(pserv::ActionVisibility::PropertiesDialog)) != 0;
+                }));
+            }
         PropertiesButton().IsEnabled(selected.size() == 1 && !ActionBusy() && !m_dialogOpen);
         MoreButton().IsEnabled(!actions.empty());
         AddVariableButton().IsEnabled(!ActionBusy() && !m_dialogOpen);
@@ -608,7 +639,7 @@ namespace winrt::pserv6::implementation
         CopyJsonMenuItem().IsEnabled(has("Copy as JSON"));
         CountText().Text(std::format(L"{} of {}  ·  {} selected  ·  {} highlighted  ·  {} {}",
             m_visibleRows.size(), m_allRows.size(), selected.size(), m_highlightedCount, m_disabledCount,
-            m_activeProvider == 0 || m_activeProvider == 1 || m_activeProvider == 7 || m_activeProvider == 9 ? L"disabled" : L"dimmed"));
+            m_activeProvider >= 0 && pserv::winui::Providers().at(m_activeProvider).labelsDisabledState ? L"disabled" : L"dimmed"));
     }
 
     void MainWindow::FillActions(MenuFlyout const& menu)
@@ -616,6 +647,7 @@ namespace winrt::pserv6::implementation
         menu.Items().Clear();
         for (auto action : AvailableActions())
         {
+            if ((static_cast<int>(action->GetVisibility()) & static_cast<int>(pserv::ActionVisibility::ContextMenu)) == 0) continue;
             if (action->IsSeparator())
             {
                 if (menu.Items().Size() && !menu.Items().GetAt(menu.Items().Size() - 1).try_as<MenuFlyoutSeparator>()) menu.Items().Append(MenuFlyoutSeparator());

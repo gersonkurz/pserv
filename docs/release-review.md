@@ -10,7 +10,16 @@
 - Modules displayed roughly 9,500 rows; full reverse sorting and column resizing passed. A first-pass realized-container lookup missed existing cells during resizing; switching to ItemsStackPanel cache indices fixed it and the GUI recheck passed. All four regression checks passed for this checkpoint.
 - This is the first bounded round-two change, not a complete second release. No comparative end-to-end latency benchmark or refreshed installer bundle yet. Dependency trimming, typography/zoom, shared configuration/provider metadata, shortcuts and multi-object properties remain follow-up work. Existing installers still contain the previous build.
 
-## Changes from the two UI reviews
+## Round two continuation — build and keyboard routing
+
+- Extracted the GUI's 47 shared translation units into `core/pserv6-core.vcxproj`, a native static library with its own `precomp.h` PCH. The UI keeps its XAML PCH; the CLI keeps its separate console compilation. Explicit C++/WinRT PCH selection and separate projects avoid the generators combining multiple header names into an invalid include. Project XML has been expanded for readability, with item definitions before the C++ targets import.
+- Restored Ctrl+1…0 view selection, Ctrl+plus/minus sizing (including keypad), and Delete routing through existing availability/confirmation checks. Ctrl+Shift+0 resets zoom. Text editing, modal dialogs, Alt-modified chords and non-table Delete are guarded by a pure routing function with non-GUI tests.
+- Provider metadata now declares remote support, environment-variable creation and disabled-state labeling instead of inferring them from navigation indices. Toolbar/context-menu eligibility also respects action visibility flags. The curated toolbar layout is retained.
+- Built-in exporter registration is explicit on first registry use. A new test links only the actual native core library and registry, detecting linker removal of static-registration-only exporter objects and checking JSON/plain-text Unicode output. No clipboard access or application launch is involved.
+- Release GUI and CLI builds passed for ARM64, x64 and x86; ARM64 Debug also passed. All six native regression checks passed. The exporter link check first failed against the library with the old static registrars, then passed after explicit registration was introduced.
+- Application launch and GUI interaction are deliberately deferred at the user's request while Claude tests another variant. These new shortcuts and action visibility changes still need a later GUI smoke check. No runtime payload trimming or installer replacement is included in this continuation.
+
+## Earlier UI changes
 
 - Restored the original application icon and all 20 Base16 palette files. Themes now use a menu grouped by dark/light classification.
 - Removed the duplicate provider heading and combined actions, elevation, refresh and search into one toolbar. Buttons are icons with tooltips and accessible names.
@@ -24,12 +33,14 @@
 
 ## Regression coverage
 
-`just test` builds native Release and runs four focused checks:
+`just test` builds native Release and runs six focused checks:
 
 - Service property mapping, identity/invalid-start-type rejection, failed configuration, successful model updates and remote-machine forwarding using a fake SCM boundary.
 - Production environment-edit algorithm: success/type preservation, collision, read/write failure, delete failure with successful rollback, and rollback failure retaining the original.
 - Row reconciliation: unchanged snapshots emit no collection events; insertion/removal/reordering preserve surviving object identity.
 - Actual DataRow collection: XAML-required IVector/IInspectable and IIterable/IInspectable share the cell contents. This guards the earlier startup crash.
+- Keyboard routing: view selection, zoom keys, Delete focus/modifier guards, modal dialogs and text input.
+- Actual static-library link: both exporters are present without direct references to their concrete types; JSON/plain-text Unicode output and singleton registration are checked.
 
 ## Runtime checks and limits
 
@@ -38,7 +49,7 @@ Earlier ARM64 checks exercised all ten providers, including over 10,000 module r
 Installer creation and payload inspection do not substitute for clean-machine install/upgrade/uninstall testing. A separate remote host, UAC elevation round-trip and live service/process/task/uninstaller mutations require a disposable test environment. No such mutations are needed to verify layout or packaging, and they have not been exercised on this working machine. These are release-validation gaps, not evidence that all administrative workflows are correct.
 `pserv6c` export review also fixed progress/banner text on stdout, signed-byte JSON escaping of UTF-8, and codepage conversion of redirected output. JSON/CSV now use UTF-8 on redirected stdout, with diagnostics on stderr.
 
-## Final verification
+## Earlier release verification (before round two)
 
 Release GUI and CLI compile for ARM64, x64 and x86; ARM64 Debug also compiles. All four regression checks pass. Native ARM64 JSON and CSV parse directly and preserve the EventLog service's Unicode description; the JSON reference was checked against Windows WMI. Column hiding/reordering survives restart, and Shift-selection remains functional with refresh paused. All 14 dark and 6 light Base16 palettes appear in the grouped menus.
 
