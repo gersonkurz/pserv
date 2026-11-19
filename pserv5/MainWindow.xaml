@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="pserv5.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:pserv5"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="pserv6">
+
+    <Grid x:Name="RootGrid" PreviewKeyDown="OnRootKeyDown">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="34" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="30" />
+        </Grid.RowDefinitions>
+
+        <!-- Row 0: Custom Fluent Title Bar -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Background="Transparent" Padding="12,0,140,0">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE912;" FontSize="15" />
+                <TextBlock x:Name="AppTitleTextBlock" Text="pserv 6.0.0" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <Border x:Name="ConnectionBadge" CornerRadius="4" Padding="8,2" VerticalAlignment="Center" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                    <TextBlock x:Name="ConnectionBadgeText" Text="Local Machine" FontSize="11" Opacity="0.85" />
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Row 1: Top MenuBar + Filter & Quick Toolbar -->
+        <Grid x:Name="TopToolbarGrid" Grid.Row="1" Padding="8,2,12,6" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <MenuBar x:Name="MainMenuBar" Grid.Column="0" VerticalAlignment="Center">
+                <MenuBarItem Title="File">
+                    <MenuFlyoutItem x:Name="MenuRefreshItem" Text="Refresh" Click="OnRefreshClick">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE72C;" />
+                        </MenuFlyoutItem.Icon>
+                        <MenuFlyoutItem.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="F5" />
+                        </MenuFlyoutItem.KeyboardAccelerators>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutSeparator />
+                    <ToggleMenuFlyoutItem x:Name="MenuConnectLocalItem" Text="Connect to Local Machine" IsChecked="True" Click="OnConnectLocalClick">
+                        <ToggleMenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE7F4;" />
+                        </ToggleMenuFlyoutItem.Icon>
+                    </ToggleMenuFlyoutItem>
+                    <ToggleMenuFlyoutItem x:Name="MenuConnectRemoteItem" Text="Connect to Remote Machine..." Click="OnConnectRemoteClick">
+                        <ToggleMenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE774;" />
+                        </ToggleMenuFlyoutItem.Icon>
+                    </ToggleMenuFlyoutItem>
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Exit" Click="OnExitClick" />
+                </MenuBarItem>
+
+                <MenuBarItem x:Name="ViewMenuBarItem" Title="View">
+                    <MenuFlyoutSubItem x:Name="AutoRefreshSubMenu" Text="Auto-Refresh">
+                        <ToggleMenuFlyoutItem x:Name="MenuAutoRefreshToggle" Text="Enabled" Click="OnAutoRefreshToggleClick">
+                            <ToggleMenuFlyoutItem.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control" Key="R" />
+                            </ToggleMenuFlyoutItem.KeyboardAccelerators>
+                        </ToggleMenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <ToggleMenuFlyoutItem x:Name="MenuInterval1s" Text="Every 1 second" Tag="1000" Click="OnAutoRefreshIntervalClick" />
+                        <ToggleMenuFlyoutItem x:Name="MenuInterval2s" Text="Every 2 seconds" Tag="2000" Click="OnAutoRefreshIntervalClick" />
+                        <ToggleMenuFlyoutItem x:Name="MenuInterval5s" Text="Every 5 seconds" Tag="5000" Click="OnAutoRefreshIntervalClick" />
+                        <ToggleMenuFlyoutItem x:Name="MenuInterval10s" Text="Every 10 seconds" Tag="10000" Click="OnAutoRefreshIntervalClick" />
+                    </MenuFlyoutSubItem>
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Increase Font Size" KeyboardAcceleratorTextOverride="Ctrl++" Click="OnIncreaseFontSizeClick">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE8A3;" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="Decrease Font Size" KeyboardAcceleratorTextOverride="Ctrl+-" Click="OnDecreaseFontSizeClick">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE71F;" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutSeparator />
+                </MenuBarItem>
+
+                <MenuBarItem x:Name="ThemesMenuBarItem" Title="Themes" />
+
+                <MenuBarItem Title="Help">
+                    <MenuFlyoutItem Text="About pserv6..." Click="OnAboutClick">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE946;" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="Documentation" Click="OnDocumentationClick">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE8A5;" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                </MenuBarItem>
+            </MenuBar>
+
+            <!-- Center Contextual Action Buttons (Icon-only with Tooltips) -->
+            <StackPanel x:Name="QuickActionsPanel" Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="16,0,16,0">
+                <Button x:Name="RefreshButton" Padding="8,5" MinWidth="34" Height="32" Click="OnRefreshClick" ToolTipService.ToolTip="Refresh current view (F5)">
+                    <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                </Button>
+                <Button x:Name="PropertiesButton" Padding="8,5" MinWidth="34" Height="32" Click="OnPropertiesClick" IsEnabled="False" ToolTipService.ToolTip="Properties">
+                    <FontIcon Glyph="&#xE946;" FontSize="14" />
+                </Button>
+                <Border Width="1" Height="20" Margin="4,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                <StackPanel x:Name="DynamicActionButtonsPanel" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Right Filter Box (uses built-in TextBox clear button) -->
+            <TextBox
+                x:Name="FilterTextBox"
+                Grid.Column="2"
+                Width="280"
+                PlaceholderText="Filter items... (Ctrl+F)"
+                TextChanged="OnFilterTextChanged"
+                VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- Row 2: NavigationView + Main Virtualized Data Grid -->
+        <NavigationView
+            x:Name="MainNavView"
+            Grid.Row="2"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            PaneDisplayMode="Left"
+            OpenPaneLength="215"
+            CompactPaneLength="48"
+            SelectionChanged="OnNavSelectionChanged">
+
+            <Grid x:Name="ContentAreaGrid" Padding="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Async Operation Banner (Visible during background service/process operations) -->
+                <Border
+                    x:Name="AsyncProgressBanner"
+                    Grid.Row="0"
+                    Visibility="Collapsed"
+                    Padding="12,8"
+                    Margin="8,6,8,0"
+                    CornerRadius="6"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="AsyncProgressMessageText" Grid.Column="0" VerticalAlignment="Center" Text="Operation in progress..." TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+                        <ProgressBar x:Name="AsyncProgressBar" Grid.Column="1" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Center" Margin="0,0,12,0" />
+                        <Button x:Name="AsyncCancelButton" Grid.Column="2" Content="Cancel" Click="OnAsyncCancelClick" />
+                    </Grid>
+                </Border>
+
+                <!-- Virtualized Multi-Column Table Area -->
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Sticky Synchronized Column Header Bar -->
+                    <ScrollViewer
+                        x:Name="HeaderScrollViewer"
+                        Grid.Row="0"
+                        HorizontalScrollBarVisibility="Hidden"
+                        VerticalScrollBarVisibility="Disabled"
+                        HorizontalScrollMode="Disabled"
+                        VerticalScrollMode="Disabled"
+                        BorderThickness="0,0,0,1"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
+                        <StackPanel x:Name="HeaderStackPanel" Orientation="Horizontal" Height="34" />
+                    </ScrollViewer>
+
+                    <!-- Hardware-Virtualized ListView -->
+                    <ListView
+                        x:Name="DataListView"
+                        Grid.Row="1"
+                        SelectionMode="Extended"
+                        IsItemClickEnabled="False"
+                        ShowsScrollingPlaceholders="False"
+                        ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                        ScrollViewer.HorizontalScrollMode="Enabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        ScrollViewer.VerticalScrollMode="Enabled"
+                        ContainerContentChanging="OnContainerContentChanging"
+                        SelectionChanged="OnListSelectionChanged"
+                        DoubleTapped="OnListDoubleTapped"
+                        RightTapped="OnListRightTapped">
+                        <ListView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <ItemsStackPanel Orientation="Vertical" CacheLength="2.0" />
+                            </ItemsPanelTemplate>
+                        </ListView.ItemsPanel>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid HorizontalAlignment="Left" />
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="MinHeight" Value="28" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="VerticalContentAlignment" Value="Center" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
+                </Grid>
+            </Grid>
+        </NavigationView>
+
+        <!-- Row 3: Status Bar -->
+        <Border
+            x:Name="StatusBarBorder"
+            Grid.Row="3"
+            Padding="12,0"
+            BorderThickness="0,1,0,0"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+            Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusVisibleText" Text="0 visible" FontSize="12" />
+                    <TextBlock Text="|" FontSize="12" Opacity="0.4" />
+                    <TextBlock x:Name="StatusHighlightedText" Text="0 highlighted" FontSize="12" />
+                    <TextBlock Text="|" FontSize="12" Opacity="0.4" />
+                    <TextBlock x:Name="StatusDisabledText" Text="0 disabled" FontSize="12" />
+                    <TextBlock Text="|" FontSize="12" Opacity="0.4" />
+                    <TextBlock x:Name="StatusFilteredText" Text="0 filtered" FontSize="12" />
+                    <TextBlock Text="|" FontSize="12" Opacity="0.4" />
+                    <TextBlock x:Name="StatusTotalText" Text="0 total" FontSize="12" />
+                    <TextBlock Text="|" FontSize="12" Opacity="0.4" />
+                    <TextBlock x:Name="StatusSelectedText" Text="0 selected" FontSize="12" FontWeight="SemiBold" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusAutoRefreshText" Text="Auto-refresh: Off" FontSize="12" Opacity="0.8" />
+                    <TextBlock Text="|" FontSize="12" Opacity="0.4" />
+                    <TextBlock x:Name="StatusRefreshTimeText" Text="Refreshed: --:--:--" FontSize="12" Opacity="0.8" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

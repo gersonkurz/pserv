@@ -8,26 +8,40 @@
 /// Direct2D to ImGui.
 #pragma once
 
-#include <imgui.h>
+#include <cstdint>
 #include <string>
 #include <vector>
 
 namespace pserv::theme
 {
+    /// @brief RGBA color with float components in [0.0, 1.0].
+    struct Color4
+    {
+        float x{0.0f};
+        float y{0.0f};
+        float z{0.0f};
+        float w{1.0f};
+
+        uint8_t R() const { return static_cast<uint8_t>(x * 255.0f + 0.5f); }
+        uint8_t G() const { return static_cast<uint8_t>(y * 255.0f + 0.5f); }
+        uint8_t B() const { return static_cast<uint8_t>(z * 255.0f + 0.5f); }
+        uint8_t A() const { return static_cast<uint8_t>(w * 255.0f + 0.5f); }
+    };
+
     /// @brief A parsed Base16 scheme: name, light/dark classification, and the
-    ///        16 palette entries (base00..base0F) as linear-ish ImGui colors.
+    ///        16 palette entries (base00..base0F).
     struct Base16Theme
     {
         std::string name;            ///< Display name (from YAML "name").
         bool isDark{true};           ///< Derived from base00 luminance.
-        ImVec4 base[16]{};           ///< base00..base0F.
+        Color4 base[16]{};           ///< base00..base0F.
 
         /// @brief Accent color used for selection/active highlights (base0D).
-        const ImVec4& Accent() const { return base[0x0D]; }
+        const Color4& Accent() const { return base[0x0D]; }
 
         /// @brief Foreground text drawn on top of an Accent() fill.
         /// White for dark accents, near-black (base00) for light accents.
-        ImVec4 AccentText() const;
+        Color4 AccentText() const;
     };
 
     /// @brief Name + dark/light flag, for grouped listings in the picker.
@@ -57,8 +71,4 @@ namespace pserv::theme
         std::vector<Base16Theme> m_themes;
         size_t m_current{0};
     };
-
-    /// @brief Map a Base16 scheme onto an ImGuiStyle's color table in place.
-    /// Geometry (sizes/rounding) is left untouched.
-    void ApplyToImGui(const Base16Theme& theme, ImGuiStyle& style);
 }

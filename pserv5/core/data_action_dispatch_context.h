@@ -40,6 +40,9 @@ namespace pserv
         DataController *m_pController{nullptr};      ///< Controller that owns the objects.
         bool m_bShowProgressDialog{false};           ///< Show progress UI during execution.
         bool m_bNeedsRefresh{false};                 ///< Request data refresh after action.
+        bool m_bOpenPropertiesDialog{false};         ///< Request opening properties dialog for selected objects.
+        bool m_bShowAddEnvVarDialog{false};          ///< Request opening Add Environment Variable dialog.
+        int m_addEnvVarScope{0};                     ///< Scope for Add Environment Variable dialog (0=User, 1=System).
 
 #ifdef PSERV_CONSOLE_BUILD
         argparse::ArgumentParser *m_pActionParser{nullptr}; ///< CLI argument parser for this action.

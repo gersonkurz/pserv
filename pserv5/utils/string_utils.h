@@ -49,15 +49,7 @@ namespace pserv::utils
         return utils::ToLower(key).find(lowerFilter) != std::string::npos;
     }
 
-    /// @brief Copy text to the system clipboard.
-    /// Uses Win32 API in console build, ImGui in GUI build.
-    #ifdef PSERV_CONSOLE_BUILD
+    /// @brief Copy text to the system clipboard using Win32 CF_UNICODETEXT.
     void CopyToClipboard(const std::string &text);
-    #else
-    inline void CopyToClipboard(const std::string& text)
-    {
-        ImGui::SetClipboardText(text.c_str());
-    }
-    #endif
 
 } // namespace pserv::utils

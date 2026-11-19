@@ -96,16 +96,13 @@ namespace pserv
             : m_controllerName{std::move(controllerName)}
             , m_itemName{std::move(itemName)}
             , m_columns{std::move(columns)}
-#ifndef PSERV_CONSOLE_BUILD
-            , m_pPropertiesDialog{nullptr}
-#endif
         {
         }
 
         virtual ~DataController();
 
 #ifndef PSERV_CONSOLE_BUILD
-        /// @brief Show the properties dialog for selected objects.
+        /// @brief Request showing the properties dialog for selected objects.
         void ShowPropertiesDialog(DataActionDispatchContext &ctx);
 #endif
 
@@ -143,15 +140,6 @@ namespace pserv
         /// @return true if periodic refresh is meaningful for this data type.
         virtual bool SupportsAutoRefresh() const { return true; }
 
-#ifndef PSERV_CONSOLE_BUILD
-        /// @brief Check if properties dialog has unsaved edits.
-        /// Used to pause auto-refresh during editing.
-        bool HasPropertiesDialogWithEdits() const;
-
-        /// @brief Render the properties dialog if open.
-        void RenderPropertiesDialog();
-#endif
-
         /// @brief Sort objects by a column.
         /// @param columnIndex Column index to sort by.
         /// @param ascending True for ascending, false for descending.
@@ -185,6 +173,8 @@ namespace pserv
         bool NeedsRefresh() const { return m_bNeedsRefresh; }
         void ClearRefreshFlag() { m_bNeedsRefresh = false; }
         std::chrono::system_clock::time_point GetLastRefreshTime() const { return m_lastRefreshTime; }
+        int GetLastSortColumn() const { return m_lastSortColumn; }
+        bool GetLastSortAscending() const { return m_lastSortAscending; }
         /// @}
 
     protected:
@@ -209,10 +199,5 @@ namespace pserv
         bool m_bNeedsRefresh{false};                     ///< True if data needs reloading.
         bool m_lastSortAscending{true};                  ///< Last sort direction.
         std::chrono::system_clock::time_point m_lastRefreshTime{}; ///< Time of last successful refresh.
-
-#ifndef PSERV_CONSOLE_BUILD
-    private:
-        DataPropertiesDialog *m_pPropertiesDialog{nullptr}; ///< Active properties dialog.
-#endif
     };
 } // namespace pserv

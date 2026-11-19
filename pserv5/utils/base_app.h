@@ -41,11 +41,11 @@ namespace pserv
 
                 // Step 1: Initialize logging with console/debug output only
                 auto logger = InitializeLogging();
-                logger->info("pserv5 starting up");
+                logger->info("pserv6 starting up");
 
                 // Step 2: Get AppData path and determine config/log paths
                 m_appDataPath = utils::GetAppDataPath();
-                m_configPath = m_appDataPath / "pserv5.toml";
+                m_configPath = m_appDataPath / "pserv6.toml";
                 logger->info("AppData path: {}", m_appDataPath.string());
                 logger->info("Loading configuration from: {}", m_configPath.string());
 
@@ -58,8 +58,8 @@ namespace pserv
                 std::string logFilePath = config::theSettings.logging.logFilePath.get();
                 if (logFilePath.empty())
                 {
-                    // Default: AppData/pserv5/pserv5.log
-                    logFilePath = (m_appDataPath / "pserv5.log").string();
+                    // Default: LocalAppData/pserv6/pserv6.log
+                    logFilePath = (m_appDataPath / "pserv6.log").string();
                     config::theSettings.logging.logFilePath.set(logFilePath);
                 }
                 logger->info("Log file path: {}", logFilePath);

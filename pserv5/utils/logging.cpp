@@ -5,8 +5,7 @@
 #include <Shlobj.h>
 
 namespace pserv::utils
-{   
-#ifdef PSERV_CONSOLE_BUILD
+{
     void CopyToClipboard(const std::string &utf8_text)
     {
         std::wstring text = Utf8ToWide(utf8_text);
@@ -54,7 +53,6 @@ namespace pserv::utils
 
         // Do NOT free hMem here; ownership transferred to clipboard.
     }
-#endif
 
     std::filesystem::path GetAppDataPath()
     {
@@ -69,9 +67,9 @@ namespace pserv::utils
         const std::wstring wpath{localAppDataPath};
         CoTaskMemFree(localAppDataPath);
 
-        // Convert to UTF-8 and append pserv5 folder
+        // Convert to UTF-8 and append pserv6 folder
         const std::string appDataPath = utils::WideToUtf8(wpath);
-        const std::filesystem::path path = std::filesystem::path(appDataPath) / "pserv5";
+        const std::filesystem::path path = std::filesystem::path(appDataPath) / "pserv6";
 
         // Create directory if it doesn't exist
         if (!std::filesystem::exists(path))
@@ -140,7 +138,7 @@ namespace pserv::utils
         msvc_sink->set_level(spdlog::level::warn);
 
         std::vector<spdlog::sink_ptr> sinks{msvc_sink};
-        auto logger = std::make_shared<spdlog::logger>("pserv5", sinks.begin(), sinks.end());
+        auto logger = std::make_shared<spdlog::logger>("pserv6", sinks.begin(), sinks.end());
         logger->set_level(spdlog::level::debug);
 
         // Explicitly drop the default logger to prevent any console output
@@ -155,42 +153,62 @@ namespace pserv::utils
         // Get existing logger
         auto logger = spdlog::default_logger();
 
-        // Force rotation on startup to create new log file
+        // Force rotation on startup to create new log file (non-throwing if another instance holds the file open)
+        std::error_code ec;
         std::filesystem::path log_path(logFilePath);
-        if (std::filesystem::exists(log_path) && std::filesystem::file_size(log_path) > 0)
+        if (std::filesystem::exists(log_path, ec) && !ec && std::filesystem::file_size(log_path, ec) > 0 && !ec)
         {
             std::filesystem::path log_dir = log_path.parent_path();
             std::string log_stem = log_path.stem().string();
             std::string log_ext = log_path.extension().string();
 
-            // Delete oldest log if it exists
-            std::filesystem::path oldest = log_dir / (log_stem + ".10" + log_ext);
-            if (std::filesystem::exists(oldest))
-            {
-                std::filesystem::remove(oldest);
-            }
+            std::filesystem::path rotated_first = log_dir / (log_stem + ".1" + log_ext);
+            std::filesystem::path rotating_tmp = log_dir / (log_stem + ".rotating" + log_ext);
 
-            // Shift all backup logs up (9 -> 10, 8 -> 9, etc.)
-            for (int i = 9; i >= 1; --i)
+            // Try moving current log first; if locked by another running instance, skip rotation cleanly
+            ec.clear();
+            std::filesystem::rename(log_path, rotating_tmp, ec);
+            if (!ec)
             {
-                std::filesystem::path old_path = log_dir / std::format("{}.{}{}", log_stem, i, log_ext);
-                std::filesystem::path new_path = log_dir / std::format("{}.{}{}", log_stem, i + 1, log_ext);
-                if (std::filesystem::exists(old_path))
+                std::filesystem::path oldest = log_dir / (log_stem + ".10" + log_ext);
+                if (std::filesystem::exists(oldest, ec) && !ec)
                 {
-                    std::filesystem::rename(old_path, new_path);
+                    std::filesystem::remove(oldest, ec);
                 }
-            }
 
-            // Move current log to .1
-            std::filesystem::rename(log_path, log_dir / (log_stem + ".1" + log_ext));
+                // Shift all backup logs up (9 -> 10, 8 -> 9, etc.)
+                for (int i = 9; i >= 1; --i)
+                {
+                    std::filesystem::path old_path = log_dir / std::format("{}.{}{}", log_stem, i, log_ext);
+                    std::filesystem::path new_path = log_dir / std::format("{}.{}{}", log_stem, i + 1, log_ext);
+                    if (std::filesystem::exists(old_path, ec) && !ec)
+                    {
+                        std::filesystem::rename(old_path, new_path, ec);
+                    }
+                }
+
+                ec.clear();
+                std::filesystem::rename(rotating_tmp, rotated_first, ec);
+            }
+            else
+            {
+                logger->warn("Skipping startup log rotation for '{}' (file may be in use by another instance): {}", logFilePath, ec.message());
+            }
         }
 
         // Add file sink with NDJSON format - 10MB max size, keep 10 backups
-        auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logFilePath, 1024 * 1024 * 10, 10);
-        file_sink->set_level(spdlog::level::debug);
-        file_sink->set_formatter(std::make_unique<NdjsonFormatter>());
+        try
+        {
+            auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logFilePath, 1024 * 1024 * 10, 10);
+            file_sink->set_level(spdlog::level::debug);
+            file_sink->set_formatter(std::make_unique<NdjsonFormatter>());
 
-        // Add file sink to existing logger
-        logger->sinks().push_back(file_sink);
+            // Add file sink to existing logger
+            logger->sinks().push_back(file_sink);
+        }
+        catch (const std::exception &ex)
+        {
+            logger->warn("Failed to open log file '{}': {} (continuing without file sink)", logFilePath, ex.what());
+        }
     }
 } // namespace pserv::utils

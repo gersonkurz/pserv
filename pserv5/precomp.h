@@ -59,22 +59,46 @@
 
 #include <wrl/client.h>
 
-#ifndef PSERV_CONSOLE_BUILD
-#include <d3d11.h>
-#include <dxgi.h>
-#endif
 #include <winreg.h>
 #include <tlhelp32.h>
 #include <sddl.h>
 #include <psapi.h>
 
 #ifndef PSERV_CONSOLE_BUILD
-#include <imgui.h>
-#include <imgui_impl_win32.h>
-#include <imgui_impl_dx11.h>
-#include <imgui_internal.h>
 #include <shellapi.h>
 #include <ShObjIdl.h>
+
+// Undefine Windows macros that conflict with WinRT/XAML methods
+#ifdef GetCurrentTime
+#undef GetCurrentTime
+#endif
+
+#include <unknwn.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.UI.h>
+#include <winrt/Windows.UI.Core.h>
+#include <winrt/Windows.UI.Text.h>
+#include <winrt/Windows.System.h>
+#include <winrt/Microsoft.UI.h>
+#include <winrt/Microsoft.UI.Composition.h>
+#include <winrt/Microsoft.UI.Composition.SystemBackdrops.h>
+#include <winrt/Microsoft.UI.Dispatching.h>
+#include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Text.h>
+#include <winrt/Microsoft.UI.Windowing.h>
+#include <winrt/Microsoft.UI.Xaml.h>
+#include <winrt/Microsoft.UI.Xaml.Controls.h>
+#include <winrt/Microsoft.UI.Xaml.Controls.Primitives.h>
+#include <winrt/Microsoft.UI.Xaml.Data.h>
+#include <winrt/Microsoft.UI.Xaml.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Interop.h>
+#include <winrt/Microsoft.UI.Xaml.Markup.h>
+#include <winrt/Microsoft.UI.Xaml.Media.h>
+#include <winrt/Microsoft.UI.Xaml.Navigation.h>
+#include <winrt/Microsoft.UI.Xaml.Shapes.h>
+#include <microsoft.ui.xaml.window.h>
+#include <wil/cppwinrt_helpers.h>
 #endif
 
 #include <wil/resource.h>

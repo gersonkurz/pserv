@@ -2,8 +2,8 @@
 <setup>
     <!-- Setup script uses MSIS - see https://github.com/gersonkurz/msis -->
     <!-- PRODUCT_VERSION mirrors pserv5/version.h; keep in sync via `just version X.Y.Z`. -->
-    <set name="PRODUCT_NAME" value="pserv5 x86"/>
-    <set name="PRODUCT_VERSION" value="5.2.0"/>
+    <set name="PRODUCT_NAME" value="pserv6 x86"/>
+    <set name="PRODUCT_VERSION" value="6.0.0"/>
     <set name="LANGUAGE" value="en-us"/>
     <set name="PLATFORM" value="x86"/>
     <set name="REPAIR_ENABLED" value="True"/>
@@ -12,12 +12,12 @@
     <set name="BUILD_TARGET" value="pserv{{PRODUCT_VERSION}} x86.msi"/>
     <set name="UPGRADE_CODE" value="672E9734-DC0A-4FD9-B25E-8544C621B230"/>
     <set name="MANUFACTURER" value="https://github.com/gersonkurz/pserv"/>
-    <set name="INSTALLDIR" value="pserv5"/>
+    <set name="INSTALLDIR" value="pserv6"/>
     <set name="ADD_TO_PATH" value="True"/>
 
     <requires type="vcredist" version="2026"/>
 
-    <feature name="pserv5" enabled="yes" allowed="no">
+    <feature name="pserv6" enabled="yes" allowed="no">
         <files source="..\\dist\\stage\\x86" target="INSTALLDIR"/>
 
         <feature name="Debug Symbols" enabled="yes" allowed="yes">
@@ -25,9 +25,9 @@
         </feature>
 
         <feature name="Start-Menu Shortcut" enabled="yes" allowed="yes">
-            <shortcut name="pserv5"
+            <shortcut name="pserv6"
                     target="STARTMENU"
-                    file="[INSTALLDIR]pserv5.exe"
+                    file="[INSTALLDIR]pserv6.exe"
                     description="Windows system administration tool"/>
         </feature>
     </feature>

@@ -173,9 +173,8 @@ namespace pserv
             void Execute(DataActionDispatchContext &ctx) const override
             {
 #ifndef PSERV_CONSOLE_BUILD
-                // Show the add variable dialog
-                auto *controller = static_cast<EnvironmentVariablesDataController *>(ctx.m_pController);
-                controller->ShowAddVariableDialog(m_scope);
+                ctx.m_bShowAddEnvVarDialog = true;
+                ctx.m_addEnvVarScope = static_cast<int>(m_scope);
 #else
                 spdlog::error("Adding new environment variables is not supported in console mode");
                 throw std::runtime_error("Adding new environment variables is not supported in console mode. Use the GUI application.");

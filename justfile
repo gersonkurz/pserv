@@ -1,17 +1,16 @@
-# Build automation for pserv5 — Windows system administration tool
-# C++20 + Dear ImGui + DirectX 11 (GUI: pserv5.exe) and a shared-core CLI (pservc.exe)
+# Build automation for pserv6 — Windows system administration tool
+# C++23 + WinUI 3 / Windows App SDK (GUI: pserv6.exe) and a shared-core CLI (pservc.exe)
 # Requires: just, msbuild on PATH (VS 2026 Developer Command Prompt / pwsh).
 #
 # Builds drive off the solution so $(SolutionDir) resolves correctly — the
 # projects derive OutDir/IntDir from it. Output lands in pserv5\bin\<Platform>\<Config>\.
-# Packaging (MSI) is intentionally absent for now; it's a separate, later step.
 
 set windows-shell := ["cmd.exe", "/c"]
 
 solution := "pserv5\\pserv5.slnx"
 
-# Map %PROCESSOR_ARCHITECTURE% to the native solution platform: AMD64 → x64, ARM64 → ARM64.
-_arch := env_var_or_default("PROCESSOR_ARCHITECTURE", "AMD64")
+# Map %PROCESSOR_ARCHITECTURE% / %PROCESSOR_ARCHITEW6432% to the native solution platform: AMD64 → x64, ARM64 → ARM64.
+_arch := env_var_or_default("PROCESSOR_ARCHITEW6432", env_var_or_default("PROCESSOR_ARCHITECTURE", "AMD64"))
 platform := if _arch == "ARM64" { "ARM64" } else { "x64" }
 
 # Default: show available recipes
@@ -28,9 +27,10 @@ _require-devshell:
 # Run MSBuild for one configuration/platform against the solution.
 [private]
 _msbuild configuration platform: _require-devshell
+    @if not exist pserv5\packages\Microsoft.WindowsAppSDK.1.8.260317003 nuget restore pserv5\packages.config -PackagesDirectory pserv5\packages -Source %USERPROFILE%\.nuget\packages
     msbuild {{solution}} /p:Configuration={{configuration}} /p:Platform={{platform}} /m /nologo /v:minimal
 
-# Build Debug (native arch) — both pserv5.exe and pservc.exe
+# Build Debug (native arch) — both pserv6.exe and pservc.exe
 build: (_msbuild "Debug" platform)
 
 # Build Release (native arch)
@@ -41,7 +41,11 @@ build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug"
 
 # Build Debug + launch the GUI (native arch)
 run: build
-    @pserv5\bin\{{platform}}\Debug\pserv5.exe
+    @pserv5\bin\{{platform}}\Debug\pserv6.exe
+
+# Build Release + launch the GUI (native arch)
+run-release: build-release
+    @pserv5\bin\{{platform}}\Release\pserv6.exe
 
 # Build Debug + launch the CLI (native arch); pass args after `--`, e.g. `just run-cli -- services`
 run-cli *ARGS: build
@@ -50,10 +54,11 @@ run-cli *ARGS: build
 # Clean + rebuild Debug (native arch)
 rebuild: clean build
 
-# Clean all build + packaging output (bin\, temp\, dist\)
+# Clean all build + packaging output (bin\, temp\, Generated Files\, dist\)
 clean:
     if exist pserv5\bin rmdir /s /q pserv5\bin
     if exist pserv5\temp rmdir /s /q pserv5\temp
+    if exist "pserv5\Generated Files" rmdir /s /q "pserv5\Generated Files"
     if exist dist rmdir /s /q dist
 
 # Set the version (X.Y.Z) in version.h and every setup\*.msis (pserv5.rc reads version.h).
