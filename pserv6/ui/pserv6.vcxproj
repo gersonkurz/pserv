@@ -251,6 +251,7 @@
   </ImportGroup>
   <ItemGroup>
     <ClInclude Include="..\core\environment_edit.h" />
+    <ClInclude Include="..\core\property_edit_batch.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\core\pserv6-core.vcxproj">

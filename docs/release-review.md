@@ -25,6 +25,7 @@
 - The initial table-level ContextFlyout/PointerPressed fix still produced an empty menu on an unselected row in the user's check. Each realized row container now owns its menu; Opening resolves its current item through ItemFromContainer and updates SelectedItems before constructing actions. It preserves an existing multi-selection and avoids capturing stale rows in recycled containers. Completed refresh snapshots wait while either action menu is open.
 - Pause/resume is now one persisted application-wide preference. Manual-only views leave that preference intact; switching Services → Windows → Processes cannot resume a paused application. Migration preserves explicit legacy pauses from capable views, ignoring manual-only views' old false values. Headless navigation checks cover pause/resume through manual-only views and restoring a saved pause.
 - These follow-ups require a later visual check: right-click an unselected row, right-click within a multi-selection, and keep a menu open across a refresh interval. The application remains closed at the user's request.
+- Properties now accepts multiple selected rows, retaining separate drafts and creating controls only for the item currently chosen in its selector. Apply uses a fresh background snapshot, resolves all edited targets before writing, and reports partial failure. Row double-click uses handled-event routing and ItemFromContainer instead of assuming selection/event bubbling. GUI verification remains pending; in-memory batch regression checks cover targeting, unchanged items, preflight failures, rejected edits, partial failure and cancellation.
 
 ## Earlier UI changes
 
@@ -40,7 +41,7 @@
 
 ## Regression coverage
 
-`just test` builds native Release and runs six focused checks:
+`just test` builds native Release and runs seven focused checks:
 
 - Service property mapping, identity/invalid-start-type rejection, failed configuration, successful model updates and remote-machine forwarding using a fake SCM boundary.
 - Production environment-edit algorithm: success/type preservation, collision, read/write failure, delete failure with successful rollback, and rollback failure retaining the original.
@@ -48,6 +49,7 @@
 - Actual DataRow collection: XAML-required IVector/IInspectable and IIterable/IInspectable share the cell contents. This guards the earlier startup crash.
 - Keyboard routing: view selection, zoom keys, Delete focus/modifier guards, modal dialogs and text input.
 - Actual static-library link: both exporters are present without direct references to their concrete types; JSON/plain-text Unicode output and singleton registration are checked.
+- Multi-object property apply: independent values, unedited objects, missing/duplicate targets, read-only/rejected values, partial commit failure and cancellation, using in-memory objects only.
 
 ## Runtime checks and limits
 

@@ -14,6 +14,7 @@
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include "reconcile_rows.h"
 #include "keyboard_shortcuts.h"
+#include <core/property_edit_batch.h>
 
 using namespace winrt;
 using namespace winrt::Microsoft::UI::Xaml;
@@ -122,6 +123,8 @@ namespace winrt::pserv6::implementation
         Rows().ItemsSource(m_items);
         Root().AddHandler(UIElement::PointerWheelChangedEvent(),
             box_value(Input::PointerEventHandler{this, &MainWindow::WheelChanged}), true);
+        Rows().AddHandler(UIElement::DoubleTappedEvent(),
+            box_value(Input::DoubleTappedEventHandler{this, &MainWindow::RowsDoubleTapped}), true);
         Rows().AddHandler(UIElement::PointerPressedEvent(), box_value(Input::PointerEventHandler{
             [weak = get_weak()](auto const&, Input::PointerRoutedEventArgs const& e)
             {
@@ -132,7 +135,7 @@ namespace winrt::pserv6::implementation
                         (GetKeyState(VK_CONTROL) & 0x8000) || (GetKeyState(VK_SHIFT) & 0x8000)) return;
                     auto node = e.OriginalSource().try_as<DependencyObject>();
                     while (node && !node.try_as<ListViewItem>()) node = Media::VisualTreeHelper::GetParent(node);
-                    if (auto item = node.try_as<ListViewItem>()) self->Rows().SelectedItem(item.Content());
+                    if (auto item = node.try_as<ListViewItem>()) self->Rows().SelectedItem(self->Rows().ItemFromContainer(item));
                 }
             }}), true);
         AppWindow().Resize({1360, 860});
@@ -666,7 +669,7 @@ namespace winrt::pserv6::implementation
                         (static_cast<int>(action->GetVisibility()) & static_cast<int>(pserv::ActionVisibility::PropertiesDialog)) != 0;
                 }));
             }
-        PropertiesButton().IsEnabled(selected.size() == 1 && !ActionBusy() && !m_dialogOpen);
+        PropertiesButton().IsEnabled(!selected.empty() && !ActionBusy() && !m_dialogOpen);
         MoreButton().IsEnabled(!actions.empty());
         AddVariableButton().IsEnabled(!ActionBusy() && !m_dialogOpen);
         Navigation().IsEnabled(!ActionBusy() && !m_dialogOpen);
@@ -699,7 +702,7 @@ namespace winrt::pserv6::implementation
             });
             menu.Items().Append(item);
         }
-        if (SelectedRows().size() == 1 && !ActionBusy())
+        if (!SelectedRows().empty() && !ActionBusy() && !m_dialogOpen)
         {
             menu.Items().Append(MenuFlyoutSeparator());
             MenuFlyoutItem item;
@@ -770,90 +773,149 @@ namespace winrt::pserv6::implementation
     {
         auto lifetime = get_strong();
         auto selected = SelectedRows();
-        if (selected.size() != 1 || ActionBusy() || m_dialogOpen) co_return;
+        if (selected.empty() || ActionBusy() || m_dialogOpen) co_return;
         m_dialogOpen = true;
         UpdateActions();
-        auto row = selected.front();
-        auto controller = m_controller;
-        auto object = Object(row);
-        std::vector<std::pair<int, FrameworkElement>> editors;
         try
         {
-            ContentDialog dialog;
-            dialog.XamlRoot(Root().XamlRoot());
-            dialog.RequestedTheme(Root().ActualTheme() == ElementTheme::Dark ? ElementTheme::Dark : ElementTheme::Light);
-            dialog.Title(box_value(Wide(object->GetItemName())));
-            if (std::ranges::any_of(controller->GetColumns(), [](auto const& c) { return c.Editable; }))
-                dialog.PrimaryButtonText(L"Apply changes");
-            dialog.CloseButtonText(L"Close");
-            dialog.DefaultButton(ContentDialogButton::Close);
-            StackPanel fields;
-            fields.Spacing(12);
-            fields.Margin({0, 0, 12, 0});
-            for (int i = 0; i < static_cast<int>(controller->GetColumns().size()); ++i)
+            struct PropertyDialogState
             {
-                auto const& column = controller->GetColumns()[i];
-                auto current = Wide(object->GetProperty(i));
-                if (column.Editable && column.EditType == pserv::ColumnEditType::Combo)
-                {
-                    ComboBox combo;
-                    combo.Header(box_value(Wide(column.DisplayName)));
-                    combo.HorizontalAlignment(HorizontalAlignment::Stretch);
-                    for (auto const& option : controller->GetComboOptions(i)) combo.Items().Append(box_value(Wide(option)));
-                    for (uint32_t option = 0; option < combo.Items().Size(); ++option)
-                        if (unbox_value<hstring>(combo.Items().GetAt(option)) == current) combo.SelectedIndex(option);
-                    fields.Children().Append(combo);
-                    editors.emplace_back(i, combo);
-                }
-                else
-                {
-                    TextBox text;
-                    text.Header(box_value(Wide(column.DisplayName)));
-                    text.Text(current);
-                    text.IsReadOnly(!column.Editable);
-                    text.AcceptsReturn(column.EditType == pserv::ColumnEditType::TextMultiline);
-                    text.TextWrapping(TextWrapping::Wrap);
-                    fields.Children().Append(text);
-                    if (column.Editable) editors.emplace_back(i, text);
-                }
-            }
-            ScrollViewer scroll;
-            scroll.MaxHeight(540);
-            scroll.HorizontalScrollMode(ScrollMode::Disabled);
-            scroll.HorizontalScrollBarVisibility(ScrollBarVisibility::Disabled);
-            scroll.Content(fields);
-            dialog.Content(scroll);
-            ApplyFontTo(dialog);
-            if (co_await dialog.ShowAsync() == ContentDialogResult::Primary && !m_closed)
+                std::shared_ptr<pserv::DataController> controller;
+                std::vector<pserv6::DataRow> rows;
+                std::vector<std::map<int, std::string>> drafts;
+                size_t active{};
+                std::vector<std::pair<int, FrameworkElement>> editors;
+                StackPanel fields;
+            };
+            auto state = std::make_shared<PropertyDialogState>();
+            state->controller = m_controller;
+            state->rows = std::move(selected); // Retain each snapshot for the whole dialog.
+            state->drafts.resize(state->rows.size());
+            state->fields.Spacing(12);
+            state->fields.Margin({0, 0, 12, 0});
+            auto saveCurrent = [state]
             {
-                std::vector<std::pair<int, std::string>> edits;
-                for (auto const& [column, editor] : editors)
+                auto object = Object(state->rows[state->active]);
+                auto& draft = state->drafts[state->active];
+                for (auto const& [column, editor] : state->editors)
                 {
                     hstring value;
                     if (auto text = editor.try_as<TextBox>()) value = text.Text();
                     else if (auto choice = editor.as<ComboBox>().SelectedItem()) value = unbox_value<hstring>(choice);
                     else continue;
-                    if (Narrow(value) != object->GetProperty(column)) edits.emplace_back(column, Narrow(value));
+                    auto text = Narrow(value);
+                    if (text == object->GetProperty(column)) draft.erase(column);
+                    else draft[column] = std::move(text);
                 }
-                if (!edits.empty())
+            };
+            // Only the current item's controls exist. Drafts survive item switching.
+            auto showItem = [state, saveCurrent, weak = get_weak()](size_t index)
+            {
+                if (index >= state->rows.size()) return;
+                saveCurrent();
+                state->active = index;
+                state->editors.clear();
+                state->fields.Children().Clear();
+                auto object = Object(state->rows[index]);
+                auto const& draft = state->drafts[index];
+                auto const& columns = state->controller->GetColumns();
+                for (int i = 0; i < static_cast<int>(columns.size()); ++i)
+                {
+                    auto const& column = columns[i];
+                    auto edited = draft.find(i);
+                    auto current = Wide(edited == draft.end() ? object->GetProperty(i) : edited->second);
+                    if (column.Editable && column.EditType == pserv::ColumnEditType::Combo)
+                    {
+                        ComboBox combo;
+                        combo.Header(box_value(Wide(column.DisplayName)));
+                        combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+                        for (auto const& option : state->controller->GetComboOptions(i)) combo.Items().Append(box_value(Wide(option)));
+                        for (uint32_t option = 0; option < combo.Items().Size(); ++option)
+                            if (unbox_value<hstring>(combo.Items().GetAt(option)) == current) combo.SelectedIndex(option);
+                        state->fields.Children().Append(combo);
+                        state->editors.emplace_back(i, combo);
+                    }
+                    else
+                    {
+                        TextBox text;
+                        text.Header(box_value(Wide(column.DisplayName)));
+                        text.Text(current);
+                        text.IsReadOnly(!column.Editable);
+                        text.AcceptsReturn(column.EditType == pserv::ColumnEditType::TextMultiline);
+                        text.TextWrapping(TextWrapping::Wrap);
+                        state->fields.Children().Append(text);
+                        if (column.Editable) state->editors.emplace_back(i, text);
+                    }
+                }
+                if (auto self = weak.get()) self->ApplyFontTo(state->fields);
+            };
+            ContentDialog dialog;
+            dialog.XamlRoot(Root().XamlRoot());
+            dialog.RequestedTheme(Root().ActualTheme() == ElementTheme::Dark ? ElementTheme::Dark : ElementTheme::Light);
+            dialog.Title(box_value(state->rows.size() == 1 ? Wide(Object(state->rows.front())->GetItemName()) :
+                hstring(std::format(L"Properties — {} items", state->rows.size()))));
+            bool editable = std::ranges::any_of(state->controller->GetColumns(), [](auto const& c) { return c.Editable; });
+            if (editable)
+                dialog.PrimaryButtonText(L"Apply changes");
+            dialog.CloseButtonText(L"Close");
+            dialog.DefaultButton(ContentDialogButton::Close);
+            StackPanel content;
+            content.Spacing(12);
+            ComboBox::SelectionChanged_revoker itemSelectionRevoker;
+            if (state->rows.size() > 1)
+            {
+                ComboBox itemPicker;
+                itemPicker.Header(box_value(L"Selected item"));
+                itemPicker.HorizontalAlignment(HorizontalAlignment::Stretch);
+                for (auto const& row : state->rows) itemPicker.Items().Append(box_value(Wide(Object(row)->GetItemName())));
+                itemPicker.SelectedIndex(0);
+                itemSelectionRevoker = itemPicker.SelectionChanged(auto_revoke, [showItem](auto const& sender, auto const&)
+                {
+                    auto index = sender.template as<ComboBox>().SelectedIndex();
+                    if (index >= 0) showItem(static_cast<size_t>(index));
+                });
+                content.Children().Append(itemPicker);
+                if (editable)
+                {
+                    TextBlock hint;
+                    hint.Text(L"Edits are kept separately for each item. Apply changes saves all edited items.");
+                    hint.TextWrapping(TextWrapping::Wrap);
+                    content.Children().Append(hint);
+                }
+            }
+            showItem(0);
+            ScrollViewer scroll;
+            scroll.MaxHeight(state->rows.size() > 1 ? 420 : 540);
+            scroll.HorizontalScrollMode(ScrollMode::Disabled);
+            scroll.HorizontalScrollBarVisibility(ScrollBarVisibility::Disabled);
+            scroll.Content(state->fields);
+            content.Children().Append(scroll);
+            dialog.Content(content);
+            ApplyFontTo(dialog);
+            if (co_await dialog.ShowAsync() == ContentDialogResult::Primary && !m_closed)
+            {
+                saveCurrent();
+                std::vector<pserv::PropertyEditBatchItem> batch;
+                for (size_t i = 0; i < state->rows.size(); ++i)
+                {
+                    if (state->drafts[i].empty()) continue;
+                    auto object = Object(state->rows[i]);
+                    batch.push_back({object->GetStableID(), object->GetItemName(),
+                        {state->drafts[i].begin(), state->drafts[i].end()}});
+                }
+                if (!batch.empty())
                 {
                     m_discardRefresh = m_refresh != nullptr;
                     m_dispatch = std::make_unique<pserv::DataActionDispatchContext>();
                     m_dispatch->m_pAsyncOp = new pserv::AsyncOperation();
                     // Re-read on the worker before editing; never mutate the displayed snapshot.
-                    m_dispatch->m_pAsyncOp->Start(nullptr, [fresh = CreateController(m_activeProvider), id = object->GetStableID(), edits = std::move(edits)](pserv::AsyncOperation* op)
+                    m_dispatch->m_pAsyncOp->Start(nullptr, [fresh = CreateController(m_activeProvider), batch = std::move(batch)](pserv::AsyncOperation* op)
                     {
-                        fresh->Refresh();
-                        auto target = fresh->GetDataObjects().GetByStableId<pserv::DataObject>(id);
-                        if (!target) throw std::runtime_error("The item no longer exists or could not be read.");
-                        fresh->BeginPropertyEdits(target);
-                        for (auto const& [column, value] : edits)
-                            if (!fresh->SetPropertyEdit(target, column, value)) throw std::runtime_error("A property value was rejected.");
                         if (op->IsCancelRequested()) return false;
-                        op->ReportProgress(0.5f, "Applying properties…");
-                        if (!fresh->CommitPropertyEdits(target)) throw std::runtime_error("Could not apply properties. Check permissions and the diagnostic log.");
-                        op->ReportProgress(1.0f, "Properties updated.");
-                        return true;
+                        fresh->Refresh();
+                        return pserv::ApplyPropertyEditBatch(*fresh, batch,
+                            [op] { return op->IsCancelRequested(); },
+                            [op](float progress, std::string message) { op->ReportProgress(progress, std::move(message)); });
                     });
                     ShowNotice(L"Applying properties…", InfoBarSeverity::Informational);
                     Progress().Visibility(Visibility::Visible);
@@ -974,7 +1036,24 @@ namespace winrt::pserv6::implementation
     {
         if (m_dispatch && m_dispatch->m_pAsyncOp) m_dispatch->m_pAsyncOp->RequestCancel();
     }
-    void MainWindow::RowsDoubleTapped(IInspectable const&, Input::DoubleTappedRoutedEventArgs const&) { ShowProperties(); }
+    void MainWindow::RowsDoubleTapped(IInspectable const&, Input::DoubleTappedRoutedEventArgs const& e)
+    {
+        if (ActionBusy() || m_dialogOpen) return;
+        auto node = e.OriginalSource().try_as<DependencyObject>();
+        while (node && !node.try_as<ListViewItem>()) node = Media::VisualTreeHelper::GetParent(node);
+        auto item = node.try_as<ListViewItem>();
+        if (!item) return; // Blank space and scrollbars are not property targets.
+        auto row = Rows().ItemFromContainer(item).try_as<pserv6::DataRow>();
+        if (!row) return;
+        uint32_t index;
+        if (!Rows().SelectedItems().IndexOf(row, index))
+        {
+            Rows().SelectedItems().Clear();
+            Rows().SelectedItems().Append(row);
+        }
+        e.Handled(true);
+        ShowProperties();
+    }
     void MainWindow::RowsKeyDown(IInspectable const&, Input::KeyRoutedEventArgs const& e)
     {
         if (e.Key() == Windows::System::VirtualKey::Enter) { ShowProperties(); e.Handled(true); }

@@ -12,7 +12,7 @@ just run            # Build and launch native Release GUI
 just run-cli services
 just build          # Debug GUI and CLI
 just run-debug
-just test           # Six regression checks; use a native-target Developer shell
+just test           # Seven regression checks; use a native-target Developer shell
 just package-all    # x64, x86, ARM64 MSIs AND the final bundle; requires MSIS 3.x
 ```
 
@@ -30,7 +30,7 @@ The navigation pane offers Services, Devices (driver services), Processes, Windo
 - View → Columns selects visible columns and their order. At least one must remain visible.
 - Ctrl/Shift select multiple rows. Ctrl+A selects all; Ctrl+C copies plain text. Edit also offers JSON copy. More actions and the row context menu expose file export and provider commands.
 - Toolbar buttons use icons, tooltips and accessible names. Common commands, Elevate, Refresh and search share one row.
-- Properties opens with its icon, double-click or Enter. Editable properties use controller metadata; Close discards edits and Apply changes submits changed fields. Read-only providers have no Apply button.
+- Properties opens with its icon, a row double-click or Enter. With multiple items selected, use the Selected item dropdown to inspect/edit each item; drafts are retained when switching items. Apply changes submits only changed fields across all edited items. Close discards all drafts. Read-only providers have no Apply button. Each edited item is a separate operation: failure stops the batch and reports how many earlier items succeeded; changes already applied are retained.
 - Delete invokes an available Delete/Terminate Process action when the table has focus, using the normal confirmation flow. It does not delete objects while editing text or with a dialog open.
 - Disabled services are grey. Running services use the Windows accent or Base16 green. Disabled state takes precedence over running.
 - F5/Refresh reads a snapshot. The refresh toggle pauses/resumes automatic updates globally; Ctrl+R toggles it. Switching views preserves that preference. View → Refresh interval offers 1, 2, 5, 10, 30 or 60 seconds. Windows, Modules and Scheduled tasks show a disabled toggle labelled “Auto-refresh unavailable”; the adjacent Refresh now button remains available. Their disabled toggle does not change the global preference.

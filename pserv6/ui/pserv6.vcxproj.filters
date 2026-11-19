@@ -31,5 +31,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\core\environment_edit.h" />
+    <ClInclude Include="..\core\property_edit_batch.h" />
   </ItemGroup>
 </Project>
