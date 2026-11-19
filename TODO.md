@@ -5,7 +5,7 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 ## From the pserv6 migration plan review (Codex, 2026-09-18, thread 01a0b39b)
 
 8. **[task] Pre-existing environment-variable rename can lose the original value.**
-   [environment_variables_data_controller.cpp:137](pserv5/controllers/environment_variables_data_controller.cpp):
+   [environment_variables_data_controller.cpp:137](pserv6/controllers/environment_variables_data_controller.cpp):
    `CommitPropertyEdits` deletes the original variable before attempting to write the
    renamed variable at line 146. If that write fails, the method returns failure after the
    original has already been removed. Preserve the original until the replacement succeeds

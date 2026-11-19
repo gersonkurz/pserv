@@ -267,8 +267,8 @@ PublishScripts/
 *.snupkg
 # The packages folder can be ignored because of Package Restore
 **/[Pp]ackages/*
-pserv5/packages/
-pserv5/temp/
+pserv6/packages/
+pserv6/temp/
 # NuGet v3's project.json files produces more ignorable files
 *.nuget.props
 *.nuget.targets

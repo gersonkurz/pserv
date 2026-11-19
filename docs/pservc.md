@@ -1,6 +1,6 @@
 # pservc - Command Line Interface
 
-`pservc.exe` is the command-line interface for pserv5. It provides full access to all system management features without a graphical interface, making it ideal for scripts, automation, and remote administration.
+`pservc.exe` is the command-line interface for pserv6. It provides full access to all system management features without a graphical interface, making it ideal for scripts, automation, and remote administration.
 
 ## Quick Start
 
@@ -526,4 +526,4 @@ pservc processes --filter chrome --format json
 - **Target names** are matched case-insensitively against the first column (usually Name)
 - **Multiple targets** can be specified for actions: `pservc services start Svc1 Svc2 Svc3`
 - **Administrator privileges** may be required for certain operations (starting/stopping services, terminating processes, etc.)
-- **Remote machines**: The console tool operates on the local machine only. Use the GUI (`pserv5.exe`) for remote machine access.
+- **Remote machines**: The console tool operates on the local machine only. Use the GUI (`pserv6.exe`) for remote machine access.

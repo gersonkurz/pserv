@@ -1,4 +1,4 @@
-# pserv5 Development Reference
+# pserv6 Development Reference
 
 ## Project Status
 
@@ -111,7 +111,7 @@ See: `utils/win32_error.h`
 ## Project Structure
 
 ```
-pserv5/
+pserv6/
 ├── core/                     # Base abstractions
 │   ├── data_controller.h/.cpp
 │   ├── data_object.h
@@ -178,7 +178,7 @@ All dependencies as git submodules: `imgui/`, `spdlog/`, `wil/`, `tomlplusplus/`
 
 ## Configuration
 
-Settings persist to: `%APPDATA%\pserv5\config.toml`
+Settings persist to: `%APPDATA%\pserv6\config.toml`
 
 Access pattern:
 ```cpp
@@ -203,7 +203,7 @@ theSettings.save();  // Persist to disk
 All initial release tasks completed.
 
 #### User Documentation ✅
-Created `docs/pservc.md` (comprehensive CLI reference) and `docs/pserv5.md` (GUI overview with screenshot placeholders).
+Created `docs/pservc.md` (comprehensive CLI reference) and `docs/pserv6.md` (GUI overview with screenshot placeholders).
 
 #### Code Documentation ✅
 Added Doxygen-style documentation to all 63 header files across all modules:
@@ -228,4 +228,4 @@ Completed. No critical vulnerabilities found. Codebase uses modern C++ with RAII
 - **2014 (v4)**: C# WPF with MahApps.Metro
 - **2025 (v5)**: C++20 with ImGui (this version)
 
-pserv5 maintains feature parity with pserv4 while eliminating .NET runtime dependency and improving performance.
+pserv6 maintains feature parity with pserv4 while eliminating .NET runtime dependency and improving performance.

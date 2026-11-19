@@ -8,7 +8,7 @@ More than 10 years after the last iteration, I decided to rewrite an old tool of
 
 ## Manual
 
-[Brief instructions for the UI](docs/pserv5.md) and [for the command line interface](docs/pservc.md).
+[Brief instructions for the UI](docs/pserv6.md) and [for the command line interface](docs/pservc.md).
 
 ## Screenshot
 
@@ -29,7 +29,7 @@ More than 10 years after the last iteration, I decided to rewrite an old tool of
 
 ## Building
 
-Open `pserv5.sln` in Visual Studio 2022 and build the solution.
+Open `pserv6.sln` in Visual Studio 2022 and build the solution.
 
 Dependencies are included as git submodules:
 - [ImGui](https://github.com/ocornut/imgui) - Immediate mode GUI
