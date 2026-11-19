@@ -33,7 +33,7 @@ The navigation pane offers Services, Devices (driver services), Processes, Windo
 - Properties opens with its icon, double-click or Enter. Editable properties use controller metadata; Close discards edits and Apply changes submits changed fields. Read-only providers have no Apply button.
 - Delete invokes an available Delete/Terminate Process action when the table has focus, using the normal confirmation flow. It does not delete objects while editing text or with a dialog open.
 - Disabled services are grey. Running services use the Windows accent or Base16 green. Disabled state takes precedence over running.
-- F5/Refresh reads a snapshot. The refresh toggle pauses/resumes automatic updates globally; Ctrl+R toggles it. Switching views preserves that preference. View → Refresh interval offers 1, 2, 5, 10, 30 or 60 seconds. Windows, Modules and Scheduled tasks use manual refresh by controller policy; their disabled toggle does not change the global preference.
+- F5/Refresh reads a snapshot. The refresh toggle pauses/resumes automatic updates globally; Ctrl+R toggles it. Switching views preserves that preference. View → Refresh interval offers 1, 2, 5, 10, 30 or 60 seconds. Windows, Modules and Scheduled tasks show a disabled toggle labelled “Auto-refresh unavailable”; the adjacent Refresh now button remains available. Their disabled toggle does not change the global preference.
 - Refresh preserves row identity, selection and scroll position for surviving rows. The footer separates the last refresh time from elapsed snapshot time. Counts of highlighted/disabled items describe the complete provider, independently of search.
 - Both scrollbars belong to the list; the vertical bar stays at the viewport edge. Narrow tables align left.
 

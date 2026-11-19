@@ -149,6 +149,7 @@ namespace winrt::pserv6::implementation
         SetButtonContent(ElevateButton(), L"Elevate", L"\uEA18");
         SetButtonContent(PropertiesButton(), L"Properties", L"\uE946");
         SetButtonContent(AddVariableButton(), L"Add variable", L"\uE710");
+        SetButtonContent(RefreshButton(), L"Refresh now (F5)", L"\uE72C");
         if (auto icon = LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(1)))
         {
             SendMessageW(m_hWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(icon));
@@ -317,7 +318,7 @@ namespace winrt::pserv6::implementation
         AutoRefresh().IsEnabled(m_controller->SupportsAutoRefresh());
         m_refreshPreference.SupportsRefresh(m_controller->SupportsAutoRefresh());
         AutoRefresh().IsOn(m_refreshPreference.IsOn());
-        AutoRefresh().OffContent(box_value(m_controller->SupportsAutoRefresh() ? L"Paused" : L"Manual refresh"));
+        AutoRefresh().OffContent(box_value(m_controller->SupportsAutoRefresh() ? L"Paused" : L"Auto-refresh unavailable"));
         ToolTipService::SetToolTip(AutoRefresh(), box_value(m_controller->SupportsAutoRefresh()
             ? L"Pause or resume automatic refresh across all supported views (Ctrl+R)."
             : L"This view supports manual refresh only (F5). Your global automatic-refresh preference is preserved."));
