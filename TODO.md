@@ -38,3 +38,7 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 ## Found while executing the Phase 1 CLI matrix (2026-11-19)
 
 11. **Pre-existing: "Open in Explorer" fails for drivers and reports success.** Device (driver) binary paths are stored as `\SystemRoot\System32\drivers\<name>.sys`; the services/devices "Open in Explorer" action passes the folder unexpanded to `ShellExecuteW`, which fails with ERROR_FILE_NOT_FOUND (`service_actions.cpp:570`). The failure is only logged, so `pservc devices open-in-explorer 1394ohci` exits 0. Expand `\SystemRoot` (and `\??\` prefixes), and report a launch failure to the user.
+
+## From the Debug-GUI Direct3D fallback review (Codex, 2026-11-19, thread 01a1f3fe)
+
+12. **[task]** [main_window.cpp:372](/C:/Projects/pserv-claude/pserv5/main_window.cpp:372): Pre-existing initialization defect: `CreateRenderTarget()` logs failures without propagating them, so `InitializeDirectX()` reports success with no render target. `Render()` then returns immediately at line 930, leaving a non-rendering window. Propagate initial render-target creation failure to initialization. Deferrable because this behavior predates the diff and is separate from the missing-debug-layer fallback.

@@ -337,18 +337,31 @@ namespace pserv
         D3D_FEATURE_LEVEL featureLevel;
         const D3D_FEATURE_LEVEL featureLevelArray[2] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0};
 
-        HRESULT hr = D3D11CreateDeviceAndSwapChain(nullptr,
-            D3D_DRIVER_TYPE_HARDWARE,
-            nullptr,
-            createDeviceFlags,
-            featureLevelArray,
-            2,
-            D3D11_SDK_VERSION,
-            &sd,
-            &m_pSwapChain,
-            &m_pDevice,
-            &featureLevel,
-            &m_pDeviceContext);
+        auto createDevice = [&](UINT flags)
+        {
+            return D3D11CreateDeviceAndSwapChain(nullptr,
+                D3D_DRIVER_TYPE_HARDWARE,
+                nullptr,
+                flags,
+                featureLevelArray,
+                2,
+                D3D11_SDK_VERSION,
+                &sd,
+                &m_pSwapChain,
+                &m_pDevice,
+                &featureLevel,
+                &m_pDeviceContext);
+        };
+
+        HRESULT hr = createDevice(createDeviceFlags);
+
+        // The debug layer exists only where the optional "Graphics Tools" feature is installed;
+        // without it a Debug build failed to start at all. Run without the layer instead.
+        if (hr == DXGI_ERROR_SDK_COMPONENT_MISSING && (createDeviceFlags & D3D11_CREATE_DEVICE_DEBUG))
+        {
+            spdlog::warn("Direct3D debug layer unavailable or incompatible (optional Windows feature 'Graphics Tools'); retrying without it");
+            hr = createDevice(createDeviceFlags & ~D3D11_CREATE_DEVICE_DEBUG);
+        }
 
         if (FAILED(hr))
         {
