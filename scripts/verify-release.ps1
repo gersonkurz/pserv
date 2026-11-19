@@ -40,7 +40,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Bundle inspection failed.' }
 $inspection | Set-Content -LiteralPath (Join-Path $root 'dist/bundle-inspection.txt') -Encoding utf8
 foreach ($arch in @('x64', 'x86', 'ARM64')) {
     $msi = Join-Path $root "setup/pserv$version $arch.msi"
-    $digest = (Get-FileHash -LiteralPath $msi -Algorithm SHA256).Hash.Substring(0,16)
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    $inputStream = [IO.File]::OpenRead($msi)
+    try { $digest = [BitConverter]::ToString($hasher.ComputeHash($inputStream)).Replace('-', '').Substring(0,16) }
+    finally { $inputStream.Dispose(); $hasher.Dispose() }
     if (-not ($inspection -match [regex]::Escape($digest))) { throw "Bundle does not contain the current $arch MSI." }
 }
 Write-Output 'Bundle contains all three current MSIs.'
