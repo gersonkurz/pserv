@@ -76,7 +76,7 @@
                         <Button Click="RefreshClicked" ToolTipService.ToolTip="Refresh (F5)" AutomationProperties.Name="Refresh"><FontIcon Glyph="&#xE72C;" FontSize="16"/></Button>
                     </StackPanel>
                     <TextBox x:Name="SearchBox" Grid.Column="1" PlaceholderText="Search" TextChanged="SearchChanged" MinWidth="140" MaxWidth="520" HorizontalAlignment="Stretch" AutomationProperties.Name="Search"/>
-                    <ToggleSwitch x:Name="AutoRefresh" Grid.Column="2" IsOn="True" OnContent="Every 5 seconds" OffContent="Paused" VerticalAlignment="Center" AutomationProperties.Name="Automatic refresh"/>
+                    <ToggleSwitch x:Name="AutoRefresh" Grid.Column="2" IsOn="True" Toggled="AutoRefreshToggled" OnContent="Every 5 seconds" OffContent="Paused" VerticalAlignment="Center" AutomationProperties.Name="Automatic refresh"/>
                 </Grid>
                 <Border Grid.Row="1" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                         <Grid x:Name="Table">
@@ -90,9 +90,6 @@
                                       ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.VerticalScrollMode="Enabled"
                                       SelectionChanged="SelectionChanged" ContainerContentChanging="RowContentChanging"
                                       DoubleTapped="RowsDoubleTapped" KeyDown="RowsKeyDown">
-                                <ListView.ContextFlyout>
-                                    <MenuFlyout x:Name="RowActionsMenu" Opening="ActionsOpening"/>
-                                </ListView.ContextFlyout>
                                 <ListView.Resources>
                                     <!-- Reserve space for both bars instead of overlaying or hiding them. -->
                                     <Style TargetType="ScrollViewer" BasedOn="{StaticResource DefaultScrollViewerStyle}">

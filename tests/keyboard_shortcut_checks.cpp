@@ -1,4 +1,5 @@
 #include "ui/keyboard_shortcuts.h"
+#include "ui/refresh_preference.h"
 #include <stdexcept>
 #include <iostream>
 
@@ -38,5 +39,29 @@ int main()
     expect(DecodeShortcut('F', true, false, false, true, false, false), Shortcut::Search);
     expect(DecodeShortcut('R', true, false, false, false, false, false), Shortcut::ToggleRefresh);
     expect(DecodeShortcut(0x74, false, false, false, true, false, false), Shortcut::Refresh);
-    std::cout << "Keyboard routing checks passed; no UI or administrative actions executed.\n";
+    RefreshPreference refresh;
+    auto checkRefresh = [&](bool preference, bool isOn)
+    {
+        if (refresh.Enabled() != preference || refresh.IsOn() != isOn)
+            throw std::runtime_error("View switching changed global refresh preference");
+    };
+    refresh.SupportsRefresh(true); // Services
+    checkRefresh(true, true);
+    refresh.UserToggled(false);
+    refresh.SupportsRefresh(false); // Windows
+    checkRefresh(false, false);
+    refresh.SupportsRefresh(true); // Processes must remain paused
+    checkRefresh(false, false);
+    refresh.UserToggled(true);
+    refresh.SupportsRefresh(false);
+    refresh.UserToggled(false); // A disabled manual-only view cannot overwrite the preference.
+    checkRefresh(true, false);
+    refresh.SupportsRefresh(true);
+    checkRefresh(true, true);
+    RefreshPreference restored;
+    restored.Enabled(false); // Persisted global preference, initially opening a manual-only view.
+    restored.SupportsRefresh(false);
+    restored.SupportsRefresh(true);
+    if (restored.IsOn()) throw std::runtime_error("Persisted pause lost on navigation");
+    std::cout << "Keyboard routing and global refresh navigation checks passed; no UI or administrative actions executed.\n";
 }

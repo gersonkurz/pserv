@@ -22,7 +22,8 @@
 ## Round two interaction follow-ups
 
 - Compact icon buttons remove text-button padding and center their glyphs. Windows toolbar commands now distinguish Bring to Front (window/arrow), Show (eye) and Hide (crossed-out eye).
-- The table uses a persistent native ContextFlyout instead of creating a temporary flyout during RightTapped. Right-button press selects/focuses an unselected row before menu opening, and preserves an existing multi-selection. Completed refresh snapshots wait while either action menu is open.
+- The initial table-level ContextFlyout/PointerPressed fix still produced an empty menu on an unselected row in the user's check. Each realized row container now owns its menu; Opening resolves its current item through ItemFromContainer and updates SelectedItems before constructing actions. It preserves an existing multi-selection and avoids capturing stale rows in recycled containers. Completed refresh snapshots wait while either action menu is open.
+- Pause/resume is now one persisted application-wide preference. Manual-only views leave that preference intact; switching Services → Windows → Processes cannot resume a paused application. Migration preserves explicit legacy pauses from capable views, ignoring manual-only views' old false values. Headless navigation checks cover pause/resume through manual-only views and restoring a saved pause.
 - These follow-ups require a later visual check: right-click an unselected row, right-click within a multi-selection, and keep a menu open across a refresh interval. The application remains closed at the user's request.
 
 ## Earlier UI changes

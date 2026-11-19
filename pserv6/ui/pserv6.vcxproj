@@ -259,5 +259,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="keyboard_shortcuts.h" />
+    <ClInclude Include="refresh_preference.h" />
   </ItemGroup>
 </Project>

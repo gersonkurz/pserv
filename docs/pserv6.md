@@ -33,7 +33,7 @@ The navigation pane offers Services, Devices (driver services), Processes, Windo
 - Properties opens with its icon, double-click or Enter. Editable properties use controller metadata; Close discards edits and Apply changes submits changed fields. Read-only providers have no Apply button.
 - Delete invokes an available Delete/Terminate Process action when the table has focus, using the normal confirmation flow. It does not delete objects while editing text or with a dialog open.
 - Disabled services are grey. Running services use the Windows accent or Base16 green. Disabled state takes precedence over running.
-- F5/Refresh reads a snapshot. The refresh toggle pauses/resumes live updates; Ctrl+R toggles it. View → Refresh interval offers 1, 2, 5, 10, 30 or 60 seconds. Windows, Modules and Scheduled tasks use manual refresh by controller policy.
+- F5/Refresh reads a snapshot. The refresh toggle pauses/resumes automatic updates globally; Ctrl+R toggles it. Switching views preserves that preference. View → Refresh interval offers 1, 2, 5, 10, 30 or 60 seconds. Windows, Modules and Scheduled tasks use manual refresh by controller policy; their disabled toggle does not change the global preference.
 - Refresh preserves row identity, selection and scroll position for surviving rows. The footer separates the last refresh time from elapsed snapshot time. Counts of highlighted/disabled items describe the complete provider, independently of search.
 - Both scrollbars belong to the list; the vertical bar stays at the viewport edge. Narrow tables align left.
 
@@ -45,7 +45,7 @@ Themes → Dark themes / Light themes includes all **20 original bundled Base16 
 
 View → Font opens the native Windows font dialog, including proportional fonts and a sample preview. Apply previews the font throughout the application; OK saves it, Cancel restores the previous appearance. Font family, size, weight and italic style apply to text; icon glyphs retain their icon font. The OS title bar and native system dialogs use Windows appearance settings.
 
-Ctrl+mousewheel or Ctrl+plus/minus scales the whole interface (8–32 base font-size range); Ctrl+Shift+0 or Reset zoom restores the default size. The plus/minus shortcuts also support the numeric keypad and leave text-field editing alone. Theme, font, zoom, window placement, active view, refresh interval and each view's search/sort/column layout/live preference persist in `%LOCALAPPDATA%/pserv6/appearance.toml`.
+Ctrl+mousewheel or Ctrl+plus/minus scales the whole interface (8–32 base font-size range); Ctrl+Shift+0 or Reset zoom restores the default size. The plus/minus shortcuts also support the numeric keypad and leave text-field editing alone. Theme, font, zoom, window placement, active view, global automatic-refresh preference/interval and each view's search/sort/column layout persist in `%LOCALAPPDATA%/pserv6/appearance.toml`. When migrating older per-view refresh settings, an explicit pause in any automatic-refresh-capable view becomes a global pause.
 
 ## Permissions and remote computers
 

@@ -128,18 +128,11 @@ namespace winrt::pserv6::implementation
                 if (auto self = weak.get())
                 {
                     auto point = e.GetCurrentPoint(self->Rows());
-                    bool rightClick = point.Properties().IsRightButtonPressed();
-                    if (!rightClick && (!point.Properties().IsLeftButtonPressed() ||
-                        (GetKeyState(VK_CONTROL) & 0x8000) || (GetKeyState(VK_SHIFT) & 0x8000))) return;
+                    if (!point.Properties().IsLeftButtonPressed() ||
+                        (GetKeyState(VK_CONTROL) & 0x8000) || (GetKeyState(VK_SHIFT) & 0x8000)) return;
                     auto node = e.OriginalSource().try_as<DependencyObject>();
                     while (node && !node.try_as<ListViewItem>()) node = Media::VisualTreeHelper::GetParent(node);
-                    if (auto item = node.try_as<ListViewItem>())
-                    {
-                        // Finish selection/focus before the native context gesture opens its flyout.
-                        // Right-clicking an existing selection must retain the whole selection.
-                        if (!rightClick || !item.IsSelected()) self->Rows().SelectedItem(item.Content());
-                        if (rightClick) item.Focus(FocusState::Pointer);
-                    }
+                    if (auto item = node.try_as<ListViewItem>()) self->Rows().SelectedItem(item.Content());
                 }
             }}), true);
         AppWindow().Resize({1360, 860});
@@ -322,8 +315,12 @@ namespace winrt::pserv6::implementation
         Automation::AutomationProperties::SetName(SearchBox(), SearchBox().PlaceholderText());
         Title(std::wstring(L"pserv6 — ") + provider.title + (m_machineName.empty() ? L"" : L" — " + std::wstring(Wide(m_machineName))));
         AutoRefresh().IsEnabled(m_controller->SupportsAutoRefresh());
-        AutoRefresh().IsOn(m_controller->SupportsAutoRefresh() && saved.live);
+        m_refreshPreference.SupportsRefresh(m_controller->SupportsAutoRefresh());
+        AutoRefresh().IsOn(m_refreshPreference.IsOn());
         AutoRefresh().OffContent(box_value(m_controller->SupportsAutoRefresh() ? L"Paused" : L"Manual refresh"));
+        ToolTipService::SetToolTip(AutoRefresh(), box_value(m_controller->SupportsAutoRefresh()
+            ? L"Pause or resume automatic refresh across all supported views (Ctrl+R)."
+            : L"This view supports manual refresh only (F5). Your global automatic-refresh preference is preserved."));
         AddVariableButton().Visibility(provider.supportsAddVariable ? Visibility::Visible : Visibility::Collapsed);
         PrimaryActions().Children().Clear();
         for (auto const& name : provider.toolbarActions)
@@ -375,7 +372,7 @@ namespace winrt::pserv6::implementation
     {
         if (m_closed) return;
         // Keep menu targets and their available actions stable until the menu closes.
-        bool actionsMenuOpen = RowActionsMenu().IsOpen() || ActionsMenu().IsOpen();
+        bool actionsMenuOpen = (m_rowActionsMenu && m_rowActionsMenu.IsOpen()) || ActionsMenu().IsOpen();
         if (m_refresh && !m_dialogOpen && !actionsMenuOpen && !ActionBusy() && m_refresh->GetStatus() != pserv::AsyncStatus::Running)
         {
             m_refresh->Wait();
@@ -485,6 +482,32 @@ namespace winrt::pserv6::implementation
     void MainWindow::RowContentChanging(ListViewBase const&, ContainerContentChangingEventArgs const& args)
     {
         if (args.InRecycleQueue()) return;
+        auto container = args.ItemContainer();
+        if (!container.ContextFlyout())
+        {
+            MenuFlyout menu;
+            menu.Opening([weak = get_weak(), target = make_weak(container)](auto const& sender, auto const&)
+            {
+                auto self = weak.get();
+                auto item = target.get();
+                if (!self || !item || self->m_closed) return;
+                auto menu = sender.template as<MenuFlyout>();
+                self->m_rowActionsMenu = menu;
+                // Resolve the current item at opening: containers are recycled, and
+                // right-click need not have updated ListView.SelectedItems yet.
+                auto row = self->Rows().ItemFromContainer(item).template try_as<pserv6::DataRow>();
+                if (!row) { menu.Items().Clear(); return; }
+                uint32_t selectedIndex;
+                auto selected = self->Rows().SelectedItems();
+                if (!selected.IndexOf(row, selectedIndex))
+                {
+                    selected.Clear();
+                    selected.Append(row);
+                }
+                self->FillActions(menu);
+            });
+            container.ContextFlyout(menu);
+        }
         auto row = args.Item().try_as<pserv6::DataRow>();
         auto grid = args.ItemContainer().ContentTemplateRoot().try_as<Grid>();
         if (row && grid) { RenderRow(grid, row); args.Handled(true); }
@@ -942,6 +965,10 @@ namespace winrt::pserv6::implementation
     void MainWindow::ActionClicked(IInspectable const& sender, RoutedEventArgs const&) { ExecuteAction(Narrow(unbox_value<hstring>(sender.as<Button>().Tag()))); }
     void MainWindow::PropertiesClicked(IInspectable const&, RoutedEventArgs const&) { ShowProperties(); }
     void MainWindow::ActionsOpening(IInspectable const& sender, IInspectable const&) { FillActions(sender.as<MenuFlyout>()); }
+    void MainWindow::AutoRefreshToggled(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (m_loaded && !m_switching) m_refreshPreference.UserToggled(AutoRefresh().IsOn());
+    }
     void MainWindow::CancelClicked(IInspectable const&, RoutedEventArgs const&)
     {
         if (m_dispatch && m_dispatch->m_pAsyncOp) m_dispatch->m_pAsyncOp->RequestCancel();

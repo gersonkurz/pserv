@@ -5,6 +5,7 @@
 #include <core/data_action_dispatch_context.h>
 #include <core/async_operation.h>
 #include <theme/base16_theme.h>
+#include "refresh_preference.h"
 
 namespace winrt::pserv6::implementation
 {
@@ -24,6 +25,7 @@ namespace winrt::pserv6::implementation
         void ActionClicked(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void PropertiesClicked(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void ActionsOpening(Windows::Foundation::IInspectable const&, Windows::Foundation::IInspectable const&);
+        void AutoRefreshToggled(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void CancelClicked(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void RowsDoubleTapped(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const&);
         void RowsKeyDown(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
@@ -34,6 +36,8 @@ namespace winrt::pserv6::implementation
         std::unique_ptr<pserv::AsyncOperation> m_refresh;
         std::unique_ptr<pserv::DataActionDispatchContext> m_dispatch;
         Microsoft::UI::Dispatching::DispatcherQueueTimer m_timer{nullptr};
+        Microsoft::UI::Xaml::Controls::MenuFlyout m_rowActionsMenu{nullptr};
+        pserv::winui::RefreshPreference m_refreshPreference;
         std::vector<pserv6::DataRow> m_allRows;
         std::vector<pserv6::DataRow> m_visibleRows;
         Windows::Foundation::Collections::IObservableVector<Windows::Foundation::IInspectable> m_items{nullptr};
@@ -77,7 +81,6 @@ namespace winrt::pserv6::implementation
             hstring filter;
             int sortColumn{0};
             bool ascending{true};
-            bool live{true};
             std::vector<int> columns;
         };
         std::unordered_map<int, ViewSettings> m_viewSettings;

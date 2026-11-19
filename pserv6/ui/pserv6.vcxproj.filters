@@ -23,6 +23,7 @@
     <ClInclude Include="DataCell.h" />
     <Midl Include="DataCell.idl" />
     <ClInclude Include="keyboard_shortcuts.h" />
+    <ClInclude Include="refresh_preference.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="pserv6.rc" />

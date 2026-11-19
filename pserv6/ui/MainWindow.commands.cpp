@@ -157,6 +157,8 @@ namespace winrt::pserv6::implementation
                 m_fontWeight = static_cast<uint16_t>(std::clamp(settings["font_weight"].value_or(400), 100, 900));
                 m_fontItalic = settings["font_italic"].value_or(false);
                 m_refreshInterval = std::clamp(settings["refresh_ms"].value_or(5000), 1000, 60000);
+                auto globalRefresh = settings["auto_refresh"].value<bool>();
+                m_refreshPreference.Enabled(globalRefresh.value_or(true));
                 m_startProvider = std::clamp(settings["active_view"].value_or(0), 0, static_cast<int>(pserv::winui::Providers().size()) - 1);
                 if (auto views = settings["views"].as_array())
                     for (auto const& node : *views)
@@ -168,7 +170,11 @@ namespace winrt::pserv6::implementation
                         view.filter = to_hstring(entry["filter"].value_or(std::string{}));
                         view.sortColumn = entry["sort"].value_or(0);
                         view.ascending = entry["ascending"].value_or(true);
-                        view.live = entry["live"].value_or(true);
+                        // Preserve an explicit pause when migrating old per-view settings.
+                        // Manual-only views used to save live=false; those are not pauses.
+                        if (!globalRefresh && !entry["live"].value_or(true) &&
+                            pserv::winui::Providers().at(index).create()->SupportsAutoRefresh())
+                            m_refreshPreference.Enabled(false);
                         if (auto widths = entry["widths"].as_array())
                             for (auto const& width : *widths) view.widths.push_back(std::clamp(width.value_or(180.0), 60.0, 900.0));
                         if (auto columns = entry["columns"].as_array())
@@ -196,7 +202,8 @@ namespace winrt::pserv6::implementation
         {
             SaveCurrentView();
             toml::table settings{{"theme", m_themeName}, {"font", pserv::utils::WideToUtf8(m_fontFamily)},
-                {"font_size", m_fontSize}, {"font_weight", m_fontWeight}, {"font_italic", m_fontItalic}, {"refresh_ms", m_refreshInterval}, {"active_view", std::max(0, m_activeProvider)}};
+                {"font_size", m_fontSize}, {"font_weight", m_fontWeight}, {"font_italic", m_fontItalic}, {"refresh_ms", m_refreshInterval},
+                {"auto_refresh", m_refreshPreference.Enabled()}, {"active_view", std::max(0, m_activeProvider)}};
             toml::array views;
             for (auto const& [id, view] : m_viewSettings)
             {
@@ -204,7 +211,7 @@ namespace winrt::pserv6::implementation
                 for (auto width : view.widths) widths.push_back(width);
                 for (auto column : view.columns) columns.push_back(column);
                 views.push_back(toml::table{{"id", id}, {"widths", std::move(widths)}, {"columns", std::move(columns)},
-                    {"sort", view.sortColumn}, {"ascending", view.ascending}, {"live", view.live}, {"filter", to_string(view.filter)}});
+                    {"sort", view.sortColumn}, {"ascending", view.ascending}, {"filter", to_string(view.filter)}});
             }
             settings.insert("views", std::move(views));
             WINDOWPLACEMENT placement{sizeof(placement)};
@@ -362,7 +369,7 @@ namespace winrt::pserv6::implementation
     void MainWindow::SaveCurrentView()
     {
         if (m_activeProvider >= 0)
-            m_viewSettings[m_activeProvider] = {m_widths, SearchBox().Text(), m_sortColumn, m_ascending, AutoRefresh().IsOn(), m_columns};
+            m_viewSettings[m_activeProvider] = {m_widths, SearchBox().Text(), m_sortColumn, m_ascending, m_columns};
     }
 
     void MainWindow::UpdateCounts()
