@@ -128,10 +128,18 @@ namespace winrt::pserv6::implementation
                 if (auto self = weak.get())
                 {
                     auto point = e.GetCurrentPoint(self->Rows());
-                    if (!point.Properties().IsLeftButtonPressed() || (GetKeyState(VK_CONTROL) & 0x8000) || (GetKeyState(VK_SHIFT) & 0x8000)) return;
+                    bool rightClick = point.Properties().IsRightButtonPressed();
+                    if (!rightClick && (!point.Properties().IsLeftButtonPressed() ||
+                        (GetKeyState(VK_CONTROL) & 0x8000) || (GetKeyState(VK_SHIFT) & 0x8000))) return;
                     auto node = e.OriginalSource().try_as<DependencyObject>();
                     while (node && !node.try_as<ListViewItem>()) node = Media::VisualTreeHelper::GetParent(node);
-                    if (auto item = node.try_as<ListViewItem>()) self->Rows().SelectedItem(item.Content());
+                    if (auto item = node.try_as<ListViewItem>())
+                    {
+                        // Finish selection/focus before the native context gesture opens its flyout.
+                        // Right-clicking an existing selection must retain the whole selection.
+                        if (!rightClick || !item.IsSelected()) self->Rows().SelectedItem(item.Content());
+                        if (rightClick) item.Focus(FocusState::Pointer);
+                    }
                 }
             }}), true);
         AppWindow().Resize({1360, 860});
@@ -324,7 +332,11 @@ namespace winrt::pserv6::implementation
             auto glyph = name == "Start" || name == "Run Now" ? L"\uE768" :
                 name == "Stop" || name == "Terminate Process" ? L"\uE71A" :
                 name == "Restart" ? L"\uE777" : name == "Enable" ? L"\uE73E" :
-                name == "Disable" ? L"\uE711" : name == "Uninstall" ? L"\uE74D" : L"\uE8A7";
+                name == "Disable" ? L"\uE711" : name == "Uninstall" ? L"\uE74D" :
+                name == "Bring To Front" ? L"\uE8A7" : // OpenInNewWindow: window with arrow.
+                name == "Show" ? L"\uE890" : // View: eye.
+                name == "Hide" ? L"\uED1A" : // Hide: crossed-out eye.
+                L"\uE8A7";
             SetButtonContent(button, Wide(name), glyph);
             button.Tag(box_value(Wide(name)));
             button.Click({this, &MainWindow::ActionClicked});
@@ -362,7 +374,9 @@ namespace winrt::pserv6::implementation
     void MainWindow::Tick()
     {
         if (m_closed) return;
-        if (m_refresh && !m_dialogOpen && !ActionBusy() && m_refresh->GetStatus() != pserv::AsyncStatus::Running)
+        // Keep menu targets and their available actions stable until the menu closes.
+        bool actionsMenuOpen = RowActionsMenu().IsOpen() || ActionsMenu().IsOpen();
+        if (m_refresh && !m_dialogOpen && !actionsMenuOpen && !ActionBusy() && m_refresh->GetStatus() != pserv::AsyncStatus::Running)
         {
             m_refresh->Wait();
             bool discarded = std::exchange(m_discardRefresh, false) || m_refreshProvider != m_activeProvider;
@@ -405,7 +419,7 @@ namespace winrt::pserv6::implementation
                 else Refresh();
             }
         }
-        if (!Busy() && !m_dialogOpen && AutoRefresh().IsOn() && m_controller && m_controller->SupportsAutoRefresh() &&
+        if (!Busy() && !m_dialogOpen && !actionsMenuOpen && AutoRefresh().IsOn() && m_controller && m_controller->SupportsAutoRefresh() &&
             std::chrono::steady_clock::now() - m_lastRefresh >= std::chrono::milliseconds(m_refreshInterval)) Refresh();
     }
 
@@ -927,22 +941,12 @@ namespace winrt::pserv6::implementation
     }
     void MainWindow::ActionClicked(IInspectable const& sender, RoutedEventArgs const&) { ExecuteAction(Narrow(unbox_value<hstring>(sender.as<Button>().Tag()))); }
     void MainWindow::PropertiesClicked(IInspectable const&, RoutedEventArgs const&) { ShowProperties(); }
-    void MainWindow::ActionsOpening(IInspectable const&, IInspectable const&) { FillActions(ActionsMenu()); }
+    void MainWindow::ActionsOpening(IInspectable const& sender, IInspectable const&) { FillActions(sender.as<MenuFlyout>()); }
     void MainWindow::CancelClicked(IInspectable const&, RoutedEventArgs const&)
     {
         if (m_dispatch && m_dispatch->m_pAsyncOp) m_dispatch->m_pAsyncOp->RequestCancel();
     }
     void MainWindow::RowsDoubleTapped(IInspectable const&, Input::DoubleTappedRoutedEventArgs const&) { ShowProperties(); }
-    void MainWindow::RowsRightTapped(IInspectable const&, Input::RightTappedRoutedEventArgs const& e)
-    {
-        auto node = e.OriginalSource().try_as<DependencyObject>();
-        while (node && !node.try_as<ListViewItem>()) node = Media::VisualTreeHelper::GetParent(node);
-        if (auto item = node.try_as<ListViewItem>(); item && !item.IsSelected()) Rows().SelectedItem(item.Content());
-        MenuFlyout menu;
-        FillActions(menu);
-        if (menu.Items().Size()) menu.ShowAt(Rows(), e.GetPosition(Rows()));
-        e.Handled(true);
-    }
     void MainWindow::RowsKeyDown(IInspectable const&, Input::KeyRoutedEventArgs const& e)
     {
         if (e.Key() == Windows::System::VirtualKey::Enter) { ShowProperties(); e.Handled(true); }

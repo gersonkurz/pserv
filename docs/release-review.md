@@ -19,6 +19,12 @@
 - Release GUI and CLI builds passed for ARM64, x64 and x86; ARM64 Debug also passed. All six native regression checks passed. The exporter link check first failed against the library with the old static registrars, then passed after explicit registration was introduced.
 - Application launch and GUI interaction are deliberately deferred at the user's request while Claude tests another variant. These new shortcuts and action visibility changes still need a later GUI smoke check. No runtime payload trimming or installer replacement is included in this continuation.
 
+## Round two interaction follow-ups
+
+- Compact icon buttons remove text-button padding and center their glyphs. Windows toolbar commands now distinguish Bring to Front (window/arrow), Show (eye) and Hide (crossed-out eye).
+- The table uses a persistent native ContextFlyout instead of creating a temporary flyout during RightTapped. Right-button press selects/focuses an unselected row before menu opening, and preserves an existing multi-selection. Completed refresh snapshots wait while either action menu is open.
+- These follow-ups require a later visual check: right-click an unselected row, right-click within a multi-selection, and keep a menu open across a refresh interval. The application remains closed at the user's request.
+
 ## Earlier UI changes
 
 - Restored the original application icon and all 20 Base16 palette files. Themes now use a menu grouped by dark/light classification.

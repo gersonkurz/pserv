@@ -89,7 +89,10 @@
                                       Loaded="RowsLoaded" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                       ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.VerticalScrollMode="Enabled"
                                       SelectionChanged="SelectionChanged" ContainerContentChanging="RowContentChanging"
-                                      DoubleTapped="RowsDoubleTapped" RightTapped="RowsRightTapped" KeyDown="RowsKeyDown">
+                                      DoubleTapped="RowsDoubleTapped" KeyDown="RowsKeyDown">
+                                <ListView.ContextFlyout>
+                                    <MenuFlyout x:Name="RowActionsMenu" Opening="ActionsOpening"/>
+                                </ListView.ContextFlyout>
                                 <ListView.Resources>
                                     <!-- Reserve space for both bars instead of overlaying or hiding them. -->
                                     <Style TargetType="ScrollViewer" BasedOn="{StaticResource DefaultScrollViewerStyle}">
