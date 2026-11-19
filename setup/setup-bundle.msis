@@ -24,7 +24,6 @@
 
   <!-- Combine the per-arch MSIs; filenames match each per-arch BUILD_TARGET. -->
   <bundle>
-    <prerequisite type="vcredist" version="2026"/>
     <msi source_64bit="pserv{{PRODUCT_VERSION}} x64.msi"
          source_32bit="pserv{{PRODUCT_VERSION}} x86.msi"
          source_arm64="pserv{{PRODUCT_VERSION}} ARM64.msi"/>

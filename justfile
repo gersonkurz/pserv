@@ -28,7 +28,7 @@ _require-devshell:
 [private]
 _msbuild configuration platform: _require-devshell
     @if not exist pserv6\packages\Microsoft.WindowsAppSDK.1.8.260317003 nuget restore pserv6\packages.config -PackagesDirectory pserv6\packages -Source %USERPROFILE%\.nuget\packages
-    msbuild {{solution}} /p:Configuration={{configuration}} /p:Platform={{platform}} /m /nologo /v:minimal
+    msbuild {{solution}} /p:Configuration={{configuration}} /p:Platform={{platform}} /m:2 /nr:false /nologo /v:minimal
 
 # Build Debug (native arch) — both pserv6.exe and pservc.exe
 build: (_msbuild "Debug" platform)
