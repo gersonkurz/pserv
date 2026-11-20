@@ -57,7 +57,7 @@
                 <Grid RowDefinitions="Auto,*">
                     <!-- Left-aligned like the rows (a fixed-width element would otherwise be centred) -->
                     <Grid x:Name="HeaderGrid" Height="30" HorizontalAlignment="Left" />
-                    <ListView Grid.Row="1" x:Name="RowList" SelectionMode="Extended" IsItemClickEnabled="False"
+                    <ListView Grid.Row="1" x:Name="RowList" HorizontalAlignment="Left" SelectionMode="Extended" IsItemClickEnabled="False"
                               ContainerContentChanging="OnContainerContentChanging"
                               ContextRequested="OnRowContextRequested" DoubleTapped="OnRowDoubleTapped">
                         <ListView.ItemContainerStyle>
