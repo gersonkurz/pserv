@@ -145,6 +145,15 @@ namespace pserv6
     {
         if (m_index >= m_views.size())
         {
+            // Second pass: switch back to every (now loaded) view. This is the plan's "view
+            // switch" budget; the first visit above also contains the first enumeration.
+            if (!m_bRevisiting && m_results.size() > 1)
+            {
+                m_bRevisiting = true;
+                m_revisitIndex = 0;
+                NextRevisit();
+                return;
+            }
             Finish();
             return;
         }
@@ -163,6 +172,34 @@ namespace pserv6
         }
     }
 
+    void SelfTest::NextRevisit()
+    {
+        while (m_revisitIndex < m_results.size() && !m_results[m_revisitIndex].error.empty())
+            ++m_revisitIndex;
+        if (m_revisitIndex >= m_results.size())
+        {
+            std::string text, over;
+            for (const auto &r : m_results)
+            {
+                if (r.revisitMs < 0)
+                    continue;
+                text += std::format(" {} {:.0f}ms,", r.name, r.revisitMs);
+                if (r.rows <= 2000 && r.revisitMs > 150)
+                    over += " " + r.name;
+            }
+            if (!text.empty())
+                text.pop_back();
+            Line(std::format("switching back to a loaded view (select -> second rendered frame):{}", text));
+            Line(std::format("view-switch budget (150 ms, views up to 2,000 rows): {}", over.empty() ? "within" : "over:" + over));
+            Finish();
+            return;
+        }
+        m_stage = Stage::Revisit;
+        m_frameCountdown = 2;
+        m_switchAt = Clock::now();
+        m_window.SelectView(m_results[m_revisitIndex].name);
+    }
+
     void SelfTest::OnPublished(double uiMs)
     {
         const auto now = Clock::now();
@@ -170,11 +207,13 @@ namespace pserv6
         {
             m_current.switchToPublishMs = Ms(now - m_switchAt);
             m_current.firstPublishUiMs = uiMs;
+            m_frameCountdown = 2;
             m_stage = Stage::WaitFrame;
         }
         else if (m_stage == Stage::Measure)
         {
             m_current.publishUiMs.push_back(uiMs);
+            m_current.publishAtMs.push_back(Ms(now - m_measureStart));
         }
     }
 
@@ -183,11 +222,22 @@ namespace pserv6
         const auto now = Clock::now();
         switch (m_stage)
         {
+        case Stage::Revisit:
+            if (--m_frameCountdown > 0)
+                break;
+            m_results[m_revisitIndex].revisitMs = Ms(now - m_switchAt);
+            ++m_revisitIndex;
+            m_stage = Stage::Idle;
+            m_window.DispatcherQueue().TryEnqueue(winrt::Microsoft::UI::Dispatching::DispatcherQueuePriority::Low, [this] { NextRevisit(); });
+            break;
         case Stage::WaitFrame:
+            if (--m_frameCountdown > 0)
+                break; // the first Rendering after the publish may precede its layout pass
             m_current.switchToFrameMs = Ms(now - m_switchAt);
             m_timeout.Stop();
             m_stage = Stage::Measure;
             m_lastFrame = now;
+            m_measureStart = now;
             m_measureEnd = now + std::chrono::seconds(m_seconds);
             m_nextRefresh = now + std::chrono::seconds(2);
             m_scrollOffset = 0;
@@ -197,6 +247,7 @@ namespace pserv6
         case Stage::Measure:
         {
             m_current.frameMs.push_back(Ms(now - m_lastFrame));
+            m_current.frameAtMs.push_back(Ms(now - m_measureStart));
             m_lastFrame = now;
             // The window ends once the time is up *and* at least one refresh has been published, so
             // every view's refresh path is measured (Modules' enumeration alone takes ~2 s).
@@ -369,7 +420,7 @@ namespace pserv6
             if (m_current.switchToFrameMs < 0)
                 unmeasured.push_back("switch");
             else if (m_current.switchToFrameMs > 150)
-                over.push_back("switch>150ms");
+                over.push_back("first-visit>150ms");
             if (!bFramesMeasured)
                 unmeasured.push_back("frames");
             else
@@ -399,6 +450,19 @@ namespace pserv6
             m_current.name, m_current.rows, m_current.switchToPublishMs, m_current.switchToFrameMs, m_current.firstPublishUiMs, m_current.publishUiMs.size(),
             bPublishMeasured ? std::format("{:.2f}ms", maxPublish) : std::string{"-"}, m_current.frameMs.size(), p95, maxFrame, stats.refreshes, stats.resets,
             stats.refreshMs, stats.containers, stats.containerMs, budgets, m_current.error.empty() ? "" : " ERROR: " + m_current.error));
+        // Where the long frames are: each over 50 ms with its time, and whether a refresh was
+        // published during it (P) or it is one of the first frames after the switch.
+        std::string longFrames;
+        for (size_t i = 0; i < m_current.frameMs.size(); ++i)
+        {
+            if (m_current.frameMs[i] <= 50)
+                continue;
+            const double end = m_current.frameAtMs[i], begin = end - m_current.frameMs[i];
+            const bool bPublish = std::any_of(m_current.publishAtMs.begin(), m_current.publishAtMs.end(), [&](double at) { return at >= begin - 1 && at <= end + 1; });
+            longFrames += std::format(" {:.0f}ms@{:.0f}{}", m_current.frameMs[i], end, bPublish ? "P" : "");
+        }
+        if (!longFrames.empty())
+            Line(std::format("{:<22} frames over 50 ms (duration@end, P = a publish in it):{}", "", longFrames));
         m_results.push_back(std::move(m_current));
         m_stage = Stage::Idle;
         // Let the dispatcher breathe before the next switch (the grid checks go on themselves)

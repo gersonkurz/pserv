@@ -67,6 +67,8 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 
 16. **Phase 4 exit not yet met.** The section 7 budgets: frame max while scrolling is over 50 ms, and the first-visit switch is over 150 ms for slow enumerations. Still to do: the WPR investigations of long frames and view-switch latency, an elevated self-test run (the owner's), and the full keyboard-only checklist.
 
+    **Update (2026-11-19):** the long frames came from the ListView's off-screen cache (four viewports by default) being built in the frames after a view switch; with `CacheLength=1` two consecutive unelevated Release runs on ARM64 show no frame over 50 ms (max 30 ms, p95 about 9 ms; the self-test now lists every frame over 50 ms with its time). The self-test also measures switching back to a loaded view: 24-111 ms (budget 150 ms); a first visit additionally contains the first enumeration (Services about 150 ms, Scheduled Tasks about 300 ms, on the worker). A WPR trace was not needed. Still open: the elevated run (the owner's) and the keyboard-only checklist.
+
 17. **GUI manual and screenshot.** `docs/pserv6.md` is to be written (Phase 6). `docs/main.png`, still referenced by the README, shows pserv5.
 
     **Resolved (Phase 6, 2026-11-19):** `docs/pserv6.md` and `docs/pserv6.png` exist; the README links them; `docs/main.png` is removed.

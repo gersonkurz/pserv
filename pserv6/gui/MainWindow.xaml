@@ -71,7 +71,7 @@
                         <ListView.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <!-- The grid restores the scroll offset itself after a reset; item anchoring would move it again -->
-                                <ItemsStackPanel ItemsUpdatingScrollMode="KeepScrollOffset" />
+                                <ItemsStackPanel ItemsUpdatingScrollMode="KeepScrollOffset" CacheLength="1" />
                             </ItemsPanelTemplate>
                         </ListView.ItemsPanel>
                         <ListView.ItemTemplate>

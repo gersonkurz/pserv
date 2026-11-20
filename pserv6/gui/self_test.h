@@ -38,14 +38,18 @@ namespace pserv6
             size_t rows{0};
             double switchToPublishMs{-1};
             double switchToFrameMs{-1};
+            double revisitMs{-1};            ///< Switching back to the loaded view: select -> second rendered frame.
             double firstPublishUiMs{-1};    ///< The publish that populated the view.
             std::vector<double> publishUiMs; ///< Refresh publishes while measuring (at least one, or an error).
             std::vector<double> frameMs;
+            std::vector<double> frameAtMs;   ///< When each frame ended, in ms since the measuring began.
+            std::vector<double> publishAtMs; ///< When each refresh was published, on the same clock.
             std::string error;
         };
 
         void Start();
         void NextView();
+        void NextRevisit();
         void OnRendering();
         void EndMeasure();
         std::string RunGridChecks(pserv::DataController &controller);
@@ -59,6 +63,9 @@ namespace pserv6
         std::ofstream m_log;
         size_t m_index{0};
         bool m_bGridChecked{false};
+        bool m_bRevisiting{false};
+        size_t m_revisitIndex{0};
+        int m_frameCountdown{0}; ///< Rendering events to wait for: the second one follows a full layout pass.
         bool m_bGridCheckPending{false}; ///< The deferred grid checks run; NextView waits for them.
         std::string m_gridCheckError; ///< Set by the deferred part of RunGridChecks.
         std::vector<winrt::weak_ref<winrt::Microsoft::UI::Xaml::Controls::Grid>> m_discardedHeaderCells;
@@ -68,12 +75,14 @@ namespace pserv6
             WaitPublish,
             WaitFrame,
             Measure,
+            Revisit,
             Done
         } m_stage{Stage::Idle};
         std::chrono::steady_clock::time_point m_switchAt{}, m_lastFrame{}, m_measureEnd{}, m_nextRefresh{};
         double m_scrollOffset{0};
         double m_scrollDirection{1};
         ViewResult m_current;
+        std::chrono::steady_clock::time_point m_measureStart{};
         std::vector<ViewResult> m_results;
         winrt::event_token m_renderingToken{};
         winrt::Microsoft::UI::Xaml::Controls::ScrollViewer m_scroller{nullptr};
