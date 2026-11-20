@@ -120,9 +120,30 @@ The owner's verdict: Gemini's version (`pserv6-gemini`) is the best so far in UI
 29. **Status bar**: visible / total / selected / highlighted / disabled counts, auto-refresh state ("every 2 s", "off", "manual view"), time and duration of the last refresh. Today there is one text line.
 30. **Table polish from Gemini**: alternating row background, right-aligned numeric columns, sort chevron glyph in the header, always-visible non-overlay scrollbars, `ShowsScrollingPlaceholders="False"`, empty `ItemContainerTransitions`, a fixed header that follows the list's horizontal offset (pserv6 scrolls header and list together inside one horizontal `ScrollViewer`, which gives the list an unbounded width - verify that row virtualization still measures only visible rows), live column resize by writing the realized rows' column widths.
 31. **Columns dialog**: show/hide and reorder columns, reset to defaults (both have it; pserv6 has drag-reorder and resize only, no hiding).
-32. **Context menu for several rows**: both others offer the intersection of the actions available for every selected row; pserv6's rule (`ShowContextMenu`) should be checked against that and made the same. Properties for several rows: pserv6 has an item picker, Gemini a `Pivot` tab per item (as pserv5 had) - ask the owner which.
+32. **Context menu for several rows**: both others offer the intersection of the actions available for every selected row; pserv6's rule (`ShowContextMenu`) should be checked against that and made the same. Properties for several rows: pserv6 has an item picker, Gemini a `Pivot` tab per item (as pserv5 had) - owner, 2026-11-19: "item picker is fine". Keep the picker.
 33. **Auto-refresh performance**: Gemini's refresh keeps containers and re-renders only realized rows, writing a cell only when its text or brush changed, and leaves the selection untouched unless the index set changed. pserv6 does incremental remove/insert up to 64 changes, else `ReplaceAll`. Measure both elevated on the same machine (Processes at 1 s) before changing anything; the owner's impression is the reference.
 34. **Design**: custom title bar (`ExtendsContentIntoTitleBar`) with app icon, version and a Local/Remote badge; filter placeholder "Filter <view>... (Ctrl+F)"; inline progress card with Cancel instead of a modal progress dialog for long actions.
 35. Then the open items above: 23 (Debug crash), 16, 18, 21, 22. Update `docs/pserv6.md` and the plan for whatever of 25-34 lands.
 
 Build note for the x64 machine: `git submodule update --init --recursive`, then `just build-all && just test`, `just selftest -RunAsInvoker`. All measurements so far are from an ARM64 Parallels VM; x64 numbers do not exist yet.
+
+## Notes for the next session (written 2026-11-19 on the ARM64 machine; that session's memory and transcript do not travel)
+
+Where things stand, in the owner's words: Gemini's version is "best bang-for-the-buck" and was finished first by far, but "not perfect"; Codex's finds more bugs but is a less polished experience; this branch is "not there yet". Each has pros and cons - take ideas from both, do not copy either wholesale. The other two trees are other agents' work: read-only (`git fetch`, then `git show origin/pserv6-gemini:<path>` / `origin/codex-branch:<path>`; their GUI sources are `pserv6/MainWindow.xaml.cpp` and `pserv6/ui/` respectively).
+
+Standing decisions of the owner:
+- Branch `pserv6-claude`; commit per step and push only when asked. `main` stays untouched.
+- Never install an MSI on a development machine (it upgrades the installed pserv5 away). Check MSIs with `just check-msi <arch>` only.
+- The yaaadabi review loop is off (too slow). Verify yourself: `just build-all && just test`, `just selftest -RunAsInvoker`, `scripts\selftest.ps1 -Actions`, and a screenshot for anything visual.
+- Phase 5's coverage gaps are accepted ("I will do a manual review anyway"); no x86; settings in `%APPDATA%\pserv6`.
+- `open-terminals.cmd` is the owner's local file: keep it out of commits.
+- Do not call the build feature-complete. It is not, and the owner said so.
+
+Things that cost time on the first machine:
+- Avoid UAC prompts when launching pserv6 from a script: set `__COMPAT_LAYER=RunAsInvoker` (the manifest asks for administrator). Anything that needs elevation (service Start/Stop, items 16 and 21) has never been run by an agent - say so instead of implying it.
+- The Debug GUI crashes after a few seconds (item 23, seen on ARM64 only so far - check whether x64 does too, that alone narrows it). Use Release for running and for every input or timing probe; Debug's UI thread is seconds slow anyway.
+- Probe artefacts that looked like app bugs: a UI Automation client in the same process stalls the app (run UIA from a child process); a clipboard owner that does not answer blocks Ctrl+C; keys sent while pserv6 is not the foreground window go elsewhere (check the foreground window first, click the title bar to activate).
+- Files copied with `Copy-Item` keep their old timestamps, and MSBuild then links stale objects (LNK2019). Touch copied sources.
+- Scripts that edit sources: backslashes in non-raw Python strings or heredocs silently became control characters several times (`\b`, `\v`, `\p`). Use the editor tool, or raw strings, and scan for control characters afterwards.
+- `KeyboardAccelerator` on the `ListView` does not fire; use `KeyDown`. A fixed-width element without `HorizontalAlignment="Left"` is centred. After a runtime theme change Mica must be re-attached. One `ContentDialog` at a time (`ActionRunner::ReserveDialog`).
+- A PCH out-of-memory error (C3859/C1076) on `just build-all` was memory pressure; a retry built.
