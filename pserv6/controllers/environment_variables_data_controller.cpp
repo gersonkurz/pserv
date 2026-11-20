@@ -108,22 +108,43 @@ namespace pserv
         {
             spdlog::info("Committing property edits for environment variable: {}", envVar->GetName());
 
-            // If name changed, we need to delete old and create new
-            if (m_editBuffer.name != envVar->GetName())
+            const std::string oldName = envVar->GetName();
+            // Variable names are case-insensitive: a change of case only is an update in place
+            const bool bRenamed = _stricmp(m_editBuffer.name.c_str(), oldName.c_str()) != 0;
+            if (m_editBuffer.name.empty())
             {
-                // Delete old variable
-                if (!EnvironmentVariableManager::DeleteEnvironmentVariable(envVar->GetName(), envVar->GetScope()))
+                spdlog::error("An environment variable needs a name");
+                m_editingObject = nullptr;
+                return false;
+            }
+            if (bRenamed)
+            {
+                // Never overwrite another variable of the same scope
+                for (const auto *other : m_objects)
                 {
-                    spdlog::error("Failed to delete old environment variable");
-                    m_editingObject = nullptr;
-                    return false;
+                    const auto *otherVar = static_cast<const EnvironmentVariableInfo *>(other);
+                    if (otherVar != envVar && otherVar->GetScope() == envVar->GetScope() && _stricmp(otherVar->GetName().c_str(), m_editBuffer.name.c_str()) == 0)
+                    {
+                        spdlog::error("Cannot rename '{}': a variable '{}' already exists", oldName, m_editBuffer.name);
+                        m_editingObject = nullptr;
+                        return false;
+                    }
                 }
             }
 
-            // Set the variable (either update existing or create renamed one)
+            // Write the new (or updated) variable first: if that fails, nothing has changed
             if (!EnvironmentVariableManager::SetEnvironmentVariable(m_editBuffer.name, m_editBuffer.value, envVar->GetScope()))
             {
                 spdlog::error("Failed to set environment variable");
+                m_editingObject = nullptr;
+                return false;
+            }
+
+            // Then remove the old name; if that fails, undo the new one so the rename is all or nothing
+            if (bRenamed && !EnvironmentVariableManager::DeleteEnvironmentVariable(oldName, envVar->GetScope()))
+            {
+                spdlog::error("Failed to delete the old environment variable '{}'; the rename is undone", oldName);
+                EnvironmentVariableManager::DeleteEnvironmentVariable(m_editBuffer.name, envVar->GetScope());
                 m_editingObject = nullptr;
                 return false;
             }

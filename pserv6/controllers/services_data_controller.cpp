@@ -118,17 +118,15 @@ namespace pserv
             return false;
         }
 
-        // Column indices based on constructor order:
-        // 0=DisplayName, 1=Name, 2=Status, 3=StartType, 4=ProcessId, 5=ServiceType, 6=BinaryPathName, 7=Description
-
-        switch (columnIndex)
+        // Column index == ServiceProperty (the column/property-id contract, checked by the tests)
+        switch (static_cast<ServiceProperty>(columnIndex))
         {
-        case 0: // DisplayName
+        case ServiceProperty::DisplayName:
             m_editBuffer.displayName = newValue;
             spdlog::debug("Set DisplayName = {}", newValue);
             return true;
 
-        case 3: // StartType
+        case ServiceProperty::StartType:
         {
             m_editBuffer.startType = newValue;
 
@@ -153,12 +151,12 @@ namespace pserv
             return true;
         }
 
-        case 6: // BinaryPathName
+        case ServiceProperty::BinaryPathName:
             m_editBuffer.binaryPathName = newValue;
             spdlog::debug("Set BinaryPathName = {}", newValue);
             return true;
 
-        case 7: // Description
+        case ServiceProperty::Description:
             m_editBuffer.description = newValue;
             spdlog::debug("Set Description = {}", newValue);
             return true;
@@ -183,12 +181,19 @@ namespace pserv
         {
             spdlog::info("Committing property edits for service: {}", service->GetName());
 
-            // Call ChangeServiceConfig with all accumulated changes
-            ServiceManager::ChangeServiceConfig(service->GetName(),
-                m_editBuffer.displayName,
-                m_editBuffer.description,
-                m_editBuffer.startTypeValue,
-                m_editBuffer.binaryPathName);
+            // Call ChangeServiceConfig with all accumulated changes, on the machine the service was
+            // enumerated from. Only a successful change is shown.
+            if (!ServiceManager::ChangeServiceConfig(service->GetName(),
+                    m_editBuffer.displayName,
+                    m_editBuffer.description,
+                    m_editBuffer.startTypeValue,
+                    m_editBuffer.binaryPathName,
+                    GetPublishedTarget()))
+            {
+                spdlog::error("Changing the configuration of service '{}' failed", service->GetName());
+                m_editingObject = nullptr;
+                return false;
+            }
 
             // Update local service object with new values
             service->SetDisplayName(m_editBuffer.displayName);
@@ -210,8 +215,7 @@ namespace pserv
 
     std::vector<std::string> ServicesDataController::GetComboOptions(int columnIndex) const
     {
-        // Column index 3 = StartType
-        if (columnIndex == 3)
+        if (static_cast<ServiceProperty>(columnIndex) == ServiceProperty::StartType)
         {
             return {"Automatic", "Manual", "Disabled", "Boot", "System"};
         }

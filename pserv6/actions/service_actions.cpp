@@ -23,6 +23,30 @@ namespace pserv
             return static_cast<const ServiceInfo *>(obj);
         }
 
+        // The machine the selected objects were enumerated from (empty = this machine). Every
+        // operation on a service must go to that machine, never to a same-named local service.
+        inline std::string TargetMachine(const DataActionDispatchContext &ctx)
+        {
+            return ctx.m_pController ? ctx.m_pController->GetPublishedTarget() : std::string{};
+        }
+
+        // For actions that open a local program or path
+        inline void RequireLocalMachine(const DataActionDispatchContext &ctx, std::string_view action)
+        {
+            if (!TargetMachine(ctx).empty())
+                throw std::runtime_error(std::format("'{}' is only available for services of this machine", action));
+        }
+
+        inline void OpenWithShell(const wchar_t *file, const wchar_t *directory, const std::string &what)
+        {
+            const HINSTANCE result = ShellExecuteW(nullptr, L"open", file, nullptr, directory, SW_SHOW);
+            if (reinterpret_cast<INT_PTR>(result) <= 32)
+            {
+                LogWin32Error("ShellExecuteW", "{}", what);
+                throw std::runtime_error(std::format("Could not open {}", what));
+            }
+        }
+
         // ============================================================================
         // Service Lifecycle Actions
         // ============================================================================
@@ -59,8 +83,10 @@ namespace pserv
                 ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
+                const std::string machine = TargetMachine(ctx);
+
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machine](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -79,7 +105,8 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machine);
                                 if (success)
                                     successCount++;
                             }
@@ -134,8 +161,10 @@ namespace pserv
                 ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
+                const std::string machine = TargetMachine(ctx);
+
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machine](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -154,7 +183,8 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machine);
                                 if (success)
                                     successCount++;
                             }
@@ -208,8 +238,10 @@ namespace pserv
                 ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
+                const std::string machine = TargetMachine(ctx);
+
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machine](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -228,7 +260,8 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machine);
                                 if (success)
                                     successCount++;
                             }
@@ -283,8 +316,10 @@ namespace pserv
                 ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
+                const std::string machine = TargetMachine(ctx);
+
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machine](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -303,7 +338,8 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machine);
                                 if (success)
                                     successCount++;
                             }
@@ -357,8 +393,10 @@ namespace pserv
                 ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
+                const std::string machine = TargetMachine(ctx);
+
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machine](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -377,7 +415,8 @@ namespace pserv
                                     {
                                         op->ReportProgress(baseProgress + progress * progressRange, message);
                                         return !op->IsCancelRequested();
-                                    });
+                                    },
+                                    machine);
                                 if (success)
                                     successCount++;
                             }
@@ -440,12 +479,15 @@ namespace pserv
 
                 DWORD dwStartupAction{m_dwStartupAction};
 
+                const std::string machine = TargetMachine(ctx);
+
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames, dwStartupAction](AsyncOperation *op) -> bool
+                    [serviceNames, dwStartupAction, machine](AsyncOperation *op) -> bool
                     {
                         try
                         {
                             size_t total = serviceNames.size();
+                            std::vector<std::string> failed;
                             for (size_t i = 0; i < total; ++i)
                             {
                                 const std::string &serviceName = serviceNames[i];
@@ -453,10 +495,24 @@ namespace pserv
 
                                 op->ReportProgress(progress, std::format("Setting startup type for '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                ServiceManager::ChangeServiceStartType(serviceName, dwStartupAction);
+                                if (!ServiceManager::ChangeServiceStartType(serviceName, dwStartupAction, machine))
+                                {
+                                    failed.push_back(serviceName);
+                                }
                             }
 
-                            op->ReportProgress(1.0f, std::format("Set startup type to Automatic for {} service(s)", total));
+                            if (!failed.empty())
+                            {
+                                // Returning false makes this the operation's error message (AsyncStatus::Failed).
+                                std::string names;
+                                for (const auto &name : failed)
+                                {
+                                    names += (names.empty() ? "" : ", ") + name;
+                                }
+                                op->ReportProgress(1.0f, std::format("Changed the startup type of {}/{} service(s); failed: {}", total - failed.size(), total, names));
+                                return false;
+                            }
+                            op->ReportProgress(1.0f, std::format("Changed the startup type of {} service(s)", total));
                             return true;
                         }
                         catch (const std::exception &e)
@@ -512,8 +568,11 @@ namespace pserv
                 return true;
             }
 
+            bool RequiresLocalMachine() const override { return true; }
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                RequireLocalMachine(ctx, GetName());
                 std::string serviceName = GetServiceInfo(ctx.m_selectedObjects[0])->GetName();
                 std::string regPath = std::format("SYSTEM\\CurrentControlSet\\Services\\{}", serviceName);
 
@@ -536,11 +595,7 @@ namespace pserv
                 }
 
                 spdlog::info("Opening registry editor for: {}", serviceName);
-                HINSTANCE result = ShellExecuteW(NULL, L"open", L"regedit.exe", NULL, NULL, SW_SHOW);
-                if (reinterpret_cast<INT_PTR>(result) <= 32)
-                {
-                    LogWin32Error("ShellExecuteW", "opening regedit.exe");
-                }
+                OpenWithShell(L"regedit.exe", nullptr, "the Registry Editor");
             }
         };
 
@@ -557,23 +612,16 @@ namespace pserv
                 return true;
             }
 
+            bool RequiresLocalMachine() const override { return true; }
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
-                std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
-                if (!installLocation.empty())
-                {
-                    spdlog::info("Opening explorer: {}", installLocation);
-                    std::wstring wInstallLocation = utils::Utf8ToWide(installLocation);
-                    HINSTANCE result = ShellExecuteW(NULL, L"open", wInstallLocation.c_str(), NULL, NULL, SW_SHOW);
-                    if (reinterpret_cast<INT_PTR>(result) <= 32)
-                    {
-                        LogWin32Error("ShellExecuteW", "opening install location '{}'", installLocation);
-                    }
-                }
-                else
-                {
-                    spdlog::warn("No install location available for this service");
-                }
+                RequireLocalMachine(ctx, GetName());
+                const std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
+                if (installLocation.empty())
+                    throw std::runtime_error("This service has no binary path");
+                spdlog::info("Opening explorer: {}", installLocation);
+                OpenWithShell(utils::Utf8ToWide(installLocation).c_str(), nullptr, std::format("the folder '{}'", installLocation));
             }
         };
 
@@ -590,23 +638,16 @@ namespace pserv
                 return true;
             }
 
+            bool RequiresLocalMachine() const override { return true; }
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
-                std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
-                if (!installLocation.empty())
-                {
-                    spdlog::info("Opening terminal in: {}", installLocation);
-                    std::wstring wInstallLocation = utils::Utf8ToWide(installLocation);
-                    HINSTANCE result = ShellExecuteW(NULL, L"open", L"cmd.exe", NULL, wInstallLocation.c_str(), SW_SHOW);
-                    if (reinterpret_cast<INT_PTR>(result) <= 32)
-                    {
-                        LogWin32Error("ShellExecuteW", "opening terminal in '{}'", installLocation);
-                    }
-                }
-                else
-                {
-                    spdlog::warn("No install location available for this service");
-                }
+                RequireLocalMachine(ctx, GetName());
+                const std::string installLocation = GetServiceInfo(ctx.m_selectedObjects[0])->GetInstallLocation();
+                if (installLocation.empty())
+                    throw std::runtime_error("This service has no binary path");
+                spdlog::info("Opening terminal in: {}", installLocation);
+                OpenWithShell(L"cmd.exe", utils::Utf8ToWide(installLocation).c_str(), std::format("a terminal in '{}'", installLocation));
             }
         };
 
@@ -679,8 +720,10 @@ namespace pserv
                 ctx.m_pAsyncOp = DBG_NEW AsyncOperation();
                 ctx.m_bShowProgressDialog = true;
 
+                const std::string machine = TargetMachine(ctx);
+
                 ctx.m_pAsyncOp->Start(ctx.m_hWnd,
-                    [serviceNames](AsyncOperation *op) -> bool
+                    [serviceNames, machine](AsyncOperation *op) -> bool
                     {
                         try
                         {
@@ -693,7 +736,7 @@ namespace pserv
 
                                 op->ReportProgress(progress, std::format("Deleting service '{}'... ({}/{})", serviceName, i + 1, total));
 
-                                if (!ServiceManager::DeleteService(serviceName))
+                                if (!ServiceManager::DeleteService(serviceName, machine))
                                 {
                                     failed.push_back(serviceName);
                                 }
@@ -772,8 +815,11 @@ namespace pserv
                 return confirmMsg;
             }
 
+            bool RequiresLocalMachine() const override { return true; }
+
             void Execute(DataActionDispatchContext &ctx) const override
             {
+                RequireLocalMachine(ctx, GetName());
                 std::vector<std::string> serviceNames;
                 for (const auto *svc : ctx.m_selectedObjects)
                 {

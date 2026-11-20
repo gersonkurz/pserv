@@ -26,7 +26,8 @@ Rows are coloured by state: running or active items use the Windows accent colou
 
 Windows services with status, start type and configuration.
 - Start, Stop, Restart, Pause, Resume
-- Edit start type and other properties in the Properties dialog
+- Set Startup: Automatic / Manual / Disabled
+- Edit display name, start type, binary path and description in the Properties dialog
 - Open in Registry Editor, Open in Explorer, Open Terminal Here
 - Uninstall Service, Delete Registry Key
 - Can show the services of a [remote machine](#remote-machine-access)
@@ -139,7 +140,7 @@ The item's actions are available as buttons below the fields. They are disabled 
 
 **File > Connect to Remote Machine...** shows the Services and Devices of another computer. Enter its name or IP address; pserv6 tests the connection before switching. While connected, the other views are unavailable and the window title shows the machine. **File > Connect to Local Machine** returns to this computer. The last machine is remembered.
 
-Remote rows are currently **read-only**: Properties, the Copy actions and the Export actions are available; starting, stopping or editing remote services is not.
+Actions and edits apply to the machine the rows come from: Start, Stop, Restart, Pause, Resume, the startup type, Uninstall Service and edits in the Properties dialog work on the remote machine's services. Actions that need this computer — Open in Registry Editor, Open in Explorer, Open Terminal Here and Delete Registry Key — are not offered for remote rows.
 
 Requirements: administrative rights on the target, and network access to its service control manager.
 

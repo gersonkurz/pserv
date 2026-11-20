@@ -378,9 +378,9 @@ and its performance is assumed to match ARM64 (owner, 2026-11-18; R4).
   - **Changed:** tabs → navigation pane (WinUI); themes: Base16 → Light/Dark/Windows (D11);
     Ctrl+wheel zoom now scales the table only, not the whole UI; settings file is
     `%APPDATA%\pserv6\config.toml`.
-  - **Changed, restricted:** remote Services/Devices are read-only until the core's service
-    mutations carry the target machine (TODO 19); pserv5 offered them but they acted on the
-    local machine.
+  - **Changed:** actions and edits on remote Services/Devices now go to the remote machine
+    (pserv5 ran them against the same-named local service, TODO 19); actions that need this
+    computer are not offered for remote rows.
   - **Not in pserv6:** "Export to CSV" (the pserv5 manual listed it; pserv5 had no CSV exporter
     either — JSON and plain text only). Needs the owner's word only if CSV is wanted.
 

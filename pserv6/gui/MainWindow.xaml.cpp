@@ -472,8 +472,8 @@ namespace winrt::pserv6::implementation
             }
             if (!pAction->IsAvailableFor(pObject))
                 continue;
-            // A remote machine's objects: only what reads them (mutations would hit this machine)
-            if (IsRemote(pController) && !::pserv6::ActionRunner::IsReadOnlyAction(pAction))
+            // A remote machine's objects: nothing that needs this machine (Explorer, Registry Editor, ...)
+            if (IsRemote(pController) && pAction->RequiresLocalMachine())
                 continue;
             MenuFlyoutItem item;
             std::string label = pAction->GetName();

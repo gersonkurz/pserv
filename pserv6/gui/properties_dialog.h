@@ -12,8 +12,9 @@ namespace pserv6
     class PropertiesDialog final : public std::enable_shared_from_this<PropertiesDialog>
     {
     public:
-        /// @param bReadOnly No editors and no action buttons (a remote machine's objects).
-        PropertiesDialog(pserv::DataController *pController, const std::vector<pserv::DataObject *> &objects, bool bReadOnly = false);
+        /// @param bRemote The objects belong to another machine: no buttons for actions that need
+        ///        this machine (edits go to the objects' machine through the controller).
+        PropertiesDialog(pserv::DataController *pController, const std::vector<pserv::DataObject *> &objects, bool bRemote = false);
 
         std::string Title() const;
 
@@ -41,7 +42,7 @@ namespace pserv6
         pserv::DataController *m_pController;
         RetainedSelection m_objects;
         size_t m_current{0};
-        bool m_bReadOnly{false};
+        bool m_bRemote{false};
         std::map<size_t, std::map<int, std::string>> m_edits; ///< object index -> column -> new value
         const pserv::DataAction *m_pRequestedAction{nullptr};
         winrt::weak_ref<winrt::Microsoft::UI::Xaml::Controls::ContentDialog> m_dialog;

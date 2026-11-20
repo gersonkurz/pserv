@@ -46,17 +46,15 @@ namespace pserv6
             std::function<void(pserv::DataController *)> refresh;
             /// Status line text.
             std::function<void(const std::string &)> status;
-            /// True if the controller's objects live on another machine. Their mutating actions
-            /// would run against this machine (TODO 19), so only read-only ones are allowed.
+            /// True if the controller's objects live on another machine: actions that need this
+            /// machine (DataAction::RequiresLocalMachine) are then not offered and refused.
             std::function<bool(const pserv::DataController *)> isRemote;
             /// Bumped whenever the target machine changes: a request, menu or properties dialog
             /// prepared before the change must not run afterwards on what the rows now are.
             std::function<uint64_t()> targetGeneration;
         };
 
-        /// Actions allowed on a remote machine's objects: Properties (read-only) and the copy and
-        /// export actions, which only read the objects.
-        static bool IsReadOnlyAction(const pserv::DataAction *pAction);
+
 
         explicit ActionRunner(Callbacks callbacks);
         ~ActionRunner() override;

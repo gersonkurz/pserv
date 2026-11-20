@@ -116,6 +116,11 @@ namespace pserv
             return std::format("Are you sure you want to run '{}' on {} item(s)?", m_name, selection.size());
         }
 
+        /// @brief True if the action only makes sense for objects of this machine (it opens a local
+        /// program or path, or edits the local registry). Frontends do not offer it for objects
+        /// enumerated from another machine (DataController::GetPublishedTarget() not empty).
+        virtual bool RequiresLocalMachine() const { return false; }
+
         /// @brief Input the frontend must collect before Execute(); empty by default.
         /// @param controller The controller the action runs on (for context-dependent defaults).
         virtual std::vector<ActionParameter> GetParameters(const DataController *controller) const { return {}; }

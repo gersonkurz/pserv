@@ -313,13 +313,42 @@ namespace pserv
         }
         else
         {
-            // No quotes - path might have arguments, take everything before first space
-            size_t spacePos = path.find(' ');
-            if (spacePos != std::string::npos)
+            // No quotes: the path may contain spaces itself (C:\Program Files\x.sys) and may be
+            // followed by arguments. It ends at the first image extension that is followed by a
+            // space or the end; without one, at the first space.
+            size_t end = std::string::npos;
+            for (const char *extension : {".exe", ".sys", ".dll"})
             {
-                path = path.substr(0, spacePos);
+                for (size_t pos = 0; pos + 4 <= path.size(); ++pos)
+                {
+                    if (_strnicmp(path.c_str() + pos, extension, 4) == 0 && (pos + 4 == path.size() || path[pos + 4] == ' '))
+                    {
+                        end = std::min(end, pos + 4);
+                        break;
+                    }
+                }
+            }
+            if (end == std::string::npos)
+                end = path.find(' ');
+            if (end != std::string::npos)
+            {
+                path = path.substr(0, end);
             }
         }
+
+        // Driver image paths are often NT-style or relative to the Windows directory:
+        // "\SystemRoot\System32\drivers\x.sys", "\??\C:\...", "system32\drivers\x.sys".
+        auto startsWith = [&path](std::string_view prefix)
+        { return path.size() >= prefix.size() && _strnicmp(path.c_str(), prefix.data(), prefix.size()) == 0; };
+        wchar_t windowsDirectory[MAX_PATH]{};
+        GetWindowsDirectoryW(windowsDirectory, MAX_PATH);
+        const std::string systemRoot = utils::WideToUtf8(windowsDirectory);
+        if (startsWith("\\SystemRoot\\"))
+            path = systemRoot + path.substr(11);
+        else if (startsWith("\\??\\"))
+            path = path.substr(4);
+        else if (startsWith("system32\\") || startsWith("syswow64\\"))
+            path = systemRoot + "\\" + path;
 
         // Extract directory
         size_t lastSlash = path.find_last_of("\\/");

@@ -68,15 +68,26 @@ namespace pserv6
 
     namespace
     {
-        // A harmless action for the remote and target-change guards: not read-only by name (so the
-        // guards apply to it), and all it does is count.
+        // Harmless actions for the remote and target-change guards: all they do is count and
+        // record the machine they were dispatched for.
         class RecordingAction final : public pserv::DataAction
         {
         public:
-            RecordingAction() : pserv::DataAction{"Self-test Recording", pserv::ActionVisibility::ContextMenu} {}
+            explicit RecordingAction(bool bLocalOnly)
+                : pserv::DataAction{bLocalOnly ? "Self-test Recording (local only)" : "Self-test Recording", pserv::ActionVisibility::ContextMenu},
+                  m_bLocalOnly{bLocalOnly}
+            {
+            }
             bool IsAvailableFor(const pserv::DataObject *) const override { return true; }
-            void Execute(pserv::DataActionDispatchContext &) const override { ++m_count; }
+            bool RequiresLocalMachine() const override { return m_bLocalOnly; }
+            void Execute(pserv::DataActionDispatchContext &ctx) const override
+            {
+                ++m_count;
+                m_lastTarget = ctx.m_pController ? ctx.m_pController->GetPublishedTarget() : std::string{"<none>"};
+            }
+            const bool m_bLocalOnly;
             mutable int m_count{0};
+            mutable std::string m_lastTarget;
         };
     } // namespace
 
@@ -529,24 +540,50 @@ namespace pserv6
         // --- Remote and target-change guards (no second machine needed): a harmless recording
         //     action through the request path the menus use
         {
-            static RecordingAction recorder;
+            static RecordingAction recorder{false}, localOnly{true};
             co_await ShowView("Services");
             auto *c = m_window.CurrentController();
             auto *row = c && c->GetDataObjects().GetSize() ? *c->GetDataObjects().begin() : nullptr;
             const std::string rowName = row ? row->GetItemName() : std::string{};
             const uint64_t generationBefore = m_window.TargetGeneration();
 
-            // Remote: a mutating action is refused (the unreachable host only makes refreshes fail)
-            m_window.SetRemoteMachine("pserv6-selftest.invalid");
+            // "Remote" = this computer by name: a real enumeration through the remote path
+            wchar_t computer[MAX_COMPUTERNAME_LENGTH + 1]{};
+            DWORD computerLength = ARRAYSIZE(computer);
+            GetComputerNameW(computer, &computerLength);
+            const std::string machine = pserv::utils::WideToUtf8(computer);
+            m_window.SetRemoteMachine(machine);
             Check(m_window.IsRemote(c), "guard: the Services controller counts as remote");
-            int before = recorder.m_count;
-            m_window.Actions().RequestAction(&recorder, c, {row});
-            m_lastMessages = m_window.Actions().TakeMessages();
-            Check(recorder.m_count == before && !m_lastMessages.empty(), "guard: a mutating action on a remote controller is refused");
+            for (int i = 0; i < 150 && c->GetPublishedTarget() != machine; ++i)
+                co_await Pause(100);
+            const bool bRemoteRows = c->GetPublishedTarget() == machine && c->GetDataObjects().GetSize() > 0;
+            Check(bRemoteRows, std::format("guard: services enumerated through the remote path ({} rows from '{}')", c->GetDataObjects().GetSize(), c->GetPublishedTarget()));
+            row = bRemoteRows ? *c->GetDataObjects().begin() : row;
 
-            // Back to this machine: a request prepared before the change (an open menu) is refused
+            // An action that needs this machine is refused for remote rows...
+            int before = localOnly.m_count;
+            m_window.Actions().RequestAction(&localOnly, c, {row});
+            m_lastMessages = m_window.Actions().TakeMessages();
+            Check(localOnly.m_count == before && !m_lastMessages.empty(), "guard: a local-only action on remote rows is refused");
+            // ...any other action runs, and is dispatched for the rows' machine
+            before = recorder.m_count;
+            m_window.Actions().RequestAction(&recorder, c, {row});
+            for (int i = 0; i < 50 && m_window.Actions().IsBusy(); ++i)
+                co_await Pause(100);
+            m_window.Actions().TakeMessages();
+            Check(recorder.m_count == before + 1 && recorder.m_lastTarget == machine,
+                std::format("guard: an action on remote rows is dispatched for their machine ('{}')", recorder.m_lastTarget));
+
+            // Back to this machine. Until the local rows are published, the rows on screen are
+            // still the remote ones: the controller keeps counting as remote, and actions keep
+            // their machine.
+            for (int i = 0; i < 100 && (m_window.IsRefreshInFlight() || m_window.Actions().IsBusy()); ++i)
+                co_await Pause(100);
             m_window.SetRemoteMachine({});
+            if (bRemoteRows)
+                Check(m_window.IsRemote(c) && c->GetPublishedTarget() == machine, "guard: still remote right after Connect to Local Machine (remote rows on screen)");
             co_await ShowView("Services");
+            Check(c->GetPublishedTarget().empty(), "guard: local rows published after Connect to Local Machine");
             row = Find("Name", rowName);
             before = recorder.m_count;
             m_window.Actions().RequestAction(&recorder, m_window.CurrentController(), {row}, generationBefore);

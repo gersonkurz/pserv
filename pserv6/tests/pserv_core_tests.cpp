@@ -390,6 +390,115 @@ void TestStartupEnableNeverOverwrites()
     RegDeleteKeyW(HKEY_CURRENT_USER, L"Software\\pserv6-tests");
 }
 
+// The edit transactions the properties dialog drives (after TestLiveProperties refreshed the views).
+void TestEditTransactions(const std::vector<DataController *> &controllers)
+{
+    std::cout << "[edit transactions: service columns by property id, driver paths, environment variable rename]\n";
+    DataController *services = nullptr, *environment = nullptr;
+    for (auto *c : controllers)
+    {
+        if (c->GetControllerName() == SERVICES_DATA_CONTROLLER_NAME)
+            services = c;
+        if (c->GetControllerName() == ENVIRONMENT_VARIABLES_CONTROLLER_NAME)
+            environment = c;
+    }
+
+    // Services: the dialog passes column indices, which are ServiceProperty values. Nothing is
+    // committed here (no change to any service).
+    if (services && services->GetDataObjects().GetSize() > 0)
+    {
+        auto *service = *services->GetDataObjects().begin();
+        services->BeginPropertyEdits(service);
+        Check(services->SetPropertyEdit(service, static_cast<int>(ServiceProperty::DisplayName), "x"), "service edit: Display Name is accepted at its column");
+        Check(services->SetPropertyEdit(service, static_cast<int>(ServiceProperty::StartType), "Manual"), "service edit: Start Type is accepted at its column");
+        Check(services->SetPropertyEdit(service, static_cast<int>(ServiceProperty::Description), "x"), "service edit: Description is accepted at its column");
+        Check(!services->SetPropertyEdit(service, static_cast<int>(ServiceProperty::Name), "x"), "service edit: Name is not editable");
+        Check(!services->SetPropertyEdit(service, static_cast<int>(ServiceProperty::Status), "x"), "service edit: Status is not editable");
+        Check(!services->GetComboOptions(static_cast<int>(ServiceProperty::StartType)).empty(), "service edit: Start Type offers its options");
+        for (size_t i = 0; i < services->GetColumns().size(); ++i)
+        {
+            const auto &column = services->GetColumns()[i];
+            if (column.Editable)
+                Check(services->SetPropertyEdit(service, static_cast<int>(i), column.EditType == ColumnEditType::Combo ? "Manual" : "x"),
+                    std::format("service edit: editable column '{}' is accepted", column.DisplayName));
+        }
+
+        // Driver image paths (TODO 11): NT-style and Windows-relative forms resolve to real folders
+        wchar_t windowsDirectory[MAX_PATH]{};
+        GetWindowsDirectoryW(windowsDirectory, MAX_PATH);
+        const std::string windows = utils::WideToUtf8(windowsDirectory);
+        auto *copy = static_cast<ServiceInfo *>(service->Clone());
+        copy->SetBinaryPathName("\\SystemRoot\\System32\\drivers\\x.sys");
+        Check(copy->GetInstallLocation() == windows + "\\System32\\drivers", std::format("install location: \\SystemRoot form -> '{}'", copy->GetInstallLocation()));
+        copy->SetBinaryPathName("system32\\DRIVERS\\x.sys");
+        Check(copy->GetInstallLocation() == windows + "\\system32\\DRIVERS", std::format("install location: relative form -> '{}'", copy->GetInstallLocation()));
+        copy->SetBinaryPathName("\\??\\C:\\Program Files\\App\\x.sys");
+        Check(copy->GetInstallLocation() == "C:\\Program Files\\App", std::format("install location: \\??\\ form -> '{}'", copy->GetInstallLocation()));
+        copy->SetBinaryPathName("\"C:\\Program Files\\App\\svc.exe\" -k run");
+        Check(copy->GetInstallLocation() == "C:\\Program Files\\App", "install location: quoted path with arguments");
+        copy->Release(REFCOUNT_DEBUG_ARGS);
+    }
+    else
+    {
+        Check(false, "edit transactions: no Services controller with objects");
+    }
+
+    // Environment variables: rename (TODO 14) on throwaway user variables this test creates
+    if (environment)
+    {
+        const std::string a = std::format("PSERV6_TEST_A_{}", GetCurrentProcessId());
+        const std::string b = std::format("PSERV6_TEST_B_{}", GetCurrentProcessId());
+        const std::string c = std::format("PSERV6_TEST_C_{}", GetCurrentProcessId());
+        auto value = [](const std::string &name) -> std::string
+        {
+            wchar_t buffer[256]{};
+            DWORD size = sizeof(buffer);
+            return RegGetValueW(HKEY_CURRENT_USER, L"Environment", utils::Utf8ToWide(name).c_str(), RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ | RRF_NOEXPAND, nullptr, buffer, &size) == ERROR_SUCCESS
+                       ? utils::WideToUtf8(buffer)
+                       : std::string{"<missing>"};
+        };
+        auto find = [&](const std::string &name) -> DataObject *
+        {
+            for (auto *obj : environment->GetDataObjects())
+            {
+                if (obj->GetProperty(0) == name && obj->GetProperty(2) == "User")
+                    return obj;
+            }
+            return nullptr;
+        };
+        const bool bFree = value(a) == "<missing>" && value(b) == "<missing>" && value(c) == "<missing>";
+        Check(bFree, "env rename: the throwaway names are free");
+        if (bFree)
+        {
+            auto set = [](const std::string &name, const wchar_t *text)
+            { RegSetKeyValueW(HKEY_CURRENT_USER, L"Environment", utils::Utf8ToWide(name).c_str(), REG_SZ, text, static_cast<DWORD>((wcslen(text) + 1) * sizeof(wchar_t))); };
+            set(a, L"value-a");
+            set(b, L"value-b");
+            environment->Refresh();
+            auto *pa = find(a);
+            Check(pa != nullptr && find(b) != nullptr, "env rename: the throwaway variables are listed");
+            if (pa)
+            {
+                // Onto an existing name: refused, both keep their values
+                environment->BeginPropertyEdits(pa);
+                environment->SetPropertyEdit(pa, 0, b);
+                Check(!environment->CommitPropertyEdits(pa), "env rename: renaming onto an existing variable is refused");
+                Check(value(a) == "value-a" && value(b) == "value-b", "env rename: both variables unchanged after the refused rename");
+
+                // To a free name, with a new value: the old name is gone, the new one has the value
+                environment->BeginPropertyEdits(pa);
+                environment->SetPropertyEdit(pa, 0, c);
+                environment->SetPropertyEdit(pa, 1, "value-c");
+                Check(environment->CommitPropertyEdits(pa), "env rename: renaming to a free name succeeds");
+                Check(value(a) == "<missing>" && value(c) == "value-c", std::format("env rename: old name gone, new name has the value ('{}')", value(c)));
+            }
+            for (const auto &name : {a, b, c})
+                RegDeleteKeyValueW(HKEY_CURRENT_USER, L"Environment", utils::Utf8ToWide(name).c_str());
+            Check(value(a) == "<missing>" && value(b) == "<missing>" && value(c) == "<missing>", "env rename: throwaway variables removed");
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     // --stress N: refresh every controller N times on a RefreshWorker (default 1; plan Phase 2 uses 50)
@@ -415,6 +524,7 @@ int main(int argc, char *argv[])
     const auto &controllers = library.GetDataControllers();
     TestColumnPropertyIdsInOrder(controllers);
     TestLiveProperties(controllers);
+    TestEditTransactions(controllers);
     TestExportersRegistered(controllers);
 
     pserv::tests::RunRefreshUnitTests();

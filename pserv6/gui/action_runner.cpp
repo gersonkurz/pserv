@@ -82,12 +82,6 @@ namespace pserv6
         return dialog;
     }
 
-    bool ActionRunner::IsReadOnlyAction(const pserv::DataAction *pAction)
-    {
-        const std::string name = pAction->GetName();
-        return pAction == &pserv::theDataPropertiesAction || name.starts_with("Copy ") || name.starts_with("Export to ");
-    }
-
     bool ActionRunner::ReserveDialog()
     {
         if (IsBusy())
@@ -119,10 +113,9 @@ namespace pserv6
         const uint64_t requestGeneration = generation.value_or(CurrentGeneration());
         if (RefuseIfTargetChanged(requestGeneration, pAction->GetName()))
             return;
-        if (m_callbacks.isRemote && m_callbacks.isRemote(pController) && !IsReadOnlyAction(pAction))
+        if (pAction->RequiresLocalMachine() && m_callbacks.isRemote && m_callbacks.isRemote(pController))
         {
-            ShowMessage(pserv::ActionMessageKind::Information, pAction->GetName(),
-                "This action is not available for a remote machine's objects yet: it would act on this machine.");
+            ShowMessage(pserv::ActionMessageKind::Information, pAction->GetName(), "This action is only available for objects of this machine.");
             return;
         }
         if (IsBusy())
@@ -478,10 +471,9 @@ namespace pserv6
             co_return;
         if (m_bDialogOpen)
             co_return; // another dialog took the slot meanwhile
-        // A remote machine's objects are shown read-only: edits would be committed on this machine
-        const bool bReadOnly = m_callbacks.isRemote && m_callbacks.isRemote(pController);
+        const bool bRemote = m_callbacks.isRemote && m_callbacks.isRemote(pController);
         const uint64_t generation = CurrentGeneration();
-        auto properties = std::make_shared<PropertiesDialog>(pController, selection.Get(), bReadOnly);
+        auto properties = std::make_shared<PropertiesDialog>(pController, selection.Get(), bRemote);
         auto dialog = NewDialog(properties->Title());
         properties->Build(dialog);
         SetDialogOpen(true);

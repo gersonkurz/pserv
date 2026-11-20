@@ -9,10 +9,10 @@ using namespace winrt::Microsoft::UI::Xaml::Controls;
 
 namespace pserv6
 {
-    PropertiesDialog::PropertiesDialog(pserv::DataController *pController, const std::vector<pserv::DataObject *> &objects, bool bReadOnly)
+    PropertiesDialog::PropertiesDialog(pserv::DataController *pController, const std::vector<pserv::DataObject *> &objects, bool bRemote)
         : m_pController{pController},
           m_objects{objects},
-          m_bReadOnly{bReadOnly}
+          m_bRemote{bRemote}
     {
     }
 
@@ -72,17 +72,9 @@ namespace pserv6
     void PropertiesDialog::Build(ContentDialog const &dialog)
     {
         m_dialog = make_weak(dialog);
-        if (m_bReadOnly)
-        {
-            dialog.CloseButtonText(L"Close");
-            dialog.DefaultButton(ContentDialogButton::Close);
-        }
-        else
-        {
-            dialog.PrimaryButtonText(L"OK");
-            dialog.CloseButtonText(L"Cancel");
-            dialog.DefaultButton(ContentDialogButton::Primary);
-        }
+        dialog.PrimaryButtonText(L"OK");
+        dialog.CloseButtonText(L"Cancel");
+        dialog.DefaultButton(ContentDialogButton::Primary);
         // Wider than the default 548 px: values like command lines need the room
         dialog.Resources().Insert(box_value(L"ContentDialogMaxWidth"), box_value(900.0));
 
@@ -139,14 +131,14 @@ namespace pserv6
 
         // Action buttons for this object (visible in the properties dialog, available for it)
         m_actions.Children().Clear();
-        if (m_bReadOnly)
-            return;
         auto *pObject = m_objects.Get()[index];
         std::weak_ptr<PropertiesDialog> weak = shared_from_this();
         for (const auto *pAction : m_pController->GetActions(pObject))
         {
             const bool bVisible = (static_cast<int>(pAction->GetVisibility()) & static_cast<int>(pserv::ActionVisibility::PropertiesDialog)) != 0;
             if (!bVisible || pAction->IsSeparator() || pAction == &pserv::theDataPropertiesAction || !pAction->IsAvailableFor(pObject))
+                continue;
+            if (m_bRemote && pAction->RequiresLocalMachine())
                 continue;
             Button button;
             button.Content(box_value(to_hstring(pAction->GetName())));
@@ -188,7 +180,7 @@ namespace pserv6
         row.Children().Append(label);
 
         FrameworkElement editor{nullptr};
-        const auto type = col.Editable && !m_bReadOnly ? col.EditType : pserv::ColumnEditType::None;
+        const auto type = col.Editable ? col.EditType : pserv::ColumnEditType::None;
         switch (type)
         {
         case pserv::ColumnEditType::Combo:

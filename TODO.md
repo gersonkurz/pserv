@@ -43,6 +43,8 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 
 11. **Pre-existing: "Open in Explorer" fails for drivers and reports success.** Device (driver) binary paths are stored as `\SystemRoot\System32\drivers\<name>.sys`; the services/devices "Open in Explorer" action passes the folder unexpanded to `ShellExecuteW`, which fails with ERROR_FILE_NOT_FOUND (`service_actions.cpp:570`). The failure is only logged, so `pservc devices open-in-explorer 1394ohci` exits 0. Expand `\SystemRoot` (and `\??\` prefixes), and report a launch failure to the user.
 
+    **Resolved (2026-11-19):** `ServiceInfo::GetInstallLocation` resolves `\SystemRoot\...`, `\??\...` and Windows-relative `system32\...` paths, and unquoted paths containing spaces (tested in `TestEditTransactions`); the open actions throw when the launch fails, which both frontends report.
+
 ## From the Debug-GUI Direct3D fallback review (Codex, 2026-11-19, thread 01a1f3fe)
 
 12. **[task]** [main_window.cpp:372](/C:/Projects/pserv-claude/pserv5/main_window.cpp:372): Pre-existing initialization defect: `CreateRenderTarget()` logs failures without propagating them, so `InitializeDirectX()` reports success with no render target. `Render()` then returns immediately at line 930, leaving a non-rendering window. Propagate initial render-target creation failure to initialization. Deferrable because this behavior predates the diff and is separate from the missing-debug-layer fallback.
@@ -53,7 +55,11 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 
 13. **[task] Pre-existing: service edits report success after configuration failure.** [services_data_controller.cpp:187](/C:/Projects/pserv-claude/pserv5/controllers/services_data_controller.cpp:187) ignores the Boolean result of `ServiceManager::ChangeServiceConfig`, updates the live object, and returns success even when the API wrapper reports failure. Users can be shown settings that were never applied. Check the result and preserve failure reporting. Deferrable because this unchanged edit-transaction defect predates the off-thread refresh task. *(Same defect as item 6.)*
 
+    **Resolved (2026-11-19, items 6 and 13):** `CommitPropertyEdits` returns false and leaves the object unchanged when `ChangeServiceConfig` fails. The "Set Startup" actions also report failures now (they ignored the result and always said "Automatic").
+
 14. **[task] Pre-existing: environment-variable rename can lose the original value.** [environment_variables_data_controller.cpp:115](/C:/Projects/pserv-claude/pserv5/controllers/environment_variables_data_controller.cpp:115) deletes the original variable before creating the replacement. If the subsequent write fails, it returns failure without restoring the deleted value. Make rename failure preserve the original data and verify with a throwaway variable and injected write failure. Deferrable because this unchanged mutation path is outside Phase 2. *(Same defect as item 8 in the first section.)*
+
+    **Resolved (2026-11-19, items 8 and 14):** a rename writes the new variable first and deletes the old one afterwards (undoing the new one if that fails), refuses to overwrite an existing variable, and treats a change of case only as an update in place. Tested on throwaway user variables in `TestEditTransactions`.
 
 ## Open after Phase 4 part 1 and the pserv5 removal (2026-11-19)
 
@@ -72,8 +78,12 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 19. **[task] Pre-existing service mutations ignore the remote target.**  
    [service_manager.cpp:224](C:/Projects/pserv-claude/pserv6/windows_api/service_manager.cpp:224) opens the local SCM with `nullptr`; Stop and other mutation helpers do likewise. [Service property commits](C:/Projects/pserv-claude/pserv6/controllers/services_data_controller.cpp:187) also omit the target. Actions on remotely enumerated rows therefore modify the same-named **local** service; Delete Registry Key likewise uses local HKLM. Carry the target through mutation APIs and dispatch, or prevent unsupported remote mutations. This predates the diff and is deferred under the requested scope rule because repairing shared service targeting expands beyond frontend wiring.
 
+    **Resolved (2026-11-19):** every `ServiceManager` mutation takes the machine name; the service actions and the properties commit pass `DataController::GetPublishedTarget()`, the machine the rows were enumerated from. Actions that need this computer declare `DataAction::RequiresLocalMachine()` (Open in Registry Editor/Explorer/Terminal, Delete Registry Key): they throw for remote objects and the GUI does not offer them. Executed: `--selftest-actions` enumerates Services through the remote path (this computer by name) and checks that an action is dispatched for the rows' machine, that a local-only action is refused, and that the controller still counts as remote between Connect to Local Machine and the next publish. **Not executed:** an actual Start/Stop/edit against a second machine (none available; needs administrator there) - part of the manual checklist, item 22.
+
 20. **[task] Pre-existing service Display Name editing uses the wrong property index.**  
    [services_data_controller.cpp:126](C:/Projects/pserv-claude/pserv6/controllers/services_data_controller.cpp:126) handles Display Name as column `0`, while its metadata places it at `1`. The new properties dialog correctly passes `1`, so changing Display Name is rejected and prevents that object’s transaction from committing. Use the property enum and add a transaction check. This is deferrable because the incorrect controller mapping already exists in HEAD.
+
+    **Resolved (2026-11-19):** the edit transaction switches on `ServiceProperty`; `TestEditTransactions` checks every editable column is accepted at its own index and Name/Status are refused.
 
 ## Phase 5 checks deferred with the owner's acceptance (2026-11-19: "Accept. I will do a manual review anyway.")
 

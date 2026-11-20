@@ -216,15 +216,15 @@ namespace pserv
             spdlog::info("Enumerated {} services", doc->GetSize());
     }
 
-    bool ServiceManager::StartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    bool ServiceManager::StartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
     {
         spdlog::info("Starting service: {}", serviceName);
 
         // Open SCM
-        SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+        SC_HANDLE hScManager = OpenSCManagerW(machineName.empty() ? nullptr : utils::Utf8ToWide(machineName).c_str(), nullptr, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine \'{}\'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
@@ -338,15 +338,15 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::StopServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    bool ServiceManager::StopServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
     {
         spdlog::info("Stopping service: {}", serviceName);
 
         // Open SCM
-        SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+        SC_HANDLE hScManager = OpenSCManagerW(machineName.empty() ? nullptr : utils::Utf8ToWide(machineName).c_str(), nullptr, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine \'{}\'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
@@ -452,15 +452,15 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::PauseServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    bool ServiceManager::PauseServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
     {
         spdlog::info("Pausing service: {}", serviceName);
 
         // Open SCM
-        SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+        SC_HANDLE hScManager = OpenSCManagerW(machineName.empty() ? nullptr : utils::Utf8ToWide(machineName).c_str(), nullptr, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine \'{}\'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
@@ -561,15 +561,15 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::ResumeServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    bool ServiceManager::ResumeServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
     {
         spdlog::info("Resuming service: {}", serviceName);
 
         // Open SCM
-        SC_HANDLE hScManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+        SC_HANDLE hScManager = OpenSCManagerW(machineName.empty() ? nullptr : utils::Utf8ToWide(machineName).c_str(), nullptr, SC_MANAGER_CONNECT);
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine \'{}\'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
@@ -670,7 +670,7 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::RestartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback)
+    bool ServiceManager::RestartServiceByName(const std::string &serviceName, std::function<bool(float, std::string)> progressCallback, const std::string &machineName)
     {
         spdlog::info("Restarting service: {}", serviceName);
 
@@ -693,7 +693,8 @@ namespace pserv
                     return progressCallback(progress * 0.5f, message);
                 }
                 return true;
-            });
+            },
+            machineName);
 
         if (!stopSuccess)
         {
@@ -719,7 +720,8 @@ namespace pserv
                     return progressCallback(0.5f + progress * 0.5f, message);
                 }
                 return true;
-            });
+            },
+            machineName);
 
         if (!startSuccess)
         {
@@ -730,7 +732,7 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::ChangeServiceStartType(const std::string &serviceName, DWORD startType)
+    bool ServiceManager::ChangeServiceStartType(const std::string &serviceName, DWORD startType, const std::string &machineName)
     {
         spdlog::info("Changing startup type for service '{}' to {}", serviceName, startType);
 
@@ -738,10 +740,10 @@ namespace pserv
         std::wstring wServiceName = utils::Utf8ToWide(serviceName);
 
         // Open SC Manager
-        wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
+        wil::unique_schandle hScManager(OpenSCManagerW(machineName.empty() ? nullptr : utils::Utf8ToWide(machineName).c_str(), nullptr, SC_MANAGER_ALL_ACCESS));
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine \'{}\'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
@@ -776,7 +778,7 @@ namespace pserv
         return true;
     }
 
-    bool ServiceManager::DeleteService(const std::string &serviceName)
+    bool ServiceManager::DeleteService(const std::string &serviceName, const std::string &machineName)
     {
         spdlog::info("Deleting service '{}'", serviceName);
 
@@ -784,10 +786,10 @@ namespace pserv
         std::wstring wServiceName = utils::Utf8ToWide(serviceName);
 
         // Open SC Manager
-        wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
+        wil::unique_schandle hScManager(OpenSCManagerW(machineName.empty() ? nullptr : utils::Utf8ToWide(machineName).c_str(), nullptr, SC_MANAGER_ALL_ACCESS));
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine \'{}\'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
@@ -812,7 +814,8 @@ namespace pserv
     }
 
     bool ServiceManager::ChangeServiceConfig(
-        const std::string &serviceName, const std::string &displayName, const std::string &description, DWORD startType, const std::string &binaryPathName)
+        const std::string &serviceName, const std::string &displayName, const std::string &description, DWORD startType, const std::string &binaryPathName,
+        const std::string &machineName)
     {
         spdlog::info("Changing configuration for service '{}'", serviceName);
 
@@ -823,10 +826,10 @@ namespace pserv
         std::wstring wBinaryPathName = utils::Utf8ToWide(binaryPathName);
 
         // Open SC Manager
-        wil::unique_schandle hScManager(OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS));
+        wil::unique_schandle hScManager(OpenSCManagerW(machineName.empty() ? nullptr : utils::Utf8ToWide(machineName).c_str(), nullptr, SC_MANAGER_ALL_ACCESS));
         if (!hScManager)
         {
-            LogWin32Error("OpenSCManagerW");
+            LogWin32Error("OpenSCManagerW", "machine \'{}\'", machineName.empty() ? "local" : machineName);
             return false;
         }
 
