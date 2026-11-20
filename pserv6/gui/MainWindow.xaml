@@ -7,7 +7,16 @@
     <Window.SystemBackdrop>
         <MicaBackdrop />
     </Window.SystemBackdrop>
-    <Grid RowDefinitions="Auto,*">
+    <Grid x:Name="Root" RowDefinitions="Auto,*">
+    <!-- Never shown: these resolve the theme brushes the grid paints with. ThemeResource follows the
+         window's theme, so the code reads the brushes from here after every theme change. -->
+    <StackPanel Visibility="Collapsed">
+        <TextBlock x:Name="BrushNormal" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+        <TextBlock x:Name="BrushHighlight" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+        <TextBlock x:Name="BrushDisabled" Foreground="{ThemeResource TextFillColorDisabledBrush}" />
+        <Border x:Name="BrushGripper" Background="{ThemeResource ControlStrongStrokeColorDefaultBrush}" />
+        <Border x:Name="BrushHover" Background="{ThemeResource SubtleFillColorTertiaryBrush}" />
+    </StackPanel>
     <MenuBar x:Name="MainMenu">
         <MenuBarItem Title="File" AccessKey="F">
             <MenuFlyoutItem Text="Refresh" Click="OnRefreshClick" KeyboardAcceleratorTextOverride="F5">
@@ -18,6 +27,13 @@
             <MenuFlyoutItem x:Name="ConnectLocalItem" Text="Connect to Local Machine" Click="OnConnectLocal" />
             <MenuFlyoutSeparator />
             <MenuFlyoutItem Text="Exit" Click="OnExit" KeyboardAcceleratorTextOverride="Alt+F4" />
+        </MenuBarItem>
+        <!-- Filled in code (BuildViewMenu): the views, auto-refresh, theme, zoom -->
+        <MenuBarItem x:Name="ViewMenu" Title="View" AccessKey="V" />
+        <MenuBarItem Title="Help" AccessKey="H">
+            <MenuFlyoutItem Text="Documentation" Click="OnDocumentation" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem Text="About pserv6..." Click="OnAbout" />
         </MenuBarItem>
     </MenuBar>
     <NavigationView Grid.Row="1" x:Name="Nav" PaneDisplayMode="Left" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
@@ -39,7 +55,8 @@
             <ScrollViewer Grid.Row="1" x:Name="HScroller" HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Auto"
                           VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
                 <Grid RowDefinitions="Auto,*">
-                    <Grid x:Name="HeaderGrid" Height="30" />
+                    <!-- Left-aligned like the rows (a fixed-width element would otherwise be centred) -->
+                    <Grid x:Name="HeaderGrid" Height="30" HorizontalAlignment="Left" />
                     <ListView Grid.Row="1" x:Name="RowList" SelectionMode="Extended" IsItemClickEnabled="False"
                               ContainerContentChanging="OnContainerContentChanging"
                               ContextRequested="OnRowContextRequested" DoubleTapped="OnRowDoubleTapped">

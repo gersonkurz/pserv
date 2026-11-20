@@ -364,8 +364,25 @@ and its performance is assumed to match ARM64 (owner, 2026-11-18; R4).
 ### Phase 6 — Parity and polish
 - Keyboard shortcuts, zoom, theme switch (D11), About, the user manual `docs/pserv6.md`, and
   `README` updates.
+- *As implemented (2026-11-19):* View menu (views, auto-refresh with Ctrl+R, interval, theme,
+  zoom), Help menu (Documentation, About), theme Light/Dark/Windows (grid brushes re-read on
+  every theme change, Mica re-attached, dark title bar), zoom 50–200 % for the table (font, row
+  height and column widths; Ctrl+Plus/Minus, Ctrl+wheel), `docs/pserv6.md` and a new screenshot.
 - **Exit:** the pserv5 manual's feature list (`docs/pserv5.md`) is walked item by item against
   pserv6 and each item is marked done, changed (with reason) or dropped (with owner approval).
+- *Walk of pserv5's manual (2026-11-19; the file is in git history at `8cb1646`):*
+  - **Done:** all ten views; filtering; column sorting; context menus; properties dialogs with
+    editing; auto-refresh; export to JSON and clipboard; Ctrl+1…0, F5, Delete; File menu
+    (Refresh, Connect to Local/Remote Machine, Exit); View menu; Help (Documentation, About);
+    settings for window, theme, column widths/order, auto-refresh, last remote machine.
+  - **Changed:** tabs → navigation pane (WinUI); themes: Base16 → Light/Dark/Windows (D11);
+    Ctrl+wheel zoom now scales the table only, not the whole UI; settings file is
+    `%APPDATA%\pserv6\config.toml`.
+  - **Changed, restricted:** remote Services/Devices are read-only until the core's service
+    mutations carry the target machine (TODO 19); pserv5 offered them but they acted on the
+    local machine.
+  - **Not in pserv6:** "Export to CSV" (the pserv5 manual listed it; pserv5 had no CSV exporter
+    either — JSON and plain text only). Needs the owner's word only if CSV is wanted.
 
 ### Phase 7 — Release and removal
 - Remove the ImGui frontend (`main_window.*`, `dialogs/`, `theme/`, `pserv5.vcxproj`), the

@@ -72,7 +72,11 @@ namespace pserv6
     ContentDialog ActionRunner::NewDialog(const std::string &title)
     {
         ContentDialog dialog;
-        dialog.XamlRoot(m_callbacks.xamlRoot());
+        const auto xamlRoot = m_callbacks.xamlRoot();
+        dialog.XamlRoot(xamlRoot);
+        // A dialog lives in the popup layer and does not inherit the window content's theme
+        if (auto content = xamlRoot.Content().try_as<FrameworkElement>())
+            dialog.RequestedTheme(content.ActualTheme());
         dialog.Title(box_value(to_hstring(title)));
         dialog.Style(Application::Current().Resources().Lookup(box_value(L"DefaultContentDialogStyle")).as<Style>());
         return dialog;

@@ -8,11 +8,11 @@ More than 10 years after the last iteration, I decided to rewrite an old tool of
 
 ## Manual
 
-[Instructions for the command line interface](docs/pservc.md). The pserv6 GUI manual is being written.
+[Instructions for the GUI](docs/pserv6.md) and [for the command line interface](docs/pservc.md).
 
 ## Screenshot
 
-![Screenshot of main application](docs/main.png)
+![Screenshot of pserv6](docs/pserv6.png)
 
 ## Features
 

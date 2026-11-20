@@ -20,6 +20,19 @@ namespace pserv6
         /// Bind to the XAML elements (once, after InitializeComponent).
         void Attach(winrt::Microsoft::UI::Xaml::Controls::ListView const &list, winrt::Microsoft::UI::Xaml::Controls::Grid const &header);
 
+        /// The brushes the grid paints with. They are theme resources resolved by the window (for
+        /// its current theme) and set again whenever the theme changes.
+        struct Brushes
+        {
+            winrt::Microsoft::UI::Xaml::Media::Brush normal{nullptr}, highlight{nullptr}, disabled{nullptr}, gripper{nullptr}, hover{nullptr};
+        };
+        void SetBrushes(const Brushes &brushes);
+
+        /// Zoom factor for the rows and the header (1.0 = 14 px text in 24 px rows).
+        /// Column widths are stored unzoomed and shown multiplied by it.
+        void SetZoom(double zoom);
+        double Zoom() const { return m_zoom; }
+
         /// Show another controller: restore its column layout and sort, rebuild header and rows.
         void SetController(pserv::DataController *pController);
 
@@ -92,6 +105,9 @@ namespace pserv6
         void BuildRowCells(winrt::Microsoft::UI::Xaml::Controls::Grid const &row);
         void FillRow(winrt::Microsoft::UI::Xaml::Controls::Grid const &row, pserv::DataObject *pObject);
         void UpdateRealized();
+        double RowHeight() const { return std::round(24.0 * m_zoom); }
+        double FontSize() const { return 14.0 * m_zoom; }
+        void ApplyRowHeight(winrt::Microsoft::UI::Xaml::Controls::Primitives::SelectorItem const &container) const;
         void RestoreSelection(const std::unordered_set<pserv::DataObject *> &selected);
         int DisplayPositionAt(double x) const;
         winrt::Microsoft::UI::Xaml::Controls::ScrollViewer Scroller();
@@ -106,6 +122,7 @@ namespace pserv6
         std::vector<int> m_order;     ///< Display position -> column index.
         std::vector<winrt::Microsoft::UI::Xaml::Controls::TextBlock> m_sortGlyphs; ///< By display position.
         std::string m_filter;
+        double m_zoom{1.0};
         int m_layoutGeneration{0}; ///< Bumped when the column layout changes; stamped on row containers.
 
         // Header interaction: click a cell to sort, drag a cell to reorder, drag a gripper to resize

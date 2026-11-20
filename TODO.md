@@ -63,6 +63,8 @@ Findings recorded from reviews, to be addressed outside the change that surfaced
 
 17. **GUI manual and screenshot.** `docs/pserv6.md` is to be written (Phase 6). `docs/main.png`, still referenced by the README, shows pserv5.
 
+    **Resolved (Phase 6, 2026-11-19):** `docs/pserv6.md` and `docs/pserv6.png` exist; the README links them; `docs/main.png` is removed.
+
 18. **Installer exit criteria of Phase 3/7 still need a disposable environment:** install over pserv5, the pserv6-to-pserv6 upgrade, uninstall leaving nothing behind. On the dev box, MSIs are checked only by `just check-msi` (administrative extract plus a self-test of the extracted payload).
 
 ## From the pserv6 Phase 5 review (Codex, 2026-11-19, thread 01a1f61a)

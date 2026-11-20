@@ -70,12 +70,43 @@ namespace pserv6
     {
         m_list = list;
         m_header = header;
-        auto res = Application::Current().Resources();
-        m_normalBrush = res.Lookup(box_value(L"TextFillColorPrimaryBrush")).as<Brush>();
-        m_disabledBrush = res.Lookup(box_value(L"TextFillColorDisabledBrush")).as<Brush>();
-        m_highlightBrush = res.Lookup(box_value(L"AccentTextFillColorPrimaryBrush")).as<Brush>();
-        m_gripperBrush = res.Lookup(box_value(L"ControlStrongStrokeColorDefaultBrush")).as<Brush>();
-        m_dropBrush = res.Lookup(box_value(L"SubtleFillColorTertiaryBrush")).as<Brush>();
+    }
+
+    void DataGrid::SetBrushes(const Brushes &brushes)
+    {
+        m_normalBrush = brushes.normal;
+        m_highlightBrush = brushes.highlight;
+        m_disabledBrush = brushes.disabled;
+        m_gripperBrush = brushes.gripper;
+        m_dropBrush = brushes.hover;
+        if (m_pController)
+        {
+            BuildHeader();    // grippers and labels
+            UpdateRealized(); // FillRow replaces the cells' brushes
+        }
+    }
+
+    void DataGrid::SetZoom(double zoom)
+    {
+        zoom = std::clamp(zoom, 0.5, 2.0);
+        if (zoom == m_zoom)
+            return;
+        m_zoom = zoom;
+        if (!m_pController)
+            return;
+        ++m_layoutGeneration; // every row rebuilds its cells with the new font size
+        BuildHeader();
+        UpdateRealized();
+    }
+
+    void DataGrid::ApplyRowHeight(Primitives::SelectorItem const &container) const
+    {
+        const double height = RowHeight();
+        if (container.Height() != height)
+        {
+            container.MinHeight(height);
+            container.Height(height);
+        }
     }
 
     ScrollViewer DataGrid::Scroller()
@@ -211,7 +242,7 @@ namespace pserv6
             const bool bRight = column.GetAlignment() == pserv::ColumnAlignment::Right;
 
             ColumnDefinition cd;
-            cd.Width(GridLengthHelper::FromPixels(m_widths[static_cast<size_t>(c)]));
+            cd.Width(GridLengthHelper::FromPixels(m_widths[static_cast<size_t>(c)] * m_zoom));
             m_header.ColumnDefinitions().Append(cd);
 
             Grid cell;
@@ -226,12 +257,13 @@ namespace pserv6
             content.ColumnDefinitions().Append(glyphColumn);
             TextBlock label;
             label.Text(to_hstring(column.DisplayName));
+            label.FontSize(FontSize());
             label.TextTrimming(TextTrimming::CharacterEllipsis);
             label.FontWeight(winrt::Microsoft::UI::Text::FontWeights::SemiBold());
             label.TextAlignment(bRight ? TextAlignment::Right : TextAlignment::Left);
             content.Children().Append(label);
             TextBlock glyph;
-            glyph.FontSize(9);
+            glyph.FontSize(9 * m_zoom);
             glyph.Margin(ThicknessHelper::FromLengths(4, 0, 0, 0));
             glyph.VerticalAlignment(VerticalAlignment::Center);
             Grid::SetColumn(glyph, 1);
@@ -340,7 +372,7 @@ namespace pserv6
                 });
             gripper.PointerPressed([this, c](winrt::Windows::Foundation::IInspectable const &sender, PointerRoutedEventArgs const &e)
                 {
-                    m_resize = {c, e.GetCurrentPoint(m_header).Position().X, m_widths[static_cast<size_t>(c)]};
+                    m_resize = {c, e.GetCurrentPoint(m_header).Position().X, m_widths[static_cast<size_t>(c)] * m_zoom};
                     sender.as<Border>().CapturePointer(e.Pointer());
                     e.Handled(true);
                 });
@@ -349,7 +381,7 @@ namespace pserv6
                     if (m_resize.column < 0)
                         return;
                     const double width = m_resize.startWidth + e.GetCurrentPoint(m_header).Position().X - m_resize.startX;
-                    SetColumnWidth(m_resize.column, width);
+                    SetColumnWidth(m_resize.column, width / m_zoom); // stored widths are unzoomed
                     e.Handled(true);
                 });
             auto endResize = [this, lineOf](winrt::Windows::Foundation::IInspectable const &sender, PointerRoutedEventArgs const &e)
@@ -373,9 +405,10 @@ namespace pserv6
             cell.Children().Append(gripper);
 
             m_header.Children().Append(cell);
-            total += m_widths[static_cast<size_t>(c)];
+            total += m_widths[static_cast<size_t>(c)] * m_zoom;
         }
         m_header.Width(total);
+        m_header.Height(std::round(30.0 * m_zoom));
         m_list.Width(total + 24);
         UpdateSortIndicators();
     }
@@ -397,7 +430,7 @@ namespace pserv6
         double right = 0;
         for (size_t d = 0; d < m_order.size(); ++d)
         {
-            right += m_widths[static_cast<size_t>(m_order[d])];
+            right += m_widths[static_cast<size_t>(m_order[d])] * m_zoom;
             if (x < right)
                 return static_cast<int>(d);
         }
@@ -429,7 +462,7 @@ namespace pserv6
         double total = 0;
         for (size_t d = 0; d < m_order.size(); ++d)
         {
-            const double w = m_widths[static_cast<size_t>(m_order[d])];
+            const double w = m_widths[static_cast<size_t>(m_order[d])] * m_zoom;
             total += w;
             if (m_order[d] == column && d < m_header.ColumnDefinitions().Size())
                 m_header.ColumnDefinitions().GetAt(static_cast<uint32_t>(d)).Width(GridLengthHelper::FromPixels(w));
@@ -459,7 +492,7 @@ namespace pserv6
             if (!row || row.ColumnDefinitions().Size() != m_order.size())
                 continue;
             for (uint32_t d = 0; d < m_order.size(); ++d)
-                row.ColumnDefinitions().GetAt(d).Width(GridLengthHelper::FromPixels(m_widths[static_cast<size_t>(m_order[d])]));
+                row.ColumnDefinitions().GetAt(d).Width(GridLengthHelper::FromPixels(m_widths[static_cast<size_t>(m_order[d])] * m_zoom));
             row.Tag(box_value(m_layoutGeneration));
         }
     }
@@ -630,10 +663,11 @@ namespace pserv6
         {
             const auto c = static_cast<size_t>(m_order[d]);
             ColumnDefinition cd;
-            cd.Width(GridLengthHelper::FromPixels(m_widths[c]));
+            cd.Width(GridLengthHelper::FromPixels(m_widths[c] * m_zoom));
             row.ColumnDefinitions().Append(cd);
             TextBlock cell;
             cell.VerticalAlignment(VerticalAlignment::Center);
+            cell.FontSize(FontSize());
             cell.TextTrimming(TextTrimming::CharacterEllipsis);
             cell.Padding(ThicknessHelper::FromLengths(8, 0, 8, 0));
             cell.TextAlignment(columns[c].GetAlignment() == pserv::ColumnAlignment::Right ? TextAlignment::Right : TextAlignment::Left);
@@ -648,6 +682,7 @@ namespace pserv6
         if (args.InRecycleQueue() || !m_pController)
             return;
         const auto start = std::chrono::steady_clock::now();
+        ApplyRowHeight(args.ItemContainer());
         auto row = args.ItemContainer().ContentTemplateRoot().as<Grid>();
         const auto stamp = row.Tag() ? unbox_value<int>(row.Tag()) : -1;
         if (stamp != m_layoutGeneration)
@@ -686,6 +721,7 @@ namespace pserv6
             auto container = m_list.ContainerFromIndex(i).try_as<ListViewItem>();
             if (!container)
                 continue;
+            ApplyRowHeight(container);
             auto row = container.ContentTemplateRoot().try_as<Grid>();
             if (!row || !row.Tag())
                 continue;

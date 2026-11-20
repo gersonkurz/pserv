@@ -59,7 +59,7 @@ Paths below are relative to `pserv6/` unless stated otherwise.
 | `windows_api/` | Windows resource enumeration and manipulation |
 | `config/` | TOML-backed settings and per-view configuration |
 | `utils/` | Logging, string conversions, Win32 errors, common app setup (`BaseApp`) |
-| Repository `docs/pservc.md` | CLI manual (the GUI manual `docs/pserv6.md` is Phase 6 work) |
+| Repository `docs/pserv6.md`, `docs/pservc.md` | User-facing GUI and CLI manuals |
 | Repository `setup/`, `scripts/` | MSIS installers; version-stamping, manifest, MSI and self-test scripts |
 
 ## Architecture and Change Conventions

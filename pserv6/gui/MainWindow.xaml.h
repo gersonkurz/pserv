@@ -28,6 +28,8 @@ namespace winrt::pserv6::implementation
         winrt::fire_and_forget OnConnectRemote(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnConnectLocal(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnExit(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
+        void OnDocumentation(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
+        winrt::fire_and_forget OnAbout(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
 
         // Also used by the self-test
         bool SelectView(std::string_view name);
@@ -54,6 +56,12 @@ namespace winrt::pserv6::implementation
         void AddKeyboardShortcuts();
         void CopySelection();
         void RebuildSortMenu();
+        void BuildViewMenu();
+        void UpdateViewMenu();
+        void ApplyTheme(const std::string &name); ///< "Light", "Dark", anything else: follow Windows
+        void ApplyThemeToChrome();                ///< Grid brushes and title bar, for the actual theme
+        void SetZoomPercent(int percent);
+        void SetAutoRefreshInterval(int milliseconds);
         void ShowContextMenu(pserv::DataObject *pClicked, Microsoft::UI::Xaml::UIElement const &target, std::optional<winrt::Windows::Foundation::Point> position);
         void RefreshAfterChange(pserv::DataController *pController);
     public:
@@ -81,6 +89,11 @@ namespace winrt::pserv6::implementation
         /// (declared after them): a running operation is waited for in its destructor.
         std::unique_ptr<::pserv6::ActionRunner> m_runner;
         HWND m_hwnd{nullptr};
+        // View menu items that mirror state (owned by the menu; no handler captures them)
+        std::vector<Microsoft::UI::Xaml::Controls::RadioMenuFlyoutItem> m_viewItems;
+        Microsoft::UI::Xaml::Controls::ToggleMenuFlyoutItem m_autoRefreshItem{nullptr};
+        Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_zoomResetItem{nullptr};
+        int m_zoomPercent{100};
         uint64_t m_connectGeneration{0}; ///< Bumped by every connect: a superseded probe result is dropped.
         uint64_t m_targetGeneration{0};  ///< Bumped when the target machine changes (ActionRunner guard).
         std::unique_ptr<::pserv6::ActionTest> m_actionTest; ///< Destroyed before m_runner, which it drives.
