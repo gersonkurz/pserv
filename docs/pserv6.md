@@ -10,8 +10,9 @@
 - **Background loading**: every view is enumerated on a worker thread; the window stays responsive while data loads or refreshes
 - **Filter** box for instant search across all columns (`Ctrl+F`)
 - **Sorting** by clicking a column header, or from the keyboard with the **Sort** button (`Alt+S`)
-- **Columns** can be resized (drag the right edge of a header) and reordered (drag a header); widths, order and sort are remembered per view
-- **Context menu** with the actions for the selected rows (right-click, `Shift+F10` or the menu key)
+- **Columns** can be resized (drag the right edge of a header) reordered (drag a header) and hidden (right-click a header, or **View > Columns**); widths, order, hidden columns and sort are remembered per view
+- **Context menu** with the actions for the selected rows (right-click, `Shift+F10` or the menu key), and **toolbar buttons** for the most common of them
+- **Status bar**: rows shown, total, selected, highlighted and disabled on the left; the auto-refresh state and the time and duration of the last refresh on the right
 - **Properties** dialog for details and editing (double-click or `Enter`)
 - **Auto-refresh** with an interval of 1, 2, 5 or 10 seconds
 - **Copy and export** of the selected rows as tab-separated text, JSON or plain text
@@ -88,7 +89,7 @@ Tasks of the Windows Task Scheduler with status, trigger and run times.
 ## Working with rows
 
 - **Select** rows with the mouse or keyboard; `Ctrl` and `Shift` extend the selection.
-- **Actions** in the context menu apply to all selected rows; the menu shows the count. Destructive actions are shown in red and ask for confirmation, with **No** as the default button.
+- **Actions** in the context menu apply to all selected rows; the menu shows the count and offers only what every selected row allows. The toolbar shows the same actions as icon buttons (those with an icon of their own; the tooltip names them). Destructive actions are shown in red and ask for confirmation, with **No** as the default button.
 - Long-running actions (for example stopping a service) show a progress dialog with **Cancel**.
 - Every view's context menu ends with **Copy as JSON**, **Export to JSON...**, **Copy as Plain Text** and **Export to Plain Text...**.
 - `Ctrl+C` copies the selected rows as tab-separated text with a header line, in the current column order — ready to paste into a spreadsheet.
@@ -130,6 +131,7 @@ The item's actions are available as buttons below the fields. They are disabled 
 - **Auto-refresh** (`Ctrl+R`) and **Refresh interval** (1, 2, 5, 10 seconds). Windows, Modules and Scheduled Tasks are refreshed manually only.
 - **Theme**: Use Windows setting, Light, Dark, and the Base16 themes under *Dark themes* and *Light themes*. They are the `.yaml` files in the `themes` folder next to `pserv6.exe`; a Base16 scheme file added there appears in the menu at the next start. With a Windows high-contrast theme active, pserv6 uses that instead.
 - **Zoom**: Zoom in, Zoom out, Reset to 100 %
+- **Columns**: show or hide each column of the current view; *Reset columns* restores the default widths and order and shows every column
 - **Table font**: *Choose...* opens the Windows font dialog for the font family of the table and its header (the size is the zoom); *Default font* returns to the Windows font
 
 ### Help
@@ -150,7 +152,7 @@ Requirements: administrative rights on the target, and network access to its ser
 pserv6 keeps its settings in `%APPDATA%\pserv6\config.toml`:
 - window position and size
 - the active view, theme, zoom and table font
-- column widths, column order and sort per view
+- column widths, column order, hidden columns and sort per view
 - auto-refresh and its interval
 - the last remote machine
 

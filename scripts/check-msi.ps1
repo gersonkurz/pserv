@@ -27,8 +27,10 @@ $installed = $exe.DirectoryName
 function Get-Listing($dir) {
     $base = (Resolve-Path $dir).Path.TrimEnd('\') + '\'
     $map = @{}
-    # Length and SHA-256: same-sized but different files must not pass
-    foreach ($f in Get-ChildItem $dir -Recurse -File) { $map[$f.FullName.Substring($base.Length).ToLowerInvariant()] = "{0}:{1}" -f $f.Length, (Get-FileHash $f.FullName -Algorithm SHA256).Hash }
+    # Length and SHA-256: same-sized but different files must not pass. Hashed with .NET, not
+    # Get-FileHash: Windows PowerShell started from a PowerShell 7 shell does not find that cmdlet.
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    foreach ($f in Get-ChildItem $dir -Recurse -File) { $map[$f.FullName.Substring($base.Length).ToLowerInvariant()] = "{0}:{1}" -f $f.Length, [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($f.FullName))) }
     return $map
 }
 $expected = Get-Listing (Join-Path $root "dist\stage\$Arch")
