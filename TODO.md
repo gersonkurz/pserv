@@ -174,6 +174,12 @@ Build note for the x64 machine: `git submodule update --init --recursive`, then 
 
     **Open question to the owner:** "Action buttons (you already have the icons, and the text should come out as screenshots)" - read as "icon buttons with the name as tooltip", which is what the toolbar does; if it meant something else (all actions in the toolbar, including Copy... and Set Startup...? text labels?), it is not done.
 
+39. **Owner's second feedback of 2026-11-22** (the round of item 38 accepted: "Everything else fine"). Done:
+    - *Progress names the service:* the service manager's state messages ("Service state: Start Pending") replaced the action's "Starting service 'x'... (1/2)" within 100 ms; every progress message of Start/Stop/Restart/Pause/Resume now carries the name and position ('x' (1/2): Service state: ...). **Not executed** (needs elevation).
+    - *Double-click on a column edge* fits the column to its header and content (DataGrid::AutoSizeColumn; measures the 30 longest texts, not every row). The self-test calls it and checks a sane width; the double-click itself is the owner's check.
+    - *Toolbar in the menu bar's row:* refresh, sort, auto-refresh, filter and the action buttons sit right of File/View/Help; the table gained that row. Screenshot checked. Not done: putting the row into the title bar (ExtendsContentIntoTitleBar) - possible, needs pointer testing of the drag regions.
+    - *Found on the way:* the sort marker in the header was mojibake on this PC (raw UTF-8 triangles in a source without BOM, compiled with the system code page 1252). Now ▲/▼ escapes; no other project source has non-ASCII bytes.
+
 ## Notes for the next session (written 2026-11-19 on the ARM64 machine; that session's memory and transcript do not travel)
 
 Where things stand, in the owner's words: Gemini's version is "best bang-for-the-buck" and was finished first by far, but "not perfect"; Codex's finds more bugs but is a less polished experience; this branch is "not there yet". Each has pros and cons - take ideas from both, do not copy either wholesale. The other two trees are other agents' work: read-only (`git fetch`, then `git show origin/pserv6-gemini:<path>` / `origin/codex-branch:<path>`; their GUI sources are `pserv6/MainWindow.xaml.cpp` and `pserv6/ui/` respectively).

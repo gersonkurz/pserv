@@ -18,6 +18,8 @@
         <Border x:Name="BrushHover" Background="{ThemeResource SubtleFillColorTertiaryBrush}" />
         <Border x:Name="BrushAlternate" Background="{ThemeResource ControlAltFillColorSecondaryBrush}" />
     </StackPanel>
+    <!-- One row for the menu and the toolbar: refresh, sort, auto-refresh, filter, the selection's actions -->
+    <Grid ColumnDefinitions="Auto,*">
     <MenuBar x:Name="MainMenu">
         <MenuBarItem Title="File" AccessKey="F">
             <MenuFlyoutItem Text="Refresh" Click="OnRefreshClick" KeyboardAcceleratorTextOverride="F5">
@@ -45,10 +47,7 @@
             </MenuFlyoutItem>
         </MenuBarItem>
     </MenuBar>
-    <NavigationView Grid.Row="1" x:Name="Nav" PaneDisplayMode="Left" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
-                    OpenPaneLength="240" SelectionChanged="OnNavSelectionChanged">
-        <Grid RowDefinitions="Auto,*,Auto,Auto" Padding="8,6,8,4" RowSpacing="6">
-            <StackPanel Orientation="Horizontal" Spacing="8">
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,2,8,2">
                 <Button x:Name="RefreshButton" Click="OnRefreshClick" ToolTipService.ToolTip="Refresh (F5)">
                     <SymbolIcon Symbol="Refresh" />
                 </Button>
@@ -63,10 +62,14 @@
                 <!-- Filled in code (UpdateActionBar): the actions available for the selected rows -->
                 <StackPanel x:Name="ActionBar" Orientation="Horizontal" Spacing="4" />
             </StackPanel>
+    </Grid>
+    <NavigationView Grid.Row="1" x:Name="Nav" PaneDisplayMode="Left" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
+                    OpenPaneLength="240" SelectionChanged="OnNavSelectionChanged">
+        <Grid RowDefinitions="*,Auto,Auto" Padding="8,6,8,4" RowSpacing="6">
             <!-- The list scrolls in both directions (its scrollbars sit at the edges of the view); the
                  header has a scroller of its own without bars, which the grid keeps at the list's
                  horizontal offset. -->
-                <Grid Grid.Row="1" RowDefinitions="Auto,*">
+                <Grid RowDefinitions="Auto,*">
                     <ScrollViewer x:Name="HeaderScroller" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled" IsTabStop="False">
                         <!-- Left-aligned like the rows (a fixed-width element would otherwise be centred) -->
@@ -104,7 +107,7 @@
                     </ListView>
                 </Grid>
             <!-- A running action (service start/stop, ...): what it is doing, a bar and Cancel -->
-            <Grid Grid.Row="2" x:Name="ProgressPanel" Visibility="Collapsed" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+            <Grid Grid.Row="1" x:Name="ProgressPanel" Visibility="Collapsed" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
                   Padding="12,8,8,8" CornerRadius="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                   BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                 <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
@@ -114,7 +117,7 @@
                 <Button Grid.Column="2" x:Name="ProgressCancel" Content="Cancel" Click="OnCancelAction" />
             </Grid>
             <!-- Status bar: counts on the left, refresh state on the right -->
-            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="16">
                 <TextBlock x:Name="StatusText" Opacity="0.8" TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="1" x:Name="RefreshText" Opacity="0.8" />
             </Grid>

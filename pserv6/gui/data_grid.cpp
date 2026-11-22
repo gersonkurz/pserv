@@ -500,6 +500,13 @@ namespace pserv6
                 SaveLayout();
                 e.Handled(true);
             };
+            // Double-click: fit the column to its content (as Explorer and Excel do)
+            gripper.DoubleTapped([this, c](auto &&, DoubleTappedRoutedEventArgs const &e)
+                {
+                    m_resize = {}; // the press of the second click must not drag the width back
+                    AutoSizeColumn(c);
+                    e.Handled(true);
+                });
             gripper.PointerReleased(endResize);
             gripper.PointerCaptureLost(endResize);
             cell.Children().Append(gripper);
@@ -520,7 +527,7 @@ namespace pserv6
         for (size_t d = 0; d < m_sortGlyphs.size() && d < m_order.size(); ++d)
         {
             const bool bSorted = m_order[d] == sortColumn;
-            m_sortGlyphs[d].Text(bSorted ? (m_pController->IsLastSortAscending() ? L"▲" : L"▼") : L"");
+            m_sortGlyphs[d].Text(bSorted ? (m_pController->IsLastSortAscending() ? L"\u25B2" : L"\u25BC") : L"");
         }
     }
 
@@ -572,6 +579,40 @@ namespace pserv6
             ApplyWidthsToRealizedRows();
             SaveLayout();
         }
+    }
+
+    void DataGrid::AutoSizeColumn(int column)
+    {
+        if (!m_pController || column < 0 || column >= static_cast<int>(m_widths.size()))
+            return;
+        // ponytail: measures the header and the 30 longest texts by length, not every row (a
+        // proportional font can make a shorter text wider; measuring 15,000 rows takes too long).
+        // Measure all rows if a column ever comes out visibly too narrow.
+        std::vector<std::string> texts;
+        texts.reserve(m_current.size());
+        for (const auto *obj : m_current)
+            texts.push_back(obj->GetProperty(column));
+        const size_t count = std::min<size_t>(texts.size(), 30);
+        std::partial_sort(texts.begin(), texts.begin() + static_cast<ptrdiff_t>(count), texts.end(),
+            [](const std::string &a, const std::string &b) { return a.size() > b.size(); });
+
+        TextBlock probe;
+        probe.FontSize(FontSize());
+        if (m_fontFamily)
+            probe.FontFamily(m_fontFamily);
+        const auto measure = [&probe](const std::string &text)
+        {
+            probe.Text(to_hstring(text));
+            probe.Measure({std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()});
+            return static_cast<double>(probe.DesiredSize().Width);
+        };
+        double width = 0;
+        for (size_t i = 0; i < count; ++i)
+            width = std::max(width, measure(texts[i]));
+        width += 18; // the cells' padding
+        probe.FontWeight(winrt::Microsoft::UI::Text::FontWeights::SemiBold());
+        width = std::max(width, measure(m_pController->GetColumns()[static_cast<size_t>(column)].DisplayName) + 20 + 14 * m_zoom); // padding, sort marker
+        SetColumnWidth(column, width / m_zoom); // stored widths are unzoomed
     }
 
     void DataGrid::ApplyWidthsToRealizedRows()

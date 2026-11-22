@@ -101,9 +101,9 @@ namespace pserv
                                 op->ReportProgress(baseProgress, std::format("Starting service '{}'... ({}/{})", serviceName, i + 1, total));
 
                                 bool success = ServiceManager::StartServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
+                                    [op, baseProgress, progressRange, &serviceName, i, total](float progress, std::string message) -> bool
                                     {
-                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        op->ReportProgress(baseProgress + progress * progressRange, std::format("'{}' ({}/{}): {}", serviceName, i + 1, total, message));
                                         return !op->IsCancelRequested();
                                     },
                                     machine);
@@ -179,9 +179,9 @@ namespace pserv
                                 op->ReportProgress(baseProgress, std::format("Stopping service '{}'... ({}/{})", serviceName, i + 1, total));
 
                                 bool success = ServiceManager::StopServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
+                                    [op, baseProgress, progressRange, &serviceName, i, total](float progress, std::string message) -> bool
                                     {
-                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        op->ReportProgress(baseProgress + progress * progressRange, std::format("'{}' ({}/{}): {}", serviceName, i + 1, total, message));
                                         return !op->IsCancelRequested();
                                     },
                                     machine);
@@ -256,9 +256,9 @@ namespace pserv
                                 op->ReportProgress(baseProgress, std::format("Restarting service '{}'... ({}/{})", serviceName, i + 1, total));
 
                                 bool success = ServiceManager::RestartServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
+                                    [op, baseProgress, progressRange, &serviceName, i, total](float progress, std::string message) -> bool
                                     {
-                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        op->ReportProgress(baseProgress + progress * progressRange, std::format("'{}' ({}/{}): {}", serviceName, i + 1, total, message));
                                         return !op->IsCancelRequested();
                                     },
                                     machine);
@@ -334,9 +334,9 @@ namespace pserv
                                 op->ReportProgress(baseProgress, std::format("Pausing service '{}'... ({}/{})", serviceName, i + 1, total));
 
                                 bool success = ServiceManager::PauseServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
+                                    [op, baseProgress, progressRange, &serviceName, i, total](float progress, std::string message) -> bool
                                     {
-                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        op->ReportProgress(baseProgress + progress * progressRange, std::format("'{}' ({}/{}): {}", serviceName, i + 1, total, message));
                                         return !op->IsCancelRequested();
                                     },
                                     machine);
@@ -411,9 +411,9 @@ namespace pserv
                                 op->ReportProgress(baseProgress, std::format("Resuming service '{}'... ({}/{})", serviceName, i + 1, total));
 
                                 bool success = ServiceManager::ResumeServiceByName(serviceName,
-                                    [op, baseProgress, progressRange](float progress, std::string message) -> bool
+                                    [op, baseProgress, progressRange, &serviceName, i, total](float progress, std::string message) -> bool
                                     {
-                                        op->ReportProgress(baseProgress + progress * progressRange, message);
+                                        op->ReportProgress(baseProgress + progress * progressRange, std::format("'{}' ({}/{}): {}", serviceName, i + 1, total, message));
                                         return !op->IsCancelRequested();
                                     },
                                     machine);

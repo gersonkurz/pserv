@@ -326,6 +326,11 @@ namespace pserv6
         grid.MoveColumn(1, 0);
         grid.SetColumnWidth(moved, widths[static_cast<size_t>(moved)]);
         bool bLayoutRestored = grid.DisplayOrder() == order && grid.Widths() == widths;
+        // Auto-size (double-click on a column edge): a sane width, then back to the stored one
+        grid.AutoSizeColumn(moved);
+        const double fitted = grid.Widths()[static_cast<size_t>(moved)];
+        grid.SetColumnWidth(moved, widths[static_cast<size_t>(moved)]);
+        bLayoutRestored = bLayoutRestored && fitted >= 30.0 && fitted <= 2000.0 && grid.Widths() == widths;
         // Hide that column and show it again: one header cell less, the stored order untouched
         if (const size_t shown = grid.ShownColumnCount(); shown > 1 && !grid.IsColumnHidden(moved))
         {

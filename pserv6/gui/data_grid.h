@@ -105,6 +105,10 @@ namespace pserv6
         /// Set the width of a column (by column index), live, and persist it.
         void SetColumnWidth(int column, double width);
 
+        /// Fit a column (by column index) to its header and its content (double-click on the
+        /// column's right edge).
+        void AutoSizeColumn(int column);
+
         /// UI-thread cost counters, read and reset by the self-test.
         struct Stats
         {
