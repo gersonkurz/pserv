@@ -16,6 +16,7 @@
         <TextBlock x:Name="BrushDisabled" Foreground="{ThemeResource TextFillColorDisabledBrush}" />
         <Border x:Name="BrushGripper" Background="{ThemeResource ControlStrongStrokeColorDefaultBrush}" />
         <Border x:Name="BrushHover" Background="{ThemeResource SubtleFillColorTertiaryBrush}" />
+        <Border x:Name="BrushAlternate" Background="{ThemeResource ControlAltFillColorSecondaryBrush}" />
     </StackPanel>
     <MenuBar x:Name="MainMenu">
         <MenuBarItem Title="File" AccessKey="F">
@@ -51,6 +52,8 @@
                 </DropDownButton>
                 <ToggleSwitch x:Name="AutoRefreshSwitch" OnContent="Auto-refresh" OffContent="Auto-refresh" Toggled="OnAutoRefreshToggled" MinWidth="0" />
                 <TextBox x:Name="FilterBox" PlaceholderText="Filter" Width="260" TextChanged="OnFilterChanged" />
+                <!-- Filled in code (UpdateActionBar): the actions available for the selected rows -->
+                <StackPanel x:Name="ActionBar" Orientation="Horizontal" Spacing="4" />
             </StackPanel>
             <ScrollViewer Grid.Row="1" x:Name="HScroller" HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Auto"
                           VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
@@ -58,6 +61,7 @@
                     <!-- Left-aligned like the rows (a fixed-width element would otherwise be centred) -->
                     <Grid x:Name="HeaderGrid" Height="30" HorizontalAlignment="Left" />
                     <ListView Grid.Row="1" x:Name="RowList" HorizontalAlignment="Left" SelectionMode="Extended" IsItemClickEnabled="False"
+                              ShowsScrollingPlaceholders="False" SelectionChanged="OnRowSelectionChanged"
                               ContainerContentChanging="OnContainerContentChanging"
                               ContextRequested="OnRowContextRequested" DoubleTapped="OnRowDoubleTapped">
                         <ListView.ItemContainerStyle>
@@ -68,6 +72,10 @@
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             </Style>
                         </ListView.ItemContainerStyle>
+                        <!-- Rows appear and move without animation (an auto-refresh would animate every second) -->
+                        <ListView.ItemContainerTransitions>
+                            <TransitionCollection />
+                        </ListView.ItemContainerTransitions>
                         <ListView.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <!-- The grid restores the scroll offset itself after a reset; item anchoring would move it again -->
@@ -82,7 +90,11 @@
                     </ListView>
                 </Grid>
             </ScrollViewer>
-            <TextBlock Grid.Row="2" x:Name="StatusText" Opacity="0.8" />
+            <!-- Status bar: counts on the left, refresh state on the right -->
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <TextBlock x:Name="StatusText" Opacity="0.8" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" x:Name="RefreshText" Opacity="0.8" />
+            </Grid>
         </Grid>
     </NavigationView>
     </Grid>

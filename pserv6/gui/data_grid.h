@@ -24,7 +24,7 @@ namespace pserv6
         /// its current theme) and set again whenever the theme changes.
         struct Brushes
         {
-            winrt::Microsoft::UI::Xaml::Media::Brush normal{nullptr}, highlight{nullptr}, disabled{nullptr}, gripper{nullptr}, hover{nullptr};
+            winrt::Microsoft::UI::Xaml::Media::Brush normal{nullptr}, highlight{nullptr}, disabled{nullptr}, gripper{nullptr}, hover{nullptr}, alternate{nullptr};
         };
         void SetBrushes(const Brushes &brushes);
 
@@ -49,6 +49,13 @@ namespace pserv6
 
         /// Number of rows currently shown (after filtering).
         size_t RowCount() const { return m_current.size(); }
+
+        /// How many of the shown rows are highlighted and disabled (status bar).
+        struct StateCounts
+        {
+            size_t highlighted{0}, disabled{0};
+        };
+        StateCounts CountStates() const;
 
         /// The selected objects in display order (borrowed pointers, valid until the next publish).
         std::vector<pserv::DataObject *> GetSelection() const;
@@ -106,7 +113,7 @@ namespace pserv6
         void UpdateSortIndicators();
         void ApplyWidthsToRealizedRows();
         void BuildRowCells(winrt::Microsoft::UI::Xaml::Controls::Grid const &row);
-        void FillRow(winrt::Microsoft::UI::Xaml::Controls::Grid const &row, pserv::DataObject *pObject);
+        void FillRow(winrt::Microsoft::UI::Xaml::Controls::Grid const &row, pserv::DataObject *pObject, int index);
         void UpdateRealized();
         double RowHeight() const { return std::round(24.0 * m_zoom); }
         double FontSize() const { return 14.0 * m_zoom; }
@@ -144,6 +151,6 @@ namespace pserv6
         } m_resize;
 
         winrt::Microsoft::UI::Xaml::Media::Brush m_normalBrush{nullptr}, m_highlightBrush{nullptr}, m_disabledBrush{nullptr};
-        winrt::Microsoft::UI::Xaml::Media::Brush m_gripperBrush{nullptr}, m_dropBrush{nullptr};
+        winrt::Microsoft::UI::Xaml::Media::Brush m_gripperBrush{nullptr}, m_dropBrush{nullptr}, m_alternateBrush{nullptr}, m_noBrush{nullptr};
     };
 } // namespace pserv6

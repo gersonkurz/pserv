@@ -79,6 +79,7 @@ namespace pserv6
         m_disabledBrush = brushes.disabled;
         m_gripperBrush = brushes.gripper;
         m_dropBrush = brushes.hover;
+        m_alternateBrush = brushes.alternate;
         if (m_pController)
         {
             BuildHeader();    // grippers and labels
@@ -701,14 +702,18 @@ namespace pserv6
         const auto stamp = row.Tag() ? unbox_value<int>(row.Tag()) : -1;
         if (stamp != m_layoutGeneration)
             BuildRowCells(row); // (re)build the cells for the current column layout
-        FillRow(row, ObjectOf(args.Item()));
+        FillRow(row, ObjectOf(args.Item()), args.ItemIndex());
         args.Handled(true);
         m_stats.containerMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
         ++m_stats.containers;
     }
 
-    void DataGrid::FillRow(Grid const &row, pserv::DataObject *pObject)
+    void DataGrid::FillRow(Grid const &row, pserv::DataObject *pObject, int index)
     {
+        // Every second row is tinted; the index of a realized row changes when rows come and go
+        const Brush &background = index % 2 ? m_alternateBrush : m_noBrush;
+        if (row.Background() != background)
+            row.Background(background);
         const auto state = m_pController->GetVisualState(pObject);
         const Brush &brush = state == pserv::VisualState::Highlighted ? m_highlightBrush : (state == pserv::VisualState::Disabled ? m_disabledBrush : m_normalBrush);
         auto cells = row.Children();
@@ -741,8 +746,22 @@ namespace pserv6
                 continue;
             if (unbox_value<int>(row.Tag()) != m_layoutGeneration)
                 BuildRowCells(row);
-            FillRow(row, m_current[static_cast<size_t>(i)]);
+            FillRow(row, m_current[static_cast<size_t>(i)], i);
         }
+    }
+
+    DataGrid::StateCounts DataGrid::CountStates() const
+    {
+        StateCounts counts;
+        if (!m_pController)
+            return counts;
+        for (auto *obj : m_current)
+        {
+            const auto state = m_pController->GetVisualState(obj);
+            counts.highlighted += state == pserv::VisualState::Highlighted;
+            counts.disabled += state == pserv::VisualState::Disabled;
+        }
+        return counts;
     }
 
     // --- Selection and copy -----------------------------------------------------------------

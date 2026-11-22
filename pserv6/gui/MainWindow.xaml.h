@@ -23,6 +23,7 @@ namespace winrt::pserv6::implementation
         void OnRefreshClick(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnAutoRefreshToggled(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnFilterChanged(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::Controls::TextChangedEventArgs const &);
+        void OnRowSelectionChanged(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const &);
         void OnContainerContentChanging(Microsoft::UI::Xaml::Controls::ListViewBase const &, Microsoft::UI::Xaml::Controls::ContainerContentChangingEventArgs const &);
         void OnRowContextRequested(Microsoft::UI::Xaml::UIElement const &, Microsoft::UI::Xaml::Input::ContextRequestedEventArgs const &);
         void OnRowDoubleTapped(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const &);
@@ -54,6 +55,7 @@ namespace winrt::pserv6::implementation
         void RunUiTask(const std::function<void()> &task);
         void OnPublished(pserv::DataController *pController);
         void UpdateStatus();
+        void UpdateRefreshStatus();
         HWND WindowHandle();
         void RestoreWindowPlacement();
         void SaveSettings();
@@ -102,6 +104,8 @@ namespace winrt::pserv6::implementation
         Microsoft::UI::Xaml::Controls::ToggleMenuFlyoutItem m_autoRefreshItem{nullptr};
         Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_zoomResetItem{nullptr};
         int m_zoomPercent{100};
+        std::chrono::steady_clock::time_point m_refreshRequested{std::chrono::steady_clock::now()};
+        std::string m_lastRefresh; ///< Status bar: time and duration of the last publish
         int m_wheelDelta{0}; ///< Ctrl+wheel movement not yet turned into a zoom step
         uint64_t m_connectGeneration{0}; ///< Bumped by every connect: a superseded probe result is dropped.
         uint64_t m_targetGeneration{0};  ///< Bumped when the target machine changes (ActionRunner guard).

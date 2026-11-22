@@ -50,6 +50,7 @@ namespace
         {L"ControlFillColorSecondaryBrush", 0x2},
         {L"SubtleFillColorSecondaryBrush", 0x2, 140},
         {L"SubtleFillColorTertiaryBrush", 0x2, 90},
+        {L"ControlAltFillColorSecondaryBrush", 0x1, 120},
         {L"ButtonBackground", 0x1},
         {L"ButtonBackgroundPointerOver", 0x2},
         {L"ButtonBackgroundPressed", 0x2},
@@ -267,15 +268,20 @@ namespace winrt::pserv6::implementation
         m_pCurrent = pController;
         UpdateViewMenu();
         m_grid.SetController(pController);
-        Nav().Header(box_value(to_hstring(std::string{pController->GetControllerName()})));
+        FilterBox().PlaceholderText(to_hstring(std::format("Filter {} (Ctrl+F)", pController->GetControllerName())));
         RequestRefresh(false);
         UpdateStatus();
+        UpdateRefreshStatus();
     }
 
     void MainWindow::RequestRefresh(bool bAutoRefresh)
     {
         if (m_pCurrent && m_coordinator && (!bAutoRefresh || m_pCurrent->SupportsAutoRefresh()))
+        {
+            if (!IsRefreshInFlight())
+                m_refreshRequested = std::chrono::steady_clock::now(); // for the status bar's duration
             m_coordinator->Request(m_pCurrent, bAutoRefresh);
+        }
     }
 
     void MainWindow::RunUiTask(const std::function<void()> &task)
@@ -296,20 +302,59 @@ namespace winrt::pserv6::implementation
             return;
         m_grid.Refresh();
         UpdateStatus();
+        SYSTEMTIME now{};
+        GetLocalTime(&now);
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_refreshRequested).count();
+        m_lastRefresh = std::format("refreshed {:02}:{:02}:{:02} in {} ms", now.wHour, now.wMinute, now.wSecond, ms);
+        UpdateRefreshStatus();
         m_bPublishedCurrent = true;
     }
 
+    // Left side of the status bar: shown / total / selected rows, and how many of the shown rows
+    // are highlighted or disabled (what that means is the view's: running services, ...).
     void MainWindow::UpdateStatus()
     {
         if (!m_pCurrent)
             return;
+        if (!m_pCurrent->IsLoaded())
+        {
+            StatusText().Text(L"Loading...");
+            return;
+        }
         const size_t total = m_pCurrent->GetDataObjects().GetSize();
-        std::string text = m_pCurrent->IsLoaded()
-                               ? std::format("{} {}s", m_grid.RowCount(), m_pCurrent->GetItemName())
-                               : std::string{"Loading..."};
-        if (m_grid.RowCount() != total && m_pCurrent->IsLoaded())
+        std::string text = std::format("{} {}s", m_grid.RowCount(), m_pCurrent->GetItemName());
+        if (m_grid.RowCount() != total)
             text += std::format(" (of {})", total);
+        if (const size_t selected = m_grid.GetSelection().size())
+            text += std::format(" | {} selected", selected);
+        const auto counts = m_grid.CountStates();
+        if (counts.highlighted)
+            text += std::format(" | {} highlighted", counts.highlighted);
+        if (counts.disabled)
+            text += std::format(" | {} disabled", counts.disabled);
         StatusText().Text(to_hstring(text));
+    }
+
+    // Right side of the status bar: the auto-refresh state and the last refresh of this view
+    void MainWindow::UpdateRefreshStatus()
+    {
+        if (!m_pCurrent)
+            return;
+        std::string text;
+        if (!m_pCurrent->SupportsAutoRefresh())
+            text = "Refresh with F5";
+        else if (AutoRefreshSwitch().IsOn())
+            text = std::format("Auto-refresh every {} s", std::clamp(pserv::config::theSettings.autoRefresh.intervalMs.get(), 1000, 10000) / 1000);
+        else
+            text = "Auto-refresh off";
+        if (m_pCurrent->IsLoaded() && !m_lastRefresh.empty())
+            text += " | " + m_lastRefresh;
+        RefreshText().Text(to_hstring(text));
+    }
+
+    void MainWindow::OnRowSelectionChanged(Windows::Foundation::IInspectable const &, SelectionChangedEventArgs const &)
+    {
+        UpdateStatus();
     }
 
     void MainWindow::OnRefreshClick(Windows::Foundation::IInspectable const &, RoutedEventArgs const &)
@@ -328,6 +373,7 @@ namespace winrt::pserv6::implementation
         pserv::config::theSettings.autoRefresh.enabled.set(AutoRefreshSwitch().IsOn());
         if (m_autoRefreshItem)
             m_autoRefreshItem.IsChecked(AutoRefreshSwitch().IsOn());
+        UpdateRefreshStatus();
     }
 
     void MainWindow::OnFilterChanged(Windows::Foundation::IInspectable const &, TextChangedEventArgs const &)
@@ -924,6 +970,7 @@ namespace winrt::pserv6::implementation
         brushes.disabled = BrushDisabled().Foreground();
         brushes.gripper = BrushGripper().Background();
         brushes.hover = BrushHover().Background();
+        brushes.alternate = BrushAlternate().Background();
         if (!brushes.normal)
             return; // not resolved yet (before the content is loaded); Loaded calls again
         m_grid.SetBrushes(brushes);
@@ -971,6 +1018,7 @@ namespace winrt::pserv6::implementation
         pserv::config::theSettings.autoRefresh.intervalMs.set(milliseconds);
         if (m_autoRefreshTimer)
             m_autoRefreshTimer.Interval(std::chrono::milliseconds(milliseconds));
+        UpdateRefreshStatus();
     }
 
     void MainWindow::OnDocumentation(Windows::Foundation::IInspectable const &, RoutedEventArgs const &)
