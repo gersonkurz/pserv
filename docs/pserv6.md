@@ -10,7 +10,7 @@
 - **Background loading**: every view is enumerated on a worker thread; the window stays responsive while data loads or refreshes
 - **Filter** box for instant search across all columns (`Ctrl+F`)
 - **Sorting** by clicking a column header, or from the keyboard with the **Sort** button (`Alt+S`)
-- **Columns** can be resized (drag the right edge of a header) reordered (drag a header) and hidden (right-click a header, or **View > Columns**); widths, order, hidden columns and sort are remembered per view
+- **Columns** can be resized (drag the right edge of a header, or double-click it to fit the column to its content), reordered (drag a header) and hidden (right-click a header, or **View > Columns**); widths, order, hidden columns and sort are remembered per view
 - **Context menu** with the actions for the selected rows (right-click, `Shift+F10` or the menu key), and **toolbar buttons** for the most common of them
 - **Status bar**: rows shown, total, selected, highlighted and disabled on the left; the auto-refresh state and the time and duration of the last refresh on the right
 - **Properties** dialog for details and editing (double-click or `Enter`)
