@@ -89,7 +89,8 @@ namespace pserv
                 }
                 TypedValue<std::string> activeView{this, "ActiveView", "Services"};
                 TypedValue<int32_t> fontSizeScaled{this, "FontSize", 1600}; // Grid zoom: 1600 = 100 % (800..3200)
-                TypedValue<std::string> theme{this, "Theme", "System"};     // "System" (follow Windows), "Light", "Dark" or a Base16 theme's name (gui/themes/*.yaml)
+                TypedValue<std::string> fontFamily{this, "FontFamily", ""}; // Table font; empty = the default
+                TypedValue<std::string> theme{this, "Theme", "System"};    // "System" (follow Windows), "Light", "Dark" or a Base16 theme's name (gui/themes/*.yaml)
                 TypedValue<std::string> serviceMachineName{this, "ServiceMachineName", ""}; // Empty = local machine
             } application{this};
 

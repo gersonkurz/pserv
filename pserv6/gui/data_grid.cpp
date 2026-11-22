@@ -99,6 +99,16 @@ namespace pserv6
         UpdateRealized();
     }
 
+    void DataGrid::SetFontFamily(const std::wstring &name)
+    {
+        m_fontFamily = name.empty() ? nullptr : FontFamily{name};
+        if (!m_pController)
+            return;
+        ++m_layoutGeneration; // every row rebuilds its cells with the new font
+        BuildHeader();
+        UpdateRealized();
+    }
+
     void DataGrid::ApplyRowHeight(Primitives::SelectorItem const &container) const
     {
         const double height = RowHeight();
@@ -258,6 +268,8 @@ namespace pserv6
             TextBlock label;
             label.Text(to_hstring(column.DisplayName));
             label.FontSize(FontSize());
+            if (m_fontFamily)
+                label.FontFamily(m_fontFamily);
             label.TextTrimming(TextTrimming::CharacterEllipsis);
             label.FontWeight(winrt::Microsoft::UI::Text::FontWeights::SemiBold());
             label.TextAlignment(bRight ? TextAlignment::Right : TextAlignment::Left);
@@ -668,6 +680,8 @@ namespace pserv6
             TextBlock cell;
             cell.VerticalAlignment(VerticalAlignment::Center);
             cell.FontSize(FontSize());
+            if (m_fontFamily)
+                cell.FontFamily(m_fontFamily);
             cell.TextTrimming(TextTrimming::CharacterEllipsis);
             cell.Padding(ThicknessHelper::FromLengths(8, 0, 8, 0));
             cell.TextAlignment(columns[c].GetAlignment() == pserv::ColumnAlignment::Right ? TextAlignment::Right : TextAlignment::Left);

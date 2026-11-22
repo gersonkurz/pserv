@@ -33,6 +33,9 @@ namespace pserv6
         void SetZoom(double zoom);
         double Zoom() const { return m_zoom; }
 
+        /// Font family of the rows and the header; empty for the default (Segoe UI Variable).
+        void SetFontFamily(const std::wstring &name);
+
         /// Show another controller: restore its column layout and sort, rebuild header and rows.
         void SetController(pserv::DataController *pController);
 
@@ -123,6 +126,7 @@ namespace pserv6
         std::vector<winrt::Microsoft::UI::Xaml::Controls::TextBlock> m_sortGlyphs; ///< By display position.
         std::string m_filter;
         double m_zoom{1.0};
+        winrt::Microsoft::UI::Xaml::Media::FontFamily m_fontFamily{nullptr}; ///< Null: the default font
         int m_layoutGeneration{0}; ///< Bumped when the column layout changes; stamped on row containers.
 
         // Header interaction: click a cell to sort, drag a cell to reorder, drag a gripper to resize

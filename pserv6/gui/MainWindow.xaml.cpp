@@ -16,6 +16,7 @@
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
 #include <winrt/Windows.UI.ViewManagement.h>
+#pragma comment(lib, "comdlg32.lib") // ChooseFontW
 
 using namespace winrt;
 using namespace winrt::Microsoft::UI::Xaml;
@@ -193,6 +194,7 @@ namespace winrt::pserv6::implementation
         Root().Loaded([this](auto &&, auto &&) { ApplyThemeToChrome(); });
         ApplyTheme(settings.application.theme.get());
         SetZoomPercent(settings.application.fontSizeScaled.get() / 16);
+        SetTableFont(settings.application.fontFamily.get());
         SetRemoteMachine(settings.application.serviceMachineName.get());
 
         Closed([this](auto &&, auto &&)
@@ -403,19 +405,23 @@ namespace winrt::pserv6::implementation
         add(VirtualKey::F5, VirtualKeyModifiers::None, [this] { RequestRefresh(false); });
         add(VirtualKey::F, VirtualKeyModifiers::Control, [this] { FilterBox().Focus(FocusState::Keyboard); });
         add(VirtualKey::R, VirtualKeyModifiers::Control, [this] { AutoRefreshSwitch().IsOn(!AutoRefreshSwitch().IsOn()); });
-        // Zoom: Ctrl+Plus / Ctrl+Minus (main block and number pad), and Ctrl+mouse wheel over the rows
+        // Zoom: Ctrl+Plus / Ctrl+Minus (main block and number pad), and Ctrl+mouse wheel anywhere in the window
         for (const auto key : {VirtualKey::Add, static_cast<VirtualKey>(VK_OEM_PLUS)})
             add(key, VirtualKeyModifiers::Control, [this] { SetZoomPercent(m_zoomPercent + 10); });
         for (const auto key : {VirtualKey::Subtract, static_cast<VirtualKey>(VK_OEM_MINUS)})
             add(key, VirtualKeyModifiers::Control, [this] { SetZoomPercent(m_zoomPercent - 10); });
-        RowList().AddHandler(UIElement::PointerWheelChangedEvent(),
+        Root().AddHandler(UIElement::PointerWheelChangedEvent(),
             box_value(Input::PointerEventHandler([this](auto &&, Input::PointerRoutedEventArgs const &args)
                 {
                     if ((args.KeyModifiers() & VirtualKeyModifiers::Control) != VirtualKeyModifiers::Control)
                         return;
-                    const int delta = args.GetCurrentPoint(nullptr).Properties().MouseWheelDelta();
-                    if (delta != 0)
-                        SetZoomPercent(m_zoomPercent + (delta > 0 ? 10 : -10));
+                    // One step per wheel notch: high-resolution wheels and touchpads send many small deltas
+                    m_wheelDelta += args.GetCurrentPoint(nullptr).Properties().MouseWheelDelta();
+                    if (const int notches = m_wheelDelta / WHEEL_DELTA)
+                    {
+                        m_wheelDelta -= notches * WHEEL_DELTA;
+                        SetZoomPercent(m_zoomPercent + notches * 10);
+                    }
                     args.Handled(true);
                 })),
             true);
@@ -796,6 +802,17 @@ namespace winrt::pserv6::implementation
         zoom.Items().Append(MenuFlyoutSeparator{});
         zoom.Items().Append(m_zoomResetItem);
         items.Append(zoom);
+
+        MenuFlyoutSubItem font;
+        font.Text(L"Table font");
+        MenuFlyoutItem chooseFont, defaultFont;
+        chooseFont.Text(L"Choose...");
+        chooseFont.Click([this](auto &&, auto &&) { ChooseTableFont(); });
+        defaultFont.Text(L"Default font");
+        defaultFont.Click([this](auto &&, auto &&) { SetTableFont(""); });
+        font.Items().Append(chooseFont);
+        font.Items().Append(defaultFont);
+        items.Append(font);
         UpdateViewMenu();
     }
 
@@ -909,11 +926,32 @@ namespace winrt::pserv6::implementation
 
     void MainWindow::SetZoomPercent(int percent)
     {
+        spdlog::debug("Zoom: {} % requested, was {} %", percent, m_zoomPercent);
         percent = std::clamp(percent / 10 * 10, 50, 200);
         m_zoomPercent = percent;
         m_grid.SetZoom(percent / 100.0);
         pserv::config::theSettings.application.fontSizeScaled.set(percent * 16);
         UpdateViewMenu();
+    }
+
+    void MainWindow::SetTableFont(const std::string &family)
+    {
+        pserv::config::theSettings.application.fontFamily.set(family);
+        m_grid.SetFontFamily(pserv::utils::Utf8ToWide(family));
+    }
+
+    void MainWindow::ChooseTableFont()
+    {
+        // The Win32 font dialog, for the family only: the size is the zoom
+        LOGFONTW logFont{};
+        const std::wstring current = pserv::utils::Utf8ToWide(pserv::config::theSettings.application.fontFamily.get());
+        wcsncpy_s(logFont.lfFaceName, current.empty() ? L"Segoe UI" : current.c_str(), _TRUNCATE);
+        CHOOSEFONTW choose{sizeof(choose)};
+        choose.hwndOwner = m_hwnd;
+        choose.lpLogFont = &logFont;
+        choose.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_FORCEFONTEXIST | CF_NOSIZESEL | CF_NOSTYLESEL | CF_NOSCRIPTSEL | CF_NOVERTFONTS;
+        if (ChooseFontW(&choose))
+            SetTableFont(pserv::utils::WideToUtf8(logFont.lfFaceName));
     }
 
     void MainWindow::SetAutoRefreshInterval(int milliseconds)

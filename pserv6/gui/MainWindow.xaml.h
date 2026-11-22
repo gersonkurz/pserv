@@ -65,6 +65,8 @@ namespace winrt::pserv6::implementation
         void ApplyTheme(const std::string &name); ///< "Light", "Dark", a Base16 theme's name; anything else: follow Windows
         void ApplyThemeToChrome();                ///< Grid brushes and title bar, for the actual theme
         void SetZoomPercent(int percent);
+        void SetTableFont(const std::string &family); ///< Empty: the default font
+        void ChooseTableFont();
         void SetAutoRefreshInterval(int milliseconds);
         void ShowContextMenu(pserv::DataObject *pClicked, Microsoft::UI::Xaml::UIElement const &target, std::optional<winrt::Windows::Foundation::Point> position);
         void RefreshAfterChange(pserv::DataController *pController);
@@ -100,6 +102,7 @@ namespace winrt::pserv6::implementation
         Microsoft::UI::Xaml::Controls::ToggleMenuFlyoutItem m_autoRefreshItem{nullptr};
         Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_zoomResetItem{nullptr};
         int m_zoomPercent{100};
+        int m_wheelDelta{0}; ///< Ctrl+wheel movement not yet turned into a zoom step
         uint64_t m_connectGeneration{0}; ///< Bumped by every connect: a superseded probe result is dropped.
         uint64_t m_targetGeneration{0};  ///< Bumped when the target machine changes (ActionRunner guard).
         std::unique_ptr<::pserv6::ActionTest> m_actionTest; ///< Destroyed before m_runner, which it drives.

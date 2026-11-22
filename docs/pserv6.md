@@ -16,7 +16,7 @@
 - **Auto-refresh** with an interval of 1, 2, 5 or 10 seconds
 - **Copy and export** of the selected rows as tab-separated text, JSON or plain text
 - **Light and dark theme**, following Windows or chosen in the View menu, plus 20 **Base16 colour themes** (Dracula, Nord, Solarized, Gruvbox, ...)
-- **Zoom** for the table, 50 % to 200 %
+- **Zoom** for the table, 50 % to 200 %, and a **table font** of your choice
 
 Rows are coloured by state: running or active items use the Windows accent colour, disabled or unavailable ones are greyed out.
 
@@ -113,7 +113,7 @@ The item's actions are available as buttons below the fields. They are disabled 
 | `Shift+F10` or menu key | Context menu |
 | `Delete` | The view's Delete action for the selected rows (with confirmation) |
 | `Ctrl+C` | Copy the selected rows |
-| `Ctrl++` / `Ctrl+-` | Zoom in / out (also `Ctrl` + mouse wheel over the table) |
+| `Ctrl++` / `Ctrl+-` | Zoom in / out (also `Ctrl` + mouse wheel anywhere in the window) |
 | `Alt+F`, `Alt+V`, `Alt+H` | File, View and Help menus |
 
 ## Menu reference
@@ -130,6 +130,7 @@ The item's actions are available as buttons below the fields. They are disabled 
 - **Auto-refresh** (`Ctrl+R`) and **Refresh interval** (1, 2, 5, 10 seconds). Windows, Modules and Scheduled Tasks are refreshed manually only.
 - **Theme**: Use Windows setting, Light, Dark, and the Base16 themes under *Dark themes* and *Light themes*. They are the `.yaml` files in the `themes` folder next to `pserv6.exe`; a Base16 scheme file added there appears in the menu at the next start. With a Windows high-contrast theme active, pserv6 uses that instead.
 - **Zoom**: Zoom in, Zoom out, Reset to 100 %
+- **Table font**: *Choose...* opens the Windows font dialog for the font family of the table and its header (the size is the zoom); *Default font* returns to the Windows font
 
 ### Help
 
@@ -148,7 +149,7 @@ Requirements: administrative rights on the target, and network access to its ser
 
 pserv6 keeps its settings in `%APPDATA%\pserv6\config.toml`:
 - window position and size
-- the active view, theme and zoom
+- the active view, theme, zoom and table font
 - column widths, column order and sort per view
 - auto-refresh and its interval
 - the last remote machine
