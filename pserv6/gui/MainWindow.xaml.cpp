@@ -117,7 +117,12 @@ namespace winrt::pserv6::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
-        ExtendsContentIntoTitleBar(false);
+        // The top row is the title bar: it drags the window, except over its controls
+        ExtendsContentIntoTitleBar(true);
+        SetTitleBar(TitleBarRow());
+        AppWindow().TitleBar().PreferredHeightOption(winrt::Microsoft::UI::Windowing::TitleBarHeightOption::Tall);
+        TitleBarRow().SizeChanged([this](auto &&, auto &&) { UpdateTitleBarRegions(); });
+        ToolBar().SizeChanged([this](auto &&, auto &&) { UpdateTitleBarRegions(); });
         m_grid.Attach(RowList(), HeaderGrid(), HeaderScroller());
         m_grid.m_onHeaderChanged = [this] { RebuildSortMenu(); };
         m_hwnd = WindowHandle();
@@ -202,7 +207,13 @@ namespace winrt::pserv6::implementation
                             ApplyThemeToChrome();
                     });
             });
-        Root().Loaded([this](auto &&, auto &&) { ApplyThemeToChrome(); });
+        Root().Loaded([this](auto &&, auto &&)
+            {
+                ApplyThemeToChrome();
+                UpdateTitleBarRegions();
+                // A change of the display scale moves the regions (they are in physical pixels)
+                Content().XamlRoot().Changed([this](auto &&, auto &&) { UpdateTitleBarRegions(); });
+            });
         {
             wil::unique_handle token;
             TOKEN_ELEVATION elevation{};
@@ -810,15 +821,46 @@ namespace winrt::pserv6::implementation
         }
     }
 
-    // "pserv 6.0.0", the remote machine if any, and whether this instance is elevated
+    // "pserv 6.0.0", the remote machine if any, and whether this instance is elevated: as the
+    // window's title (taskbar, Alt+Tab) and as title and badge in the title bar row
     void MainWindow::UpdateTitle()
     {
-        std::string title = std::format("pserv {}", PSERV_VERSION_STRING);
-        if (const std::string machine = pserv::config::theSettings.application.serviceMachineName.get(); !machine.empty())
+        const std::string name = std::format("pserv {}", PSERV_VERSION_STRING);
+        const std::string machine = pserv::config::theSettings.application.serviceMachineName.get();
+        std::string title = name;
+        if (!machine.empty())
             title += " - " + machine;
         if (m_bElevated)
             title += " (Administrator)";
         Title(to_hstring(title));
+        TitleText().Text(to_hstring(name));
+        // "\xC2\xB7" is a middle dot in UTF-8
+        BadgeText().Text(to_hstring(std::format("{} \xC2\xB7 {}", machine.empty() ? std::string{"Local machine"} : "Remote: " + machine,
+                                                m_bElevated ? "Administrator" : "Standard user")));
+    }
+
+    // The title bar row drags the window; its controls are declared pass-through so they get the
+    // pointer. Also sizes the spacer under the caption buttons. Rectangles are in physical pixels.
+    void MainWindow::UpdateTitleBarRegions()
+    {
+        const auto root = *m_alive && Content() ? Content().XamlRoot() : nullptr;
+        if (!root)
+            return;
+        const double scale = root.RasterizationScale();
+        const double inset = AppWindow().TitleBar().RightInset() / scale;
+        if (inset > 0 && CaptionInset().Width() != inset)
+            CaptionInset().Width(inset);
+        std::vector<winrt::Windows::Graphics::RectInt32> rects;
+        for (FrameworkElement const &element : {MainMenu().as<FrameworkElement>(), ToolBar().as<FrameworkElement>(), ElevateButton().as<FrameworkElement>()})
+        {
+            if (element.Visibility() != Visibility::Visible || element.ActualWidth() <= 0)
+                continue;
+            const auto origin = element.TransformToVisual(nullptr).TransformPoint({0, 0});
+            rects.push_back({static_cast<int32_t>(std::lround(origin.X * scale)), static_cast<int32_t>(std::lround(origin.Y * scale)),
+                             static_cast<int32_t>(std::lround(element.ActualWidth() * scale)), static_cast<int32_t>(std::lround(element.ActualHeight() * scale))});
+        }
+        winrt::Microsoft::UI::Input::InputNonClientPointerSource::GetForWindowId(AppWindow().Id())
+            .SetRegionRects(winrt::Microsoft::UI::Input::NonClientRegionKind::Passthrough, rects);
     }
 
     // The row context menu (as pserv5's): the view's actions for the clicked object plus the
@@ -842,8 +884,12 @@ namespace winrt::pserv6::implementation
         auto held = std::make_shared<::pserv6::RetainedSelection>(selection);
         auto *pController = m_pCurrent;
         const uint64_t generation = m_targetGeneration; // a click after a machine change is refused
-        auto actions = pController->GetActions(pObject);
+        // Every action of the view, as in the toolbar; those the object's own list leaves out (a
+        // stopped service has no Stop) or the selection does not allow are shown disabled.
+        auto actions = pController->GetAllActions();
         pserv::AddCommonExportActions(actions);
+        auto available = pController->GetActions(pObject);
+        pserv::AddCommonExportActions(available);
 
         MenuFlyout menu;
         bool bLastWasSeparator = true; // no leading separator
@@ -859,14 +905,17 @@ namespace winrt::pserv6::implementation
                 bLastWasSeparator = true;
                 continue;
             }
-            if (!IsOffered(pAction, selection))
-                continue;
+            const auto match = std::ranges::find_if(available, [pAction](const pserv::DataAction *p) { return !p->IsSeparator() && p->GetName() == pAction->GetName(); });
+            const bool bEnabled = match != available.end() && IsOffered(*match, selection);
+            if (bEnabled)
+                pAction = *match; // the object's own instance is the one that runs
             MenuFlyoutItem item;
             std::string label = pAction->GetName();
-            if (selection.size() > 1)
+            if (bEnabled && selection.size() > 1)
                 label += std::format(" ({} selected)", selection.size());
             item.Text(to_hstring(label));
-            if (pAction->IsDestructive())
+            item.IsEnabled(bEnabled);
+            if (bEnabled && pAction->IsDestructive())
                 item.Foreground(criticalBrush);
             if (const wchar_t *glyph = ::pserv6::ActionGlyph(pAction->GetName()))
             {
@@ -1173,14 +1222,6 @@ namespace winrt::pserv6::implementation
         SystemBackdrop(nullptr);
         SystemBackdrop(Media::MicaBackdrop{});
 
-        // Title bar in the theme's colours (Windows 11; older versions refuse the attribute, and
-        // the dark/light caption set by ApplyThemeToChrome remains)
-        const auto colorRef = [](winrt::Windows::UI::Color c) { return RGB(c.R, c.G, c.B); };
-        const COLORREF caption = pTheme ? colorRef(pTheme->base[0]) : DWMWA_COLOR_DEFAULT;
-        const COLORREF captionText = pTheme ? colorRef(pTheme->base[5]) : DWMWA_COLOR_DEFAULT;
-        DwmSetWindowAttribute(m_hwnd, DWMWA_CAPTION_COLOR, &caption, sizeof(caption));
-        DwmSetWindowAttribute(m_hwnd, DWMWA_TEXT_COLOR, &captionText, sizeof(captionText));
-
         ApplyThemeToChrome(); // ActualThemeChanged does not fire if the actual theme stays the same
     }
 
@@ -1219,8 +1260,29 @@ namespace winrt::pserv6::implementation
             return; // not resolved yet (before the content is loaded); Loaded calls again
         m_grid.SetBrushes(brushes);
 
-        // The system-drawn title bar follows Windows' app mode unless told otherwise
+        // The caption buttons are drawn by the system over our title bar row, in Windows' app mode
+        // unless told otherwise: the theme's text colour, and for hover and pressed that colour
+        // mixed into the page colour (opaque: not every one of these honours alpha).
+        const auto text = brushes.normal.as<Media::SolidColorBrush>().Color();
         const BOOL bDark = Root().ActualTheme() == ElementTheme::Dark;
+        auto page = bDark ? winrt::Windows::UI::Color{255, 32, 32, 32} : winrt::Windows::UI::Color{255, 243, 243, 243};
+        if (const auto background = Root().Background()) // a Base16 theme
+            page = background.as<Media::SolidColorBrush>().Color();
+        const auto mix = [&](int percent)
+        {
+            const auto channel = [percent](uint8_t a, uint8_t b) { return static_cast<uint8_t>((a * (100 - percent) + b * percent) / 100); };
+            return winrt::Windows::UI::Color{255, channel(page.R, text.R), channel(page.G, text.G), channel(page.B, text.B)};
+        };
+        const auto titleBar = AppWindow().TitleBar();
+        titleBar.ButtonBackgroundColor(winrt::Microsoft::UI::Colors::Transparent());
+        titleBar.ButtonInactiveBackgroundColor(winrt::Microsoft::UI::Colors::Transparent());
+        titleBar.ButtonForegroundColor(text);
+        titleBar.ButtonInactiveForegroundColor(mix(50));
+        titleBar.ButtonHoverForegroundColor(text);
+        titleBar.ButtonHoverBackgroundColor(mix(12));
+        titleBar.ButtonPressedForegroundColor(text);
+        titleBar.ButtonPressedBackgroundColor(mix(20));
+
         const HRESULT hr = DwmSetWindowAttribute(m_hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &bDark, sizeof(bDark));
         if (FAILED(hr))
             LogWin32ErrorCode("DwmSetWindowAttribute", hr, "DWMWA_USE_IMMERSIVE_DARK_MODE");
@@ -1229,7 +1291,7 @@ namespace winrt::pserv6::implementation
     void MainWindow::SetZoomPercent(int percent)
     {
         spdlog::debug("Zoom: {} % requested, was {} %", percent, m_zoomPercent);
-        percent = std::clamp(percent / 10 * 10, 50, 200);
+        percent = std::clamp(percent, 50, 200); // any value: the font dialog's point sizes fall between the steps of 10
         m_zoomPercent = percent;
         m_grid.SetZoom(percent / 100.0);
         pserv::config::theSettings.application.fontSizeScaled.set(percent * 16);
@@ -1244,16 +1306,23 @@ namespace winrt::pserv6::implementation
 
     void MainWindow::ChooseTableFont()
     {
-        // The Win32 font dialog, for the family only: the size is the zoom
+        // The Win32 font dialog, for family and size. The size is the zoom: 100 % is 14 px, 10.5 pt.
+        constexpr double basePoints = 10.5;
         LOGFONTW logFont{};
         const std::wstring current = pserv::utils::Utf8ToWide(pserv::config::theSettings.application.fontFamily.get());
         wcsncpy_s(logFont.lfFaceName, current.empty() ? L"Segoe UI" : current.c_str(), _TRUNCATE);
+        logFont.lfHeight = -MulDiv(std::lround(basePoints * m_zoomPercent / 100), GetDpiForWindow(m_hwnd), 72);
         CHOOSEFONTW choose{sizeof(choose)};
         choose.hwndOwner = m_hwnd;
         choose.lpLogFont = &logFont;
-        choose.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_FORCEFONTEXIST | CF_NOSIZESEL | CF_NOSTYLESEL | CF_NOSCRIPTSEL | CF_NOVERTFONTS;
+        choose.nSizeMin = 6; // the zoom's range, 50 % to 200 %
+        choose.nSizeMax = 21;
+        choose.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_FORCEFONTEXIST | CF_LIMITSIZE | CF_NOSTYLESEL | CF_NOSCRIPTSEL | CF_NOVERTFONTS;
         if (ChooseFontW(&choose))
+        {
             SetTableFont(pserv::utils::WideToUtf8(logFont.lfFaceName));
+            SetZoomPercent(std::lround(choose.iPointSize / 10.0 / basePoints * 100));
+        }
     }
 
     void MainWindow::SetAutoRefreshInterval(int milliseconds)

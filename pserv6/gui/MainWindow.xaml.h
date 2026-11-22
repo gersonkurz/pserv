@@ -60,6 +60,7 @@ namespace winrt::pserv6::implementation
         void UpdateRefreshStatus();
         void UpdateActionBar();
         void UpdateTitle();
+        void UpdateTitleBarRegions();
         const pserv::DataAction *OfferedAction(const std::string &name, const std::vector<pserv::DataObject *> &selection) const;
         void ShowActionProgress(bool bActive, double value, const std::string &text);
         bool IsOffered(const pserv::DataAction *pAction, const std::vector<pserv::DataObject *> &selection) const;
