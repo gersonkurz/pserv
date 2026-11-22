@@ -132,6 +132,8 @@ namespace pserv6
     void DataGrid::LoadLayout()
     {
         m_widths.clear();
+        m_fullOrder.clear();
+        m_hidden.clear();
         m_order.clear();
         if (!m_pController)
             return;
@@ -165,9 +167,19 @@ namespace pserv6
                 }
             }
         }
-        m_order.assign(n, 0);
+        m_fullOrder.assign(n, 0);
         for (size_t c = 0; c < n; ++c)
-            m_order[bValidOrder ? static_cast<size_t>(position[c]) : c] = static_cast<int>(c);
+            m_fullOrder[bValidOrder ? static_cast<size_t>(position[c]) : c] = static_cast<int>(c);
+
+        // Hidden columns, as a list of column indices
+        m_hidden.assign(n, false);
+        for (const auto &entry : pSection ? SplitList(pSection->columnHidden.get()) : std::vector<std::string>{})
+        {
+            int c = -1;
+            if (ParseInt(entry, c) && c >= 0 && c < static_cast<int>(n))
+                m_hidden[static_cast<size_t>(c)] = true;
+        }
+        RebuildShown();
 
         // Sort: restore it unless the controller already has one (it remembers it across visits)
         if (pSection && m_pController->GetLastSortColumn() < 0)
@@ -186,9 +198,9 @@ namespace pserv6
         if (!pSection)
             return;
         std::string widths, order;
-        std::vector<int> position(m_order.size(), 0);
-        for (size_t d = 0; d < m_order.size(); ++d)
-            position[static_cast<size_t>(m_order[d])] = static_cast<int>(d);
+        std::vector<int> position(m_fullOrder.size(), 0);
+        for (size_t d = 0; d < m_fullOrder.size(); ++d)
+            position[static_cast<size_t>(m_fullOrder[d])] = static_cast<int>(d);
         for (size_t c = 0; c < m_widths.size(); ++c)
         {
             widths += std::format("{}{}", c ? "," : "", static_cast<int>(std::lround(m_widths[c])));
@@ -196,8 +208,59 @@ namespace pserv6
         }
         pSection->columnWidths.set(widths);
         pSection->columnOrder.set(order);
+        std::string hidden;
+        for (size_t c = 0; c < m_hidden.size(); ++c)
+            if (m_hidden[c])
+                hidden += std::format("{}{}", hidden.empty() ? "" : ",", c);
+        pSection->columnHidden.set(hidden);
         pSection->sortColumn.set(m_pController->GetLastSortColumn());
         pSection->sortAscending.set(m_pController->IsLastSortAscending());
+    }
+
+    void DataGrid::RebuildShown()
+    {
+        m_order.clear();
+        for (const int c : m_fullOrder)
+            if (!m_hidden[static_cast<size_t>(c)])
+                m_order.push_back(c);
+        if (m_order.empty() && !m_fullOrder.empty()) // never an empty table
+        {
+            m_hidden[static_cast<size_t>(m_fullOrder.front())] = false;
+            m_order.push_back(m_fullOrder.front());
+        }
+    }
+
+    void DataGrid::LayoutChanged()
+    {
+        RebuildShown();
+        ++m_layoutGeneration;
+        BuildHeader();
+        UpdateRealized(); // realized rows rebuild their cells for the new layout
+        SaveLayout();
+        if (m_onHeaderChanged)
+            m_onHeaderChanged(); // the Sort and Columns menus list the columns
+    }
+
+    void DataGrid::SetColumnHidden(int column, bool bHidden)
+    {
+        if (column < 0 || column >= static_cast<int>(m_hidden.size()) || m_hidden[static_cast<size_t>(column)] == bHidden)
+            return;
+        m_hidden[static_cast<size_t>(column)] = bHidden;
+        LayoutChanged();
+    }
+
+    void DataGrid::ResetLayout()
+    {
+        if (!m_pController)
+            return;
+        if (auto *pSection = pserv::config::theSettings.getSectionFor(std::string{m_pController->GetControllerName()}))
+        {
+            pSection->columnWidths.revertToDefault();
+            pSection->columnOrder.revertToDefault();
+            pSection->columnHidden.revertToDefault();
+        }
+        LoadLayout();
+        LayoutChanged();
     }
 
     void DataGrid::SetController(pserv::DataController *pController)
@@ -455,15 +518,13 @@ namespace pserv6
         const int n = static_cast<int>(m_order.size());
         if (from < 0 || from >= n || to < 0 || to >= n || from == to)
             return;
-        const int column = m_order[static_cast<size_t>(from)];
-        m_order.erase(m_order.begin() + from);
-        m_order.insert(m_order.begin() + to, column);
-        ++m_layoutGeneration;
-        BuildHeader();
-        UpdateRealized(); // realized rows rebuild their cells for the new order
-        SaveLayout();
-        if (m_onHeaderChanged)
-            m_onHeaderChanged(); // the Sort menu lists columns in display order
+        // Positions among the shown columns -> positions in the full order (hidden ones keep theirs)
+        const auto fullPosition = [this](int shown) { return std::find(m_fullOrder.begin(), m_fullOrder.end(), m_order[static_cast<size_t>(shown)]) - m_fullOrder.begin(); };
+        const auto fullFrom = fullPosition(from), fullTo = fullPosition(to);
+        const int column = m_fullOrder[static_cast<size_t>(fullFrom)];
+        m_fullOrder.erase(m_fullOrder.begin() + fullFrom);
+        m_fullOrder.insert(m_fullOrder.begin() + fullTo, column);
+        LayoutChanged();
     }
 
     void DataGrid::SetColumnWidth(int column, double width)

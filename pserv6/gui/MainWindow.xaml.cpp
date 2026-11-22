@@ -415,6 +415,31 @@ namespace winrt::pserv6::implementation
             flyout.Items().Append(descending);
         }
         SortButton().Flyout(flyout);
+        if (m_columnsMenu)
+            FillColumnsMenu(m_columnsMenu.Items());
+    }
+
+    // Show/hide per column and a reset: the View menu's Columns submenu and the header's context menu
+    void MainWindow::FillColumnsMenu(Windows::Foundation::Collections::IVector<MenuFlyoutItemBase> const &items)
+    {
+        items.Clear();
+        if (!m_pCurrent)
+            return;
+        const auto &columns = m_pCurrent->GetColumns();
+        for (int c : m_grid.DisplayOrder())
+        {
+            ToggleMenuFlyoutItem item;
+            item.Text(to_hstring(columns[static_cast<size_t>(c)].DisplayName));
+            item.IsChecked(!m_grid.IsColumnHidden(c));
+            // Deferred: the change rebuilds this menu, which must not happen inside its own click
+            item.Click([this, c](auto &&, auto &&) { DispatcherQueue().TryEnqueue([this, c] { m_grid.SetColumnHidden(c, !m_grid.IsColumnHidden(c)); }); });
+            items.Append(item);
+        }
+        items.Append(MenuFlyoutSeparator{});
+        MenuFlyoutItem reset;
+        reset.Text(L"Reset columns");
+        reset.Click([this](auto &&, auto &&) { DispatcherQueue().TryEnqueue([this] { m_grid.ResetLayout(); }); });
+        items.Append(reset);
     }
 
     void MainWindow::CopySelection()
@@ -475,6 +500,19 @@ namespace winrt::pserv6::implementation
                     args.Handled(true);
                 })),
             true);
+
+        // Right-click (or the menu key) on the header: the Columns menu
+        HeaderGrid().ContextRequested([this](UIElement const &sender, Input::ContextRequestedEventArgs const &args)
+            {
+                args.Handled(true);
+                MenuFlyout menu;
+                FillColumnsMenu(menu.Items());
+                Primitives::FlyoutShowOptions options;
+                winrt::Windows::Foundation::Point point{};
+                if (args.TryGetPosition(sender, point))
+                    options.Position(point);
+                menu.ShowAt(sender, options);
+            });
 
         // Keys that act on the selected rows: handled on the list itself, so they apply only while
         // it has focus (the filter box keeps its own Ctrl+C).
@@ -859,6 +897,10 @@ namespace winrt::pserv6::implementation
         zoom.Items().Append(MenuFlyoutSeparator{});
         zoom.Items().Append(m_zoomResetItem);
         items.Append(zoom);
+
+        m_columnsMenu = MenuFlyoutSubItem{};
+        m_columnsMenu.Text(L"Columns");
+        items.Append(m_columnsMenu);
 
         MenuFlyoutSubItem font;
         font.Text(L"Table font");

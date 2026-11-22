@@ -87,7 +87,15 @@ namespace pserv6
         std::vector<winrt::weak_ref<winrt::Microsoft::UI::Xaml::Controls::Grid>> HeaderCellRefs() const;
 
         /// Column layout, display position -> column index (for tests and the self-test).
-        const std::vector<int> &DisplayOrder() const { return m_order; }
+        const std::vector<int> &DisplayOrder() const { return m_fullOrder; }
+
+        /// Show or hide a column (by column index); the last shown column cannot be hidden.
+        bool IsColumnHidden(int column) const { return m_hidden[static_cast<size_t>(column)]; }
+        void SetColumnHidden(int column, bool bHidden);
+        size_t ShownColumnCount() const { return m_order.size(); }
+
+        /// Back to the default widths and order, every column shown.
+        void ResetLayout();
         const std::vector<double> &Widths() const { return m_widths; }
 
         /// Move the column at display position `from` to display position `to`.
@@ -109,6 +117,8 @@ namespace pserv6
     private:
         void LoadLayout();
         void SaveLayout() const;
+        void RebuildShown();  ///< m_order from m_fullOrder and m_hidden
+        void LayoutChanged(); ///< After a change of order or visibility: rebuild, save, notify
         void BuildHeader();
         void UpdateSortIndicators();
         void ApplyWidthsToRealizedRows();
@@ -129,7 +139,9 @@ namespace pserv6
         std::vector<pserv::DataObject *> m_current; ///< Parallel to m_items (each RowItem holds a reference).
         pserv::DataController *m_pController{nullptr};
         std::vector<double> m_widths; ///< By column index.
-        std::vector<int> m_order;     ///< Display position -> column index.
+        std::vector<int> m_fullOrder; ///< Display position -> column index, hidden columns included (persisted).
+        std::vector<bool> m_hidden;   ///< By column index.
+        std::vector<int> m_order;     ///< Display position -> column index of the shown columns.
         std::vector<winrt::Microsoft::UI::Xaml::Controls::TextBlock> m_sortGlyphs; ///< By display position.
         std::string m_filter;
         double m_zoom{1.0};

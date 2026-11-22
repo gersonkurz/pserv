@@ -62,6 +62,7 @@ namespace winrt::pserv6::implementation
         void AddKeyboardShortcuts();
         void CopySelection();
         void RebuildSortMenu();
+        void FillColumnsMenu(Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const &items);
         void BuildViewMenu();
         void UpdateViewMenu();
         void ApplyTheme(const std::string &name); ///< "Light", "Dark", a Base16 theme's name; anything else: follow Windows
@@ -103,6 +104,7 @@ namespace winrt::pserv6::implementation
         std::vector<std::pair<std::string, Microsoft::UI::Xaml::Controls::RadioMenuFlyoutItem>> m_themeItems; ///< By setting value
         Microsoft::UI::Xaml::Controls::ToggleMenuFlyoutItem m_autoRefreshItem{nullptr};
         Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_zoomResetItem{nullptr};
+        Microsoft::UI::Xaml::Controls::MenuFlyoutSubItem m_columnsMenu{nullptr}; ///< Refilled with the Sort menu
         int m_zoomPercent{100};
         std::chrono::steady_clock::time_point m_refreshRequested{std::chrono::steady_clock::now()};
         std::string m_lastRefresh; ///< Status bar: time and duration of the last publish

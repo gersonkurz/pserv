@@ -31,6 +31,7 @@ namespace pserv
             TypedValue<std::string> columnOrder{this, "ColumnOrder", "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17"};
 
             /// @brief Index of the column to sort by (-1 for no sort).
+            TypedValue<std::string> columnHidden{this, "ColumnHidden", ""}; // Column indices hidden in pserv6's table
             TypedValue<int32_t> sortColumn{this, "SortColumn", -1};
 
             /// @brief Sort direction: true for ascending, false for descending.

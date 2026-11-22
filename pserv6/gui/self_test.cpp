@@ -325,7 +325,17 @@ namespace pserv6
         keep();
         grid.MoveColumn(1, 0);
         grid.SetColumnWidth(moved, widths[static_cast<size_t>(moved)]);
-        const bool bLayoutRestored = grid.DisplayOrder() == order && grid.Widths() == widths;
+        bool bLayoutRestored = grid.DisplayOrder() == order && grid.Widths() == widths;
+        // Hide that column and show it again: one header cell less, the stored order untouched
+        if (const size_t shown = grid.ShownColumnCount(); shown > 1 && !grid.IsColumnHidden(moved))
+        {
+            keep();
+            grid.SetColumnHidden(moved, true);
+            const bool bHidden = grid.ShownColumnCount() == shown - 1 && grid.HeaderCellRefs().size() == shown - 1 && grid.DisplayOrder() == order;
+            keep();
+            grid.SetColumnHidden(moved, false);
+            bLayoutRestored = bLayoutRestored && bHidden && grid.ShownColumnCount() == shown && grid.DisplayOrder() == order;
+        }
 
         // 2. Selection and scroll position across a re-sort (a ReplaceAll): scroll down, select
         // rows 1 and 3, reverse the sort, compare.
