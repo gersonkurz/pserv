@@ -1,10 +1,10 @@
 # Checks a built pserv6 MSI without installing it (installing would upgrade an installed pserv5
 # away: plan D12). An administrative extract (msiexec /a) writes the MSI's files into
 # dist\extract\<arch>\; they are compared, by relative path, size and SHA-256, with what the MSI was built
-# from (dist\stage\<arch>\; the symbols are not in the MSI). With -SelfTest the extracted pserv6.exe also
+# from (dist\stage\<arch>\ plus dist\symbols\<arch>\, the optional "Debug Symbols" feature: an administrative extract writes every feature). With -SelfTest the extracted pserv6.exe also
 # runs its self-test (unelevated, RunAsInvoker), which shows the payload launches as installed.
 param(
-    [Parameter(Mandatory = $true)][ValidateSet("x64", "arm64")][string]$Arch,
+    [Parameter(Mandatory = $true)][ValidateSet("x64", "x86", "arm64")][string]$Arch,
     [switch]$SelfTest
 )
 $ErrorActionPreference = "Stop"
@@ -34,6 +34,8 @@ function Get-Listing($dir) {
     return $map
 }
 $expected = Get-Listing (Join-Path $root "dist\stage\$Arch")
+$symbols = Get-Listing (Join-Path $root "dist\symbols\$Arch")
+foreach ($k in $symbols.Keys) { $expected[$k] = $symbols[$k] }
 $actual = Get-Listing $installed
 
 $missing = @($expected.Keys | Where-Object { -not $actual.ContainsKey($_) })

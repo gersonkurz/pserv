@@ -2,6 +2,7 @@
   <Configurations>
     <Platform Name="ARM64" />
     <Platform Name="x64" />
+    <Platform Name="x86" />
   </Configurations>
   <Project Path="gui/pserv6.vcxproj" Id="8c4f2d1a-6e3b-4a7c-9d05-2b1e7f3a6c48" />
   <Project Path="pservc/pservc.vcxproj" Id="fff6295f-5877-4b5b-a65e-5d32080ff0da" />

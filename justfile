@@ -1,6 +1,6 @@
 # Build automation for pserv6 — Windows system administration tool
 # The GUI pserv6.exe (WinUI 3) and the CLI pservc.exe, both on the shared pserv_core library,
-# plus pserv_core_tests. Platforms: ARM64 and x64.
+# plus pserv_core_tests. Platforms: x64, x86 and ARM64 (solution platform x86 builds into bin\Win32).
 # Requires: just, msbuild on PATH (VS 2026 Developer shell).
 #
 # Builds drive off the solution so $(SolutionDir) resolves correctly — the projects derive
@@ -43,8 +43,8 @@ build: (_msbuild "Debug" platform)
 # Build Release (native arch)
 build-release: (_msbuild "Release" platform)
 
-# Build everything: Debug+Release for x64 and ARM64
-build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug" "ARM64") (_msbuild "Release" "ARM64")
+# Build everything: Debug+Release for x64, x86 and ARM64
+build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug" "x86") (_msbuild "Release" "x86") (_msbuild "Debug" "ARM64") (_msbuild "Release" "ARM64")
 
 # Build Debug (native arch), run pserv_core_tests, and check that every built pserv6.exe
 # starts as the invoker (asInvoker; plan F6); exits non-zero if any check fails
@@ -87,24 +87,27 @@ version VERSION:
 
 # --- Packaging (MSIS 3.x → MSI + multi-arch bundle) -------------------------
 
-# Build the full release: x64 + ARM64 MSIs and the multi-arch bundle .exe, into setup\.
+# Build the full release: x64, x86 and ARM64 MSIs and the multi-arch bundle .exe, into setup\.
 release: package-all bundle
 
-# Build both per-architecture MSIs.
-package-all: package-x64 package-arm64
+# Build the per-architecture MSIs.
+package-all: package-x64 package-x86 package-arm64
 
-# Build the x64 MSI and its symbols zip.
-package-x64: (_stage "x64" "x64") (_package "pserv6-x64.msis") (_symbols_zip "x64")
+# Build the x64 MSI.
+package-x64: (_stage "x64" "x64" "x64") (_package "pserv6-x64.msis")
 
-# Build the ARM64 MSI and its symbols zip.
-package-arm64: (_stage "ARM64" "arm64") (_package "pserv6-arm64.msis") (_symbols_zip "arm64")
+# Build the x86 MSI.
+package-x86: (_stage "x86" "Win32" "x86") (_package "pserv6-x86.msis")
 
-# Build the multi-architecture bundle .exe (requires both MSIs built first).
+# Build the ARM64 MSI.
+package-arm64: (_stage "ARM64" "ARM64" "arm64") (_package "pserv6-arm64.msis")
+
+# Build the multi-architecture bundle .exe (requires the three MSIs built first).
 bundle:
     msis /BUILD setup\setup-bundle.msis
 
 # Check an MSI without installing it: administrative extract into dist\extract\<arch>\,
-# compared file by file with dist\stage\<arch>\ (the payload it was built from).
+# compared file by file with dist\stage\<arch>\ and dist\symbols\<arch>\ (what it was built from).
 check-msi arch:
     @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-msi.ps1 -Arch {{arch}}
 
@@ -112,23 +115,18 @@ check-msi arch:
 
 # Stage one arch's Release payload: pserv6.exe, its WinAppSDK runtime files and pservc.exe into
 # dist\stage\<arch>\ (no .pdb/.lib/.exp/.ilk/.winmd), the .pdb files into dist\symbols\<arch>\
-# (zipped by _symbols_zip; not part of the MSI).
-# Args: <solution-platform> <stage-name>.
+# (the MSI's optional "Debug Symbols" feature).
+# Args: <solution-platform> <output-folder> <stage-name>.
 [private]
-_stage msplatform stagename: (_msbuild "Release" msplatform)
+_stage msplatform bindir stagename: (_msbuild "Release" msplatform)
     @if exist dist\stage\{{stagename}} rmdir /s /q dist\stage\{{stagename}}
     @if exist dist\symbols\{{stagename}} rmdir /s /q dist\symbols\{{stagename}}
     @mkdir dist\stage\{{stagename}}
     @mkdir dist\symbols\{{stagename}}
-    @robocopy pserv6\bin\{{msplatform}}\Release dist\stage\{{stagename}} /E /XF *.pdb *.exp *.lib *.ilk *.winmd >nul & if errorlevel 8 exit /b 1
-    @copy /Y pserv6\bin\{{msplatform}}\Release\*.pdb dist\symbols\{{stagename}}\ >nul
+    @robocopy pserv6\bin\{{bindir}}\Release dist\stage\{{stagename}} /E /XF *.pdb *.exp *.lib *.ilk *.winmd >nul & if errorlevel 8 exit /b 1
+    @copy /Y pserv6\bin\{{bindir}}\Release\*.pdb dist\symbols\{{stagename}}\ >nul
 
 # Build one MSI from setup\ (standalone — the bundle adds prerequisites).
 [private]
 _package script:
     @cd setup&& msis /BUILD /STANDALONE {{script}}
-
-# Zip one arch's staged .pdb files next to the MSIs (they are not part of the MSI).
-[private]
-_symbols_zip stagename:
-    @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\zip-symbols.ps1 -Arch {{stagename}}

@@ -26,7 +26,7 @@ $h = $h -replace '(#define\s+PSERV_VERSION_RC\s+)\d+,\d+,\d+,\d+', "`${1}$major,
 
 # 2) Installer manifests — patch PRODUCT_VERSION. BUILD_TARGET filenames and the
 #    bundle's MSI references derive from it via {{PRODUCT_VERSION}}.
-foreach ($name in @('pserv6-x64.msis', 'pserv6-arm64.msis', 'setup-bundle.msis')) {
+foreach ($name in @('pserv6-x64.msis', 'pserv6-x86.msis', 'pserv6-arm64.msis', 'setup-bundle.msis')) {
     $msisPath = Join-Path $root (Join-Path 'setup' $name)
     if (-not (Test-Path $msisPath)) { continue }
     $msis = Get-Content -Raw $msisPath

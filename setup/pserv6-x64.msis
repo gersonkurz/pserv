@@ -18,8 +18,8 @@
     <requires type="vcredist" version="2026"/>
 
     <!-- Payload: pserv6.exe with its self-contained WinAppSDK runtime files, and pservc.exe
-         (no .pdb files: the symbols ship as setup\pserv6-<version>-x64-symbols.zip, to keep the MSI
-         within the plan's 20 MB budget; staged by `just package-x64` from pserv6\bin$A\Release). -->
+         (staged by `just package-x64` from pserv6\bin). The .pdb files are an optional feature, not
+         installed unless selected (owner, 2026-11-22); they about double the size of the MSI. -->
     <feature name="pserv6" enabled="yes" allowed="no">
         <files source="..\dist\stage\x64" target="INSTALLDIR"/>
 
@@ -28,6 +28,10 @@
                     target="STARTMENU"
                     file="[INSTALLDIR]pserv6.exe"
                     description="Windows system administration tool"/>
+        </feature>
+
+        <feature name="Debug Symbols" enabled="no" allowed="yes">
+            <files source="..\dist\symbols\x64" target="INSTALLDIR"/>
         </feature>
     </feature>
 </setup>

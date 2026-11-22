@@ -31,7 +31,7 @@ Run recipes from the repository root with `just` in a **Visual Studio 2026 Devel
 - `just test` — `just build`, then run `pserv_core_tests` and check every built `pserv6.exe` manifest for `asInvoker` (pserv6 starts unelevated and offers "Run as administrator" itself).
 - `just test-asan` — the same tests under AddressSanitizer, with the 50-round background-refresh stress run.
 - `just build-release` — Release, native architecture.
-- `just build-all` — Debug and Release for x64 and ARM64 (there is no x86 build).
+- `just build-all` — Debug and Release for x64, x86 and ARM64 (the solution platform `x86` builds into `bin/Win32/`).
 - `just run` — build Debug and launch pserv6 (with the shell's rights).
 - `just selftest` — build Release and run `pserv6 --selftest`, which loads, scrolls and refreshes every view, runs grid checks and prints a timing log; it runs with the shell's rights, so an elevated shell gives the full data.
 - `just run-cli services` — build Debug and list services through the CLI.
@@ -88,13 +88,13 @@ When adding a view:
 
 Dependencies are Git submodules: `spdlog`, `wil`, `tomlplusplus`, `rapidjson`, and `argparse`. Initialize or resynchronize them with `git submodule update --init --recursive` when needed, particularly after switching revisions. Avoid unrelated changes to vendored code or submodule revisions. The GUI additionally uses the NuGet packages pinned in `gui/pserv6.vcxproj` (Windows App SDK WinUI and Foundation component packages, C++/WinRT, SDK build tools, WIL), restored by the build's `/restore`.
 
-Configuration uses TOML: `%APPDATA%\pserv6\config.toml`, shared by pserv6 (reads and saves) and pservc (reads only); the first run imports pserv5's file. pserv6 follows the Windows (Fluent) theme; pserv5's Base16 themes are gone.
+Configuration uses TOML: `%APPDATA%\pserv6\config.toml`, shared by pserv6 (reads and saves) and pservc (reads only); the first run imports pserv5's file. pserv6 follows the Windows (Fluent) theme or one of the Base16 themes in `gui/themes/`.
 
 ## Versioning and Packaging
 
 - `just version X.Y.Z` updates `pserv6/version.h` and `setup/*.msis`; `gui/pserv6.rc` and `pservc/pservc.rc` consume the version header via `version.rc2`.
 - Packaging requires MSIS 3.x (`msis` on PATH) in addition to the VS build tools.
-- `just package-x64` and `just package-arm64` build and stage the respective Release payload and symbols, then create an MSI. `just package-all` runs both.
+- `just package-x64`, `just package-x86` and `just package-arm64` build and stage the respective Release payload and symbols, then create an MSI; the `.pdb` files are its optional "Debug Symbols" feature, not installed by default. `just package-all` runs all three.
 - `just bundle` combines the per-architecture MSIs; `just release` builds both packages and the bundle.
 - The MSIs keep pserv5's UpgradeCodes (plan D12): installing one upgrades an installed pserv5 away. Do not install them on a development machine; `just check-msi <arch>` checks a built MSI by administrative extraction instead.
 - Staging uses `dist/stage/<arch>/` and `dist/symbols/<arch>/`. Final MSI and bundle outputs land in `setup/`. Keep generated binaries and staging output out of commits.

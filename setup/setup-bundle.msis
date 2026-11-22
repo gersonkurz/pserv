@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  MSIS Bundle Setup - combines the x64 and ARM64 installers into one .exe that auto-selects
-  the correct architecture for the target system. pserv6 has no x86 build.
+  MSIS Bundle Setup - combines the x64, x86 and ARM64 installers into one .exe that auto-selects
+  the correct architecture for the target system.
 -->
 <setup>
   <!-- Product identification -->
@@ -27,6 +27,7 @@
   <!-- Combine the per-arch MSIs; filenames match each per-arch BUILD_TARGET. -->
   <bundle>
     <msi source_64bit="pserv6-{{PRODUCT_VERSION}}-x64.msi"
+         source_32bit="pserv6-{{PRODUCT_VERSION}}-x86.msi"
          source_arm64="pserv6-{{PRODUCT_VERSION}}-arm64.msi"/>
   </bundle>
 </setup>

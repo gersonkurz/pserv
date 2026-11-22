@@ -16,25 +16,25 @@ Build with `just` (recipes in the repo-root `justfile`) from a **Visual Studio 2
 - `just test` — `just build`, then run `pserv_core_tests` and check that every built `pserv6.exe` embeds an `asInvoker` manifest (exit code 0 = all checks pass)
 - `just test-asan` — `pserv_core` + tests under AddressSanitizer (Debug, native arch, `-asan` output folders), with the 50-round background-refresh stress run. Native ARM64 on ARM64 hardware: the x64 ASan runtime does not start under emulation.
 - `just build-release` — Release, native arch
-- `just build-all` — Debug+Release for x64 and ARM64
+- `just build-all` — Debug+Release for x64, x86 and ARM64 (solution platform `x86` builds into `bin\Win32`)
 - `just run` / `just run-cli [-- args]` — build Debug + launch pserv6 (it starts with the shell's rights; "Run as administrator" in the window restarts it elevated) / pservc
 - `just selftest` — build Release + run `pserv6 --selftest` (every view loaded, scrolled, refreshed; grid checks; timing log vs. the plan's section 7 budgets; exit 1 unless `RESULT: PASS` and exit code 0)
 - `just clean`, `just rebuild`
-- `just release` — build x64+ARM64 Release, then the 2 MSIs + the multi-arch bundle `.exe`
-- `just check-msi <x64|arm64>` — check a built MSI without installing it (administrative extract compared with the staged payload); `scripts\check-msi.ps1 -SelfTest` also runs the extracted pserv6
+- `just release` — build x64, x86 and ARM64 Release, then the 3 MSIs + the multi-arch bundle `.exe`
+- `just check-msi <x64|x86|arm64>` — check a built MSI without installing it (administrative extract compared with the staged payload); `scripts\check-msi.ps1 -SelfTest` also runs the extracted pserv6
 - `just version X.Y.Z` — stamp `pserv6/version.h` + `setup/*.msis` (the `.rc` files read `version.h`)
 
 Builds are solution-driven (`pserv6/pserv6.slnx`) so `$(SolutionDir)` resolves — building a bare `.vcxproj` leaves output paths undefined.
 
 Solution: `pserv6/pserv6.slnx` (projects: `gui/pserv6.vcxproj` the WinUI 3 GUI, `pservc/pservc.vcxproj` CLI, `pserv_core/pserv_core.vcxproj` shared core static library linked by the GUI, the CLI and the tests, `tests/pserv_core_tests.vcxproj`). The core is frontend-neutral: one compiled library, no frontend macros (see AGENTS.md).
 Output: `pserv6/bin/<Platform>/<Config>/` — `pserv6.exe` with its self-contained WinAppSDK runtime files (unpackaged; the WinUI build recipe and its pitfalls are Appendix A of `docs/pserv6-plan.md`) and `pservc.exe`; this folder is the release payload. `pserv_core_tests.exe` builds into `pserv6/bin/tests/<Platform>/<Config>/`, outside it.
-Platforms: x64, ARM64 (no x86).
+Platforms: x64, x86, ARM64.
 
 Settings: `%APPDATA%\pserv6\config.toml`, shared by pserv6 (reads and saves) and pservc (reads only); on the first run pserv5's `%LOCALAPPDATA%\pserv5\pserv5.toml` is imported. Logs: `pserv6.log` and `pservc.log` in the same folder.
 
 ### Packaging (MSI via MSIS 3.x)
 
-Installers are built with [MSIS](https://github.com/gersonkurz/msis) (`msis` on PATH) from `.msis` scripts in `setup/`: per-arch `pserv6-{x64,arm64}.msis` and `setup-bundle.msis` (one arch-selecting `.exe`). They keep **pserv5's UpgradeCodes** (plan D12: one lineage), so installing pserv6 upgrades an installed pserv5 away — test installs belong in a disposable environment, not on a dev box. `just release` stages each Release payload into `dist/stage/<arch>/` (symbols into `dist/symbols/<arch>/`), builds an MSI per arch (standalone, with vcredist launch conditions), then the bundle. Output lands in `setup/` (`pserv6-<ver>-<arch>.msi`, `pserv6-<ver>.exe`); `dist/` and the generated `.msi`/`.exe` are gitignored.
+Installers are built with [MSIS](https://github.com/gersonkurz/msis) (`msis` on PATH) from `.msis` scripts in `setup/`: per-arch `pserv6-{x64,x86,arm64}.msis` and `setup-bundle.msis` (one arch-selecting `.exe`). They keep **pserv5's UpgradeCodes** (plan D12: one lineage), so installing pserv6 upgrades an installed pserv5 away — test installs belong in a disposable environment, not on a dev box. `just release` stages each Release payload into `dist/stage/<arch>/` (symbols into `dist/symbols/<arch>/`; they are the MSI's optional "Debug Symbols" feature, not installed by default), builds an MSI per arch (standalone, with vcredist launch conditions), then the bundle. Output lands in `setup/` (`pserv6-<ver>-<arch>.msi`, `pserv6-<ver>.exe`); `dist/` and the generated `.msi`/`.exe` are gitignored.
 
 ## Architecture
 

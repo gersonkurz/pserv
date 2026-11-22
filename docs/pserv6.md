@@ -1,6 +1,6 @@
 # pserv6 - Graphical User Interface
 
-`pserv6.exe` is the graphical interface of pserv6, a Windows system administration tool. It is a native WinUI 3 application for x64 and ARM64 . It starts with your own rights: views show what you may see, and most changes (starting a service, terminating another user's process) are refused. **Run as administrator** at the right of the toolbar, or **File > Restart as Administrator**, restarts it elevated (Windows asks for confirmation); the title bar then reads "pserv 6.0.0 (Administrator)".
+`pserv6.exe` is the graphical interface of pserv6, a Windows system administration tool. It is a native WinUI 3 application for x64, x86 and ARM64. It starts with your own rights: views show what you may see, and most changes (starting a service, terminating another user's process) are refused. **Run as administrator** at the right of the toolbar, or **File > Restart as Administrator**, restarts it elevated (Windows asks for confirmation). The badge next to the title shows which machine the views belong to and with which rights pserv6 runs, for example "Local machine · Standard user".
 
 ![pserv6 showing the Services view](pserv6.png)
 
@@ -89,7 +89,7 @@ Tasks of the Windows Task Scheduler with status, trigger and run times.
 ## Working with rows
 
 - **Select** rows with the mouse or keyboard; `Ctrl` and `Shift` extend the selection.
-- **Actions** in the context menu apply to all selected rows; the menu shows the count and offers only what every selected row allows. The toolbar shows the same actions as icon buttons (those with an icon of their own; the tooltip names them). Destructive actions are shown in red and ask for confirmation, with **No** as the default button.
+- **Actions** in the context menu apply to all selected rows; the menu shows the count and lists every action of the view; what the selected rows do not allow is greyed out. The toolbar shows the same actions as icon buttons (those with an icon of their own; the tooltip names them). Destructive actions are shown in red and ask for confirmation, with **No** as the default button.
 - Actions that take time (starting, stopping or restarting a service, terminating processes) show a progress bar with **Cancel** above the status bar; the table stays visible.
 - Every view's context menu ends with **Copy as JSON**, **Export to JSON...**, **Copy as Plain Text** and **Export to Plain Text...**.
 - `Ctrl+C` copies the selected rows as tab-separated text with a header line, in the current column order — ready to paste into a spreadsheet.
@@ -132,7 +132,7 @@ The item's actions are available as icon buttons below the fields; the tooltip n
 - **Theme**: Use Windows setting, Light, Dark, and the Base16 themes under *Dark themes* and *Light themes*. They are the `.yaml` files in the `themes` folder next to `pserv6.exe`; a Base16 scheme file added there appears in the menu at the next start. With a Windows high-contrast theme active, pserv6 uses that instead.
 - **Zoom**: Zoom in, Zoom out, Reset to 100 %
 - **Columns**: show or hide each column of the current view; *Reset columns* restores the default widths and order and shows every column
-- **Table font**: *Choose...* opens the Windows font dialog for the font family of the table and its header (the size is the zoom); *Default font* returns to the Windows font
+- **Table font**: *Choose...* opens the Windows font dialog for the font family and size of the table and its header (the size sets the zoom: 10.5 pt is 100 %); *Default font* returns to the Windows font
 
 ### Help
 
@@ -141,7 +141,7 @@ The item's actions are available as icon buttons below the fields; the tooltip n
 
 ## Remote machine access
 
-**File > Connect to Remote Machine...** shows the Services and Devices of another computer. Enter its name or IP address; pserv6 tests the connection before switching. While connected, the other views are unavailable and the window title shows the machine. **File > Connect to Local Machine** returns to this computer. The last machine is remembered.
+**File > Connect to Remote Machine...** shows the Services and Devices of another computer. Enter its name or IP address; pserv6 tests the connection before switching. While connected, the other views are unavailable and the badge in the title bar shows the machine. **File > Connect to Local Machine** returns to this computer. The last machine is remembered.
 
 Actions and edits apply to the machine the rows come from: Start, Stop, Restart, Pause, Resume, the startup type, Uninstall Service and edits in the Properties dialog work on the remote machine's services. Actions that need this computer — Open in Registry Editor, Open in Explorer, Open Terminal Here and Delete Registry Key — are not offered for remote rows.
 
