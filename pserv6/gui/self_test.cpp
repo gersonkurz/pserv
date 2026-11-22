@@ -337,7 +337,7 @@ namespace pserv6
             bLayoutRestored = bLayoutRestored && bHidden && grid.ShownColumnCount() == shown && grid.DisplayOrder() == order;
         }
 
-        // 2. Selection and scroll position across a re-sort (a ReplaceAll): scroll down, select
+        // 2. Selection and scroll position across a re-sort (rows rewritten in place): scroll down, select
         // rows 1 and 3, reverse the sort, compare.
         grid.ScrollTo(10 * 24.0);
         const double offsetBefore = grid.VerticalOffset();
@@ -348,7 +348,7 @@ namespace pserv6
         grid.SortBy(0);
         grid.SortBy(0); // twice: the second toggles the direction, so the order surely changes
         auto after = grid.GetSelection();
-        const bool bReset = grid.m_stats.resets > resetsBefore;
+        const bool bReset = grid.m_stats.resets == resetsBefore; // in place: the list is not reset
         std::sort(before.begin(), before.end());
         std::sort(after.begin(), after.end());
         const bool bSelectionKept = before.size() == 2 && before == after;
@@ -382,7 +382,7 @@ namespace pserv6
                         grid.SetController(&controller);
                         grid.ScrollTo(0);
                         Line(std::format("grid checks on {}: layout round trip {}, layout restored {}, sort menu follows the column order {}, "
-                                         "re-sort was a reset {}, selection kept {}, scroll position kept {} ({:.0f} -> {:.0f}), "
+                                         "re-sort without a reset {}, selection kept {}, scroll position kept {} ({:.0f} -> {:.0f}), "
                                          "top kept after a reset at the top {} ({:.0f})",
                             name, bLayoutKept, bLayoutRestored, bMenuFollows, bReset, bSelectionKept, bScrollKept, offsetBefore, offsetAfter, bTopKept, offsetTop));
                         if (!bLayoutKept || !bLayoutRestored || !bMenuFollows || !bReset || !bSelectionKept || !bScrollKept || !bTopKept)

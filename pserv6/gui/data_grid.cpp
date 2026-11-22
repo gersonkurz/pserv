@@ -19,6 +19,14 @@ namespace pserv6
         {
             explicit RowItem(pserv::DataObject *p) : m_p{p} { m_p->Retain(REFCOUNT_DEBUG_ARGS); }
             ~RowItem() { m_p->Release(REFCOUNT_DEBUG_ARGS); }
+            /// The row shows another object from now on (a refresh that changes the order rewrites
+            /// the rows in place instead of resetting the list).
+            void Set(pserv::DataObject *p)
+            {
+                p->Retain(REFCOUNT_DEBUG_ARGS);
+                m_p->Release(REFCOUNT_DEBUG_ARGS);
+                m_p = p;
+            }
             hstring ToString() { return to_hstring(m_p->GetItemName()); } // UI Automation name
             pserv::DataObject *m_p;
         };
@@ -638,7 +646,8 @@ namespace pserv6
         {
             // The common refresh (a few processes come and go, order of the rest unchanged) is
             // applied as individual removes/inserts, so the ListView keeps scroll position and
-            // selection. Anything else (first population, re-sort, filter change, many changes)
+            // selection. A changed order with about the same row count is written into the existing
+            // rows. Anything else (first population, filter change, many rows more or fewer)
             // becomes one ReplaceAll: one Reset notification instead of thousands of events, with
             // selection and scroll position restored afterwards.
             constexpr size_t maxIncrementalChanges = 64;
@@ -668,6 +677,30 @@ namespace pserv6
                         continue;
                     m_items.InsertAt(static_cast<uint32_t>(i), make<RowItem>(next[i])); // new: old ones keep their order
                     m_current.insert(m_current.begin() + static_cast<ptrdiff_t>(i), next[i]);
+                }
+            }
+            else if (!m_current.empty() && (std::max(next.size(), m_current.size()) - std::min(next.size(), m_current.size())) <= maxIncrementalChanges)
+            {
+                // The order changed (a re-sort; an auto-refresh of a view sorted by a value that
+                // changes) and the row count is about the same: the rows stay and show other
+                // objects. No reset, so scroll position, keyboard focus and containers are kept;
+                // the selection is moved to where its objects are now.
+                const auto selection = GetSelection();
+                while (m_items.Size() > next.size())
+                    m_items.RemoveAtEnd();
+                const uint32_t common = m_items.Size();
+                for (uint32_t i = 0; i < common; ++i)
+                {
+                    if (m_current[i] != next[i])
+                        get_self<RowItem>(m_items.GetAt(i).as<winrt::Windows::Foundation::IStringable>())->Set(next[i]);
+                }
+                for (size_t i = common; i < next.size(); ++i)
+                    m_items.Append(make<RowItem>(next[i]));
+                m_current = std::move(next);
+                if (!selection.empty() && GetSelection() != selection)
+                {
+                    m_list.DeselectRange(winrt::Microsoft::UI::Xaml::Data::ItemIndexRange{0, static_cast<uint32_t>(m_current.size())});
+                    RestoreSelection({selection.begin(), selection.end()});
                 }
             }
             else
