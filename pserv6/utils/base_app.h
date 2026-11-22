@@ -28,7 +28,7 @@ namespace pserv
         /// 2. Logging to the debugger
         /// 3. Configuration from %APPDATA%\pserv6\config.toml; on the first run (no such file yet),
         ///    pserv5's %LOCALAPPDATA%\pserv5\pserv5.toml is loaded instead (D13), without the font
-        ///    size and theme (D11: pserv6 follows the Fluent theme)
+        ///    size (the Base16 theme is kept: pserv6 has the same themes)
         /// 4. File logging to <config folder>\<logFileName>, one file per program
         /// 5. Log level from configuration
         class BaseApp final
@@ -65,7 +65,6 @@ namespace pserv
                     config::TomlBackend importBackend{pserv5Config.string()};
                     config::theSettings.load(importBackend);
                     config::theSettings.application.fontSizeScaled.revertToDefault();
-                    config::theSettings.application.theme.revertToDefault();
                     m_bImported = true;
                 }
                 m_pBackend = new config::TomlBackend{m_configPath.string()};

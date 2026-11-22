@@ -2,6 +2,7 @@
 #include "MainWindow.g.h"
 #include "action_runner.h"
 #include "data_grid.h"
+#include "themes.h"
 #include <core/data_controller_library.h>
 #include <core/refresh_coordinator.h>
 
@@ -38,6 +39,9 @@ namespace winrt::pserv6::implementation
         bool IsRefreshInFlight() const { return m_pCurrent && m_coordinator && m_coordinator->IsInFlight(m_pCurrent); }
         const std::vector<pserv::DataController *> &Controllers() { return m_library.GetDataControllers(); }
         ::pserv6::DataGrid &Grid() { return m_grid; }
+        /// Self-test: applies every Base16 theme and the Windows setting again; an error text or "".
+        std::string CheckThemes();
+        size_t ThemeCount() const { return m_themes.size(); }
         bool IsSelfTesting() const { return m_selfTest != nullptr || m_actionTest != nullptr; }
         ::pserv6::ActionRunner &Actions() { return *m_runner; }
         /// Run an action on the selection as the UI would (confirmation, parameters, execution).
@@ -58,7 +62,7 @@ namespace winrt::pserv6::implementation
         void RebuildSortMenu();
         void BuildViewMenu();
         void UpdateViewMenu();
-        void ApplyTheme(const std::string &name); ///< "Light", "Dark", anything else: follow Windows
+        void ApplyTheme(const std::string &name); ///< "Light", "Dark", a Base16 theme's name; anything else: follow Windows
         void ApplyThemeToChrome();                ///< Grid brushes and title bar, for the actual theme
         void SetZoomPercent(int percent);
         void SetAutoRefreshInterval(int milliseconds);
@@ -91,6 +95,8 @@ namespace winrt::pserv6::implementation
         HWND m_hwnd{nullptr};
         // View menu items that mirror state (owned by the menu; no handler captures them)
         std::vector<Microsoft::UI::Xaml::Controls::RadioMenuFlyoutItem> m_viewItems;
+        std::vector<::pserv6::Base16Theme> m_themes{::pserv6::LoadBase16Themes()};
+        std::vector<std::pair<std::string, Microsoft::UI::Xaml::Controls::RadioMenuFlyoutItem>> m_themeItems; ///< By setting value
         Microsoft::UI::Xaml::Controls::ToggleMenuFlyoutItem m_autoRefreshItem{nullptr};
         Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_zoomResetItem{nullptr};
         int m_zoomPercent{100};

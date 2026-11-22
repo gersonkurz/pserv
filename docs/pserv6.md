@@ -15,7 +15,7 @@
 - **Properties** dialog for details and editing (double-click or `Enter`)
 - **Auto-refresh** with an interval of 1, 2, 5 or 10 seconds
 - **Copy and export** of the selected rows as tab-separated text, JSON or plain text
-- **Light and dark theme**, following Windows or chosen in the View menu
+- **Light and dark theme**, following Windows or chosen in the View menu, plus 20 **Base16 colour themes** (Dracula, Nord, Solarized, Gruvbox, ...)
 - **Zoom** for the table, 50 % to 200 %
 
 Rows are coloured by state: running or active items use the Windows accent colour, disabled or unavailable ones are greyed out.
@@ -128,7 +128,7 @@ The item's actions are available as buttons below the fields. They are disabled 
 
 - The ten views
 - **Auto-refresh** (`Ctrl+R`) and **Refresh interval** (1, 2, 5, 10 seconds). Windows, Modules and Scheduled Tasks are refreshed manually only.
-- **Theme**: Use Windows setting, Light, Dark
+- **Theme**: Use Windows setting, Light, Dark, and the Base16 themes under *Dark themes* and *Light themes*. They are the `.yaml` files in the `themes` folder next to `pserv6.exe`; a Base16 scheme file added there appears in the menu at the next start. With a Windows high-contrast theme active, pserv6 uses that instead.
 - **Zoom**: Zoom in, Zoom out, Reset to 100 %
 
 ### Help
@@ -153,7 +153,7 @@ pserv6 keeps its settings in `%APPDATA%\pserv6\config.toml`:
 - auto-refresh and its interval
 - the last remote machine
 
-On the first start, the settings of an installed pserv5 are imported (except its font size and colour theme). The log files `pserv6.log` and `pservc.log` are written to the same folder.
+On the first start, the settings of an installed pserv5 are imported (except its font size; the colour theme is kept). The log files `pserv6.log` and `pservc.log` are written to the same folder.
 
 ## Self-test
 

@@ -483,6 +483,10 @@ namespace pserv6
         Line(std::format("discarded header cells still alive: {} of {}", alive, m_discardedHeaderCells.size()));
         if (alive > 0 && !m_results.empty() && m_results.front().error.empty())
             m_results.front().error = "discarded header cells are still alive (a reference cycle?)";
+        const std::string themeError = m_window.CheckThemes();
+        Line(std::format("Base16 themes: {} applied and removed again{}", m_window.ThemeCount(), themeError.empty() ? "" : " ERROR: " + themeError));
+        if (!themeError.empty() && !m_results.empty() && m_results.front().error.empty())
+            m_results.front().error = themeError;
         // Shutdown with work in flight: the window must join the worker before it destroys the
         // coordinator the worker's task calls back into.
         m_window.RequestRefresh(false);

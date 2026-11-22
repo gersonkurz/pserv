@@ -108,6 +108,11 @@
     <ClInclude Include="data_grid.h" />
     <ClInclude Include="properties_dialog.h" />
     <ClInclude Include="self_test.h" />
+    <ClInclude Include="themes.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Base16 themes, read at run time from themes\ next to pserv6.exe (part of the payload) -->
+    <None Include="themes\*.yaml"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />

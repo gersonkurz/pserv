@@ -15,10 +15,99 @@
 #include <utils/base_app.h>
 #include <utils/string_utils.h>
 #include <utils/win32_error.h>
+#include <winrt/Windows.UI.ViewManagement.h>
 
 using namespace winrt;
 using namespace winrt::Microsoft::UI::Xaml;
 using namespace winrt::Microsoft::UI::Xaml::Controls;
+
+namespace
+{
+    /// The WinUI resources a Base16 theme replaces (as entries of Application.Resources, which win
+    /// over the control library's theme dictionaries): key, palette index, alpha. Control-level keys
+    /// are listed too, because the library's own aliases of the basic brushes are already resolved.
+    struct ThemeKey
+    {
+        const wchar_t *key;
+        int base;
+        uint8_t alpha{255};
+    };
+    constexpr ThemeKey THEME_KEYS[] = {
+        // Surfaces
+        {L"ApplicationPageBackgroundThemeBrush", 0x0},
+        {L"SolidBackgroundFillColorBaseBrush", 0x0},
+        {L"LayerFillColorDefaultBrush", 0x1},
+        {L"CardBackgroundFillColorDefaultBrush", 0x1},
+        {L"NavigationViewContentBackground", 0x0},
+        {L"NavigationViewDefaultPaneBackground", 0x1},
+        {L"NavigationViewExpandedPaneBackground", 0x1},
+        {L"MenuFlyoutPresenterBackground", 0x1},
+        {L"ContentDialogBackground", 0x0},
+        {L"ContentDialogTopOverlay", 0x1},
+        {L"ControlFillColorDefaultBrush", 0x1},
+        {L"ControlFillColorSecondaryBrush", 0x2},
+        {L"SubtleFillColorSecondaryBrush", 0x2, 140},
+        {L"SubtleFillColorTertiaryBrush", 0x2, 90},
+        {L"ButtonBackground", 0x1},
+        {L"ButtonBackgroundPointerOver", 0x2},
+        {L"ButtonBackgroundPressed", 0x2},
+        {L"TextControlBackground", 0x1},
+        {L"TextControlBackgroundPointerOver", 0x2},
+        {L"TextControlBackgroundFocused", 0x0},
+        {L"ComboBoxBackground", 0x1},
+        {L"ComboBoxBackgroundPointerOver", 0x2},
+        {L"ComboBoxDropDownBackground", 0x1},
+        {L"MenuFlyoutItemBackgroundPointerOver", 0x2},
+        {L"MenuFlyoutSubItemBackgroundPointerOver", 0x2},
+        {L"MenuFlyoutSubItemBackgroundSubMenuOpened", 0x2},
+        {L"MenuBarItemBackgroundPointerOver", 0x2},
+        {L"MenuBarItemBackgroundSelected", 0x2},
+        {L"ListViewItemBackgroundPointerOver", 0x2, 120},
+        {L"ListViewItemBackgroundSelected", 0x2, 220},
+        {L"ListViewItemBackgroundSelectedPointerOver", 0x2, 245},
+        // Text
+        {L"TextFillColorPrimaryBrush", 0x5},
+        {L"TextFillColorSecondaryBrush", 0x4},
+        {L"TextFillColorTertiaryBrush", 0x3},
+        {L"TextFillColorDisabledBrush", 0x3},
+        {L"ButtonForeground", 0x5},
+        {L"ButtonForegroundPointerOver", 0x5},
+        {L"ButtonForegroundPressed", 0x4},
+        {L"TextControlForeground", 0x5},
+        {L"TextControlForegroundPointerOver", 0x5},
+        {L"TextControlForegroundFocused", 0x5},
+        {L"TextControlPlaceholderForeground", 0x4},
+        {L"TextControlPlaceholderForegroundPointerOver", 0x4},
+        {L"TextControlPlaceholderForegroundFocused", 0x3},
+        {L"ComboBoxForeground", 0x5},
+        {L"MenuFlyoutItemForeground", 0x5},
+        {L"MenuFlyoutItemForegroundPointerOver", 0x5},
+        {L"MenuFlyoutSubItemForeground", 0x5},
+        {L"MenuFlyoutSubItemForegroundPointerOver", 0x5},
+        {L"MenuFlyoutSubItemChevron", 0x4},
+        {L"NavigationViewItemForeground", 0x5},
+        {L"NavigationViewItemForegroundPointerOver", 0x5},
+        {L"NavigationViewItemForegroundSelected", 0xD},
+        {L"NavigationViewItemForegroundSelectedPointerOver", 0xD},
+        {L"NavigationViewSelectionIndicatorForeground", 0xD},
+        {L"ToggleSwitchContentForeground", 0x5},
+        // Strokes, accent, destructive
+        {L"DividerStrokeColorDefaultBrush", 0x2},
+        {L"CardStrokeColorDefaultBrush", 0x2},
+        {L"ControlStrokeColorDefaultBrush", 0x3, 180},
+        {L"ControlStrongStrokeColorDefaultBrush", 0x3},
+        {L"MenuFlyoutPresenterBorderBrush", 0x2},
+        {L"ContentDialogBorderBrush", 0x3},
+        {L"TextControlBorderBrush", 0x2},
+        {L"ButtonBorderBrush", 0x2},
+        {L"AccentFillColorDefaultBrush", 0xD},
+        {L"AccentTextFillColorPrimaryBrush", 0xD},
+        {L"ListViewItemSelectionIndicatorBrush", 0xD},
+        {L"ToggleSwitchFillOn", 0xD},
+        {L"ToggleSwitchFillOnPointerOver", 0xD},
+        {L"SystemFillColorCriticalBrush", 0x8},
+    };
+} // namespace
 
 namespace winrt::pserv6::implementation
 {
@@ -664,16 +753,30 @@ namespace winrt::pserv6::implementation
 
         MenuFlyoutSubItem theme;
         theme.Text(L"Theme");
-        const std::string currentTheme = settings.application.theme.get();
-        const bool bKnown = currentTheme == "Light" || currentTheme == "Dark";
-        for (const auto &[label, value] : {std::pair{L"Use Windows setting", "System"}, std::pair{L"Light", "Light"}, std::pair{L"Dark", "Dark"}})
+        // The check marks are set by ApplyTheme
+        m_themeItems.clear();
+        auto addTheme = [this](const MenuFlyoutSubItem &menu, const std::string &label, const std::string &value)
         {
             RadioMenuFlyoutItem item;
             item.GroupName(L"Theme");
-            item.Text(label);
-            item.IsChecked(bKnown ? currentTheme == value : std::string_view{value} == "System");
-            item.Click([this, name = std::string{value}](auto &&, auto &&) { ApplyTheme(name); });
-            theme.Items().Append(item);
+            item.Text(to_hstring(label));
+            item.Click([this, value](auto &&, auto &&) { ApplyTheme(value); });
+            menu.Items().Append(item);
+            m_themeItems.emplace_back(value, item);
+        };
+        addTheme(theme, "Use Windows setting", "System");
+        addTheme(theme, "Light", "Light");
+        addTheme(theme, "Dark", "Dark");
+        if (!m_themes.empty())
+        {
+            MenuFlyoutSubItem dark, light;
+            dark.Text(L"Dark themes");
+            light.Text(L"Light themes");
+            for (const auto &t : m_themes)
+                addTheme(t.bDark ? dark : light, t.name, t.name);
+            theme.Items().Append(MenuFlyoutSeparator{});
+            theme.Items().Append(dark);
+            theme.Items().Append(light);
         }
         items.Append(theme);
 
@@ -712,19 +815,77 @@ namespace winrt::pserv6::implementation
 
     void MainWindow::ApplyTheme(const std::string &name)
     {
-        const bool bKnown = name == "Light" || name == "Dark";
-        pserv::config::theSettings.application.theme.set(bKnown ? name : std::string{"System"});
-        const auto before = Root().ActualTheme();
-        Root().RequestedTheme(name == "Light" ? ElementTheme::Light : (name == "Dark" ? ElementTheme::Dark : ElementTheme::Default));
-        if (Root().ActualTheme() != before)
+        const auto it = std::ranges::find(m_themes, name, &::pserv6::Base16Theme::name);
+        const std::string setting = it != m_themes.end() || name == "Light" || name == "Dark" ? name : std::string{"System"};
+        pserv::config::theSettings.application.theme.set(setting);
+        for (const auto &[value, item] : m_themeItems)
+            item.IsChecked(value == setting);
+
+        // High contrast is the user's accessibility choice: no Base16 colours over it (the setting stays)
+        const bool bHighContrast = Windows::UI::ViewManagement::AccessibilitySettings{}.HighContrast();
+        const ::pserv6::Base16Theme *pTheme = it != m_themes.end() && !bHighContrast ? &*it : nullptr;
+
+        auto resources = Application::Current().Resources();
+        for (const auto &k : THEME_KEYS)
         {
-            // The Mica backdrop takes its tint when it is attached and does not follow a later
-            // change of the content's theme (executed: light Mica behind dark-theme text):
-            // attach a new one.
-            SystemBackdrop(nullptr);
-            SystemBackdrop(Media::MicaBackdrop{});
+            if (pTheme)
+            {
+                auto color = pTheme->base[k.base];
+                color.A = k.alpha;
+                resources.Insert(box_value(k.key), Media::SolidColorBrush{color});
+            }
+            else
+                resources.TryRemove(box_value(k.key));
         }
+        if (pTheme)
+            Root().Background(Media::SolidColorBrush{pTheme->base[0]}); // an opaque page instead of Mica
+        else
+            Root().ClearValue(Panel::BackgroundProperty());
+
+        // Theme resources are only looked up again when the element's theme changes, so go through
+        // the opposite theme first.
+        const ElementTheme target = pTheme ? (pTheme->bDark ? ElementTheme::Dark : ElementTheme::Light)
+                                           : (name == "Light" ? ElementTheme::Light : (name == "Dark" ? ElementTheme::Dark : ElementTheme::Default));
+        const bool bDark = target == ElementTheme::Default ? Application::Current().RequestedTheme() == ApplicationTheme::Dark : target == ElementTheme::Dark;
+        Root().RequestedTheme(bDark ? ElementTheme::Light : ElementTheme::Dark);
+        Root().RequestedTheme(target);
+        // The Mica backdrop takes its tint when it is attached and does not follow a later
+        // change of the content's theme (executed: light Mica behind dark-theme text):
+        // attach a new one.
+        SystemBackdrop(nullptr);
+        SystemBackdrop(Media::MicaBackdrop{});
+
+        // Title bar in the theme's colours (Windows 11; older versions refuse the attribute, and
+        // the dark/light caption set by ApplyThemeToChrome remains)
+        const auto colorRef = [](winrt::Windows::UI::Color c) { return RGB(c.R, c.G, c.B); };
+        const COLORREF caption = pTheme ? colorRef(pTheme->base[0]) : DWMWA_COLOR_DEFAULT;
+        const COLORREF captionText = pTheme ? colorRef(pTheme->base[5]) : DWMWA_COLOR_DEFAULT;
+        DwmSetWindowAttribute(m_hwnd, DWMWA_CAPTION_COLOR, &caption, sizeof(caption));
+        DwmSetWindowAttribute(m_hwnd, DWMWA_TEXT_COLOR, &captionText, sizeof(captionText));
+
         ApplyThemeToChrome(); // ActualThemeChanged does not fire if the actual theme stays the same
+    }
+
+    std::string MainWindow::CheckThemes()
+    {
+        const std::string before = pserv::config::theSettings.application.theme.get();
+        const auto color = [](Media::Brush const &brush) { return brush ? brush.as<Media::SolidColorBrush>().Color() : winrt::Windows::UI::Color{}; };
+        std::string error;
+        for (const auto &theme : m_themes)
+        {
+            ApplyTheme(theme.name);
+            const auto critical = Application::Current().Resources().TryLookup(box_value(L"SystemFillColorCriticalBrush")).try_as<Media::Brush>();
+            if (color(BrushNormal().Foreground()) != theme.base[0x5] || color(BrushHighlight().Foreground()) != theme.base[0xD] ||
+                color(critical) != theme.base[0x8] || (Root().ActualTheme() == ElementTheme::Dark) != theme.bDark)
+                error += std::format(" '{}'", theme.name);
+        }
+        ApplyTheme("System");
+        if (!m_themes.empty() && color(BrushNormal().Foreground()) == m_themes.back().base[0x5])
+            error += " (colours remain after switching back to the Windows setting)";
+        ApplyTheme(before);
+        if (m_themes.empty())
+            return "no Base16 themes found next to pserv6.exe";
+        return error.empty() ? error : "theme colours not applied:" + error;
     }
 
     void MainWindow::ApplyThemeToChrome()
