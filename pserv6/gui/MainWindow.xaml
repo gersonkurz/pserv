@@ -37,7 +37,7 @@
         </MenuBarItem>
     </MenuBar>
     <NavigationView Grid.Row="1" x:Name="Nav" PaneDisplayMode="Left" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
-                    OpenPaneLength="210" SelectionChanged="OnNavSelectionChanged">
+                    OpenPaneLength="240" SelectionChanged="OnNavSelectionChanged">
         <Grid RowDefinitions="Auto,*,Auto" Padding="8,6,8,4" RowSpacing="6">
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button x:Name="RefreshButton" Click="OnRefreshClick" ToolTipService.ToolTip="Refresh (F5)">

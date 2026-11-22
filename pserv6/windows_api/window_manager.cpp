@@ -132,21 +132,18 @@ namespace pserv
 
     std::string WindowManager::GetWindowTextUtf8(HWND hwnd)
     {
-        int len = ::GetWindowTextLengthW(hwnd);
-        if (len <= 0)
+        // InternalGetWindowText reads the title the system keeps for the window. GetWindowText and
+        // GetWindowTextLength send a message to a window of this process: enumerating on the
+        // refresh worker, that deadlocked with a UI thread waiting for the worker (closing while
+        // the Windows view refreshes).
+        std::vector<wchar_t> buf(256);
+        for (;;)
         {
-            // Zero length is valid (empty title), don't log
-            return "";
+            const int copied = ::InternalGetWindowText(hwnd, buf.data(), static_cast<int>(buf.size()));
+            if (copied < static_cast<int>(buf.size()) - 1 || buf.size() >= 32768)
+                return utils::WideToUtf8(std::wstring{buf.data(), static_cast<size_t>(std::max(copied, 0))});
+            buf.resize(buf.size() * 2); // possibly truncated
         }
-
-        std::vector<wchar_t> buf(len + 1);
-        int result = ::GetWindowTextW(hwnd, buf.data(), len + 1);
-        if (result == 0 && len > 0)
-        {
-            LogExpectedWin32Error("GetWindowTextW", "HWND {:#x}", reinterpret_cast<uintptr_t>(hwnd));
-            return "";
-        }
-        return utils::WideToUtf8(buf.data());
     }
 
     std::string WindowManager::GetClassNameUtf8(HWND hwnd)

@@ -106,6 +106,7 @@
     <ClInclude Include="action_runner.h" />
     <ClInclude Include="action_test.h" />
     <ClInclude Include="data_grid.h" />
+    <ClInclude Include="icons.h" />
     <ClInclude Include="properties_dialog.h" />
     <ClInclude Include="self_test.h" />
     <ClInclude Include="themes.h" />

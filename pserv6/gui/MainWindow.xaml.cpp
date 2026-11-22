@@ -4,6 +4,7 @@
 #include "MainWindow.g.cpp"
 #endif
 #include "action_test.h"
+#include "icons.h"
 #include "self_test.h"
 #include <actions/common_actions.h>
 #include <config/settings.h>
@@ -148,6 +149,9 @@ namespace winrt::pserv6::implementation
             NavigationViewItem item;
             item.Content(box_value(to_hstring(std::string{controller->GetControllerName()})));
             item.Tag(box_value(to_hstring(std::string{controller->GetControllerName()})));
+            FontIcon icon;
+            icon.Glyph(::pserv6::ViewGlyph(controller->GetControllerName()));
+            item.Icon(icon);
             Nav().MenuItems().Append(item);
         }
 
@@ -565,7 +569,8 @@ namespace winrt::pserv6::implementation
                 bLastWasSeparator = true;
                 continue;
             }
-            if (!pAction->IsAvailableFor(pObject))
+            // The action runs on the whole selection, so every selected object must allow it
+            if (!std::ranges::all_of(selection, [pAction](const pserv::DataObject *p) { return pAction->IsAvailableFor(p); }))
                 continue;
             // A remote machine's objects: nothing that needs this machine (Explorer, Registry Editor, ...)
             if (IsRemote(pController) && pAction->RequiresLocalMachine())
@@ -577,6 +582,12 @@ namespace winrt::pserv6::implementation
             item.Text(to_hstring(label));
             if (pAction->IsDestructive())
                 item.Foreground(criticalBrush);
+            if (const wchar_t *glyph = ::pserv6::ActionGlyph(pAction->GetName()))
+            {
+                FontIcon icon;
+                icon.Glyph(glyph);
+                item.Icon(icon);
+            }
             item.Click([this, pAction, pController, held, generation](auto &&, auto &&)
                 {
                     if (m_runner)
