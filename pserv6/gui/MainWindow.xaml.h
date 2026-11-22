@@ -23,6 +23,7 @@ namespace winrt::pserv6::implementation
         void OnRefreshClick(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnAutoRefreshToggled(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnFilterChanged(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::Controls::TextChangedEventArgs const &);
+        void OnCancelAction(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnRowSelectionChanged(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const &);
         void OnContainerContentChanging(Microsoft::UI::Xaml::Controls::ListViewBase const &, Microsoft::UI::Xaml::Controls::ContainerContentChangingEventArgs const &);
         void OnRowContextRequested(Microsoft::UI::Xaml::UIElement const &, Microsoft::UI::Xaml::Input::ContextRequestedEventArgs const &);
@@ -57,6 +58,7 @@ namespace winrt::pserv6::implementation
         void UpdateStatus();
         void UpdateRefreshStatus();
         void UpdateActionBar();
+        void ShowActionProgress(bool bActive, double value, const std::string &text);
         bool IsOffered(const pserv::DataAction *pAction, const std::vector<pserv::DataObject *> &selection) const;
         HWND WindowHandle();
         void RestoreWindowPlacement();
@@ -94,6 +96,7 @@ namespace winrt::pserv6::implementation
         ::pserv6::DataGrid m_grid;
         pserv::DataController *m_pCurrent{nullptr};
         Microsoft::UI::Dispatching::DispatcherQueueTimer m_autoRefreshTimer{nullptr};
+        Microsoft::UI::Dispatching::DispatcherQueueTimer m_progressHideTimer{nullptr};
         bool m_bPublishedCurrent{false}; ///< Set by OnPublished during the UI task that published.
         std::unique_ptr<::pserv6::SelfTest> m_selfTest;
         /// Runs actions and their dialogs. Destroyed before the coordinator and the library

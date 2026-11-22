@@ -18,7 +18,8 @@ namespace pserv6
         DataGrid &operator=(const DataGrid &) = delete;
 
         /// Bind to the XAML elements (once, after InitializeComponent).
-        void Attach(winrt::Microsoft::UI::Xaml::Controls::ListView const &list, winrt::Microsoft::UI::Xaml::Controls::Grid const &header);
+        void Attach(winrt::Microsoft::UI::Xaml::Controls::ListView const &list, winrt::Microsoft::UI::Xaml::Controls::Grid const &header,
+            winrt::Microsoft::UI::Xaml::Controls::ScrollViewer const &headerScroller);
 
         /// The brushes the grid paints with. They are theme resources resolved by the window (for
         /// its current theme) and set again whenever the theme changes.
@@ -134,7 +135,8 @@ namespace pserv6
 
         winrt::Microsoft::UI::Xaml::Controls::ListView m_list{nullptr};
         winrt::Microsoft::UI::Xaml::Controls::Grid m_header{nullptr};
-        winrt::Microsoft::UI::Xaml::Controls::ScrollViewer m_scroller{nullptr};
+        winrt::Microsoft::UI::Xaml::Controls::ScrollViewer m_scroller{nullptr};       ///< The list's own (both directions)
+        winrt::Microsoft::UI::Xaml::Controls::ScrollViewer m_headerScroller{nullptr}; ///< Around the header, kept at the list's horizontal offset
         winrt::Windows::Foundation::Collections::IObservableVector<winrt::Windows::Foundation::IInspectable> m_items{nullptr};
         std::vector<pserv::DataObject *> m_current; ///< Parallel to m_items (each RowItem holds a reference).
         pserv::DataController *m_pController{nullptr};

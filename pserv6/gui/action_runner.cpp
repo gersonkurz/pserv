@@ -306,53 +306,25 @@ namespace pserv6
                     auto *op = m_dispatch.m_pAsyncOp;
                     if (!op)
                         return;
-                    if (m_progressBar)
-                    {
-                        m_progressBar.Value(op->GetProgress());
-                        m_progressText.Text(to_hstring(op->GetProgressMessage()));
-                    }
+                    if (m_bProgressShown && m_callbacks.progress)
+                        m_callbacks.progress(true, op->GetProgress(), op->GetProgressMessage());
                     if (op->GetStatus() != pserv::AsyncStatus::Running)
                         FinishAsync();
                 });
         }
         m_progressTimer.Start();
 
-        if (!m_dispatch.m_bShowProgressDialog || m_bDialogOpen || m_bAutomation)
-            return;
-        m_progressDialog = NewDialog(m_actionName);
-        StackPanel panel;
-        panel.Spacing(10);
-        panel.MinWidth(400);
-        m_progressText = TextBlock{};
-        m_progressText.TextWrapping(TextWrapping::Wrap);
-        m_progressText.Text(L"Starting...");
-        m_progressBar = ProgressBar{};
-        m_progressBar.Minimum(0);
-        m_progressBar.Maximum(1);
-        panel.Children().Append(m_progressText);
-        panel.Children().Append(m_progressBar);
-        m_progressDialog.Content(panel);
-        m_progressDialog.CloseButtonText(L"Cancel");
-        m_progressDialog.CloseButtonClick([this](auto &&, ContentDialogButtonClickEventArgs const &args)
-            {
-                // Keep the dialog until the operation has actually stopped
-                args.Cancel(true);
-                if (auto *op = m_dispatch.m_pAsyncOp)
-                {
-                    op->RequestCancel();
-                    if (m_progressText)
-                        m_progressText.Text(L"Cancelling...");
-                }
-            });
-        SetDialogOpen(true);
-        [](ActionRunner *self, ContentDialog dialog, std::weak_ptr<bool> alive) -> winrt::fire_and_forget
-        {
-            co_await dialog.ShowAsync();
-            if (auto a = alive.lock(); !a || !*a)
-                co_return;
-            self->SetDialogOpen(false);
-            self->ShowNextMessage();
-        }(this, m_progressDialog, m_alive);
+        // Progress is shown in the window (a bar with Cancel above the status bar), not in a
+        // dialog: it does not need the dialog slot and does not cover the table.
+        m_bProgressShown = m_dispatch.m_bShowProgressDialog && !m_bAutomation && m_callbacks.progress;
+        if (m_bProgressShown)
+            m_callbacks.progress(true, 0.0, m_actionName + "...");
+    }
+
+    void ActionRunner::CancelOperation()
+    {
+        if (auto *op = m_dispatch.m_pAsyncOp)
+            op->RequestCancel();
     }
 
     void ActionRunner::OnAsyncComplete()
@@ -378,13 +350,8 @@ namespace pserv6
         pserv::DataController *pController = m_dispatch.m_pController;
         m_dispatch.SetSelection({});
 
-        if (m_progressDialog)
-        {
-            m_progressDialog.Hide(); // its ShowAsync continuation frees the dialog slot
-            m_progressDialog = nullptr;
-            m_progressBar = nullptr;
-            m_progressText = nullptr;
-        }
+        if (std::exchange(m_bProgressShown, false))
+            m_callbacks.progress(false, 1.0, message);
 
         switch (status)
         {

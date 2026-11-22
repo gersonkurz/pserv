@@ -142,22 +142,15 @@ namespace pserv6
             if (m_bRemote && pAction->RequiresLocalMachine())
                 continue;
             Button button;
-            if (const wchar_t *glyph = ActionGlyph(pAction->GetName()))
-            {
-                StackPanel content;
-                content.Orientation(Orientation::Horizontal);
-                content.Spacing(6);
-                FontIcon icon;
-                icon.Glyph(glyph);
-                icon.FontSize(14);
-                TextBlock label;
-                label.Text(to_hstring(pAction->GetName()));
-                content.Children().Append(icon);
-                content.Children().Append(label);
-                button.Content(content);
-            }
-            else
-                button.Content(box_value(to_hstring(pAction->GetName())));
+            // Icon only, the name as tooltip: with text, a service's actions do not fit the dialog
+            const wchar_t *glyph = ActionGlyph(pAction->GetName());
+            FontIcon icon;
+            icon.Glyph(glyph ? glyph : MoreGlyph);
+            icon.FontSize(16);
+            button.Content(icon);
+            const hstring name = to_hstring(pAction->GetName());
+            ToolTipService::SetToolTip(button, box_value(name));
+            winrt::Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button, name);
             if (pAction->IsDestructive())
                 button.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Media::Brush>());
             button.IsEnabled(m_edits.empty());

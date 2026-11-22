@@ -74,10 +74,13 @@ namespace pserv6
         }
     } // namespace
 
-    void DataGrid::Attach(ListView const &list, Grid const &header)
+    void DataGrid::Attach(ListView const &list, Grid const &header, ScrollViewer const &headerScroller)
     {
         m_list = list;
         m_header = header;
+        m_headerScroller = headerScroller;
+        // The list's own ScrollViewer exists once its template is applied
+        m_list.Loaded([this](auto &&, auto &&) { Scroller(); });
     }
 
     void DataGrid::SetBrushes(const Brushes &brushes)
@@ -131,7 +134,20 @@ namespace pserv6
     ScrollViewer DataGrid::Scroller()
     {
         if (!m_scroller)
+        {
             m_scroller = FindScrollViewer(m_list);
+            if (m_scroller)
+            {
+                // The header follows the rows horizontally. The handler takes the scroller from
+                // the sender (it must not capture the element it is attached to).
+                m_scroller.ViewChanged([this](winrt::Windows::Foundation::IInspectable const &sender, auto &&)
+                    {
+                        const double offset = sender.as<ScrollViewer>().HorizontalOffset();
+                        if (m_headerScroller.HorizontalOffset() != offset)
+                            m_headerScroller.ChangeView(offset, nullptr, nullptr, true);
+                    });
+            }
+        }
         return m_scroller;
     }
 
@@ -493,7 +509,6 @@ namespace pserv6
         }
         m_header.Width(total);
         m_header.Height(std::round(30.0 * m_zoom));
-        m_list.Width(total + 24);
         UpdateSortIndicators();
     }
 
@@ -550,7 +565,6 @@ namespace pserv6
                 m_header.ColumnDefinitions().GetAt(static_cast<uint32_t>(d)).Width(GridLengthHelper::FromPixels(w));
         }
         m_header.Width(total);
-        m_list.Width(total + 24);
         ApplyWidthsToRealizedRows();
         if (m_resize.column < 0) // programmatic (not a drag in progress): persist now
         {

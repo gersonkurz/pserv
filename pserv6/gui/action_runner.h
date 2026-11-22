@@ -1,7 +1,7 @@
 #pragma once
 // Runs DataActions for the pserv6 window (plan Phase 5, D4): everything the user is asked happens
 // here before Execute() (confirmation, parameters), the persistent dispatch context is kept while
-// an asynchronous operation runs (with a progress dialog and Cancel), and the frontend services
+// an asynchronous operation runs (its progress goes to the window, which has the Cancel button), and the frontend services
 // actions call back into (IActionHost: messages, the properties dialog) are provided.
 //
 // One dialog at a time: ContentDialogs are shown one after another (WinUI allows a single open
@@ -52,6 +52,9 @@ namespace pserv6
             /// Bumped whenever the target machine changes: a request, menu or properties dialog
             /// prepared before the change must not run afterwards on what the rows now are.
             std::function<uint64_t()> targetGeneration;
+            /// Progress of a running operation, shown in the window: (active, 0..1, text). The last
+            /// call has active == false and the operation's final message.
+            std::function<void(bool, double, const std::string &)> progress;
         };
 
 
@@ -77,6 +80,9 @@ namespace pserv6
 
         /// The window received WM_ASYNC_OPERATION_COMPLETE.
         void OnAsyncComplete();
+
+        /// Ask the running operation to stop (the window's Cancel button).
+        void CancelOperation();
 
         /// Stop showing anything (the window closes); a running operation is waited for.
         void Shutdown();
@@ -113,9 +119,7 @@ namespace pserv6
         bool m_bDialogOpen{false};
         std::deque<std::pair<std::string, std::string>> m_messages; ///< Waiting for the dialog slot.
         std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)}; ///< Cleared by Shutdown().
-        winrt::Microsoft::UI::Xaml::Controls::ContentDialog m_progressDialog{nullptr};
-        winrt::Microsoft::UI::Xaml::Controls::ProgressBar m_progressBar{nullptr};
-        winrt::Microsoft::UI::Xaml::Controls::TextBlock m_progressText{nullptr};
+        bool m_bProgressShown{false}; ///< The window shows the running operation's progress.
         winrt::Microsoft::UI::Dispatching::DispatcherQueueTimer m_progressTimer{nullptr};
         bool m_bAsyncFinished{false}; ///< FinishAsync() ran for the current operation.
         std::string m_actionName;     ///< The action being executed (dialog titles, messages).

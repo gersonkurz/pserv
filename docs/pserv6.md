@@ -90,7 +90,7 @@ Tasks of the Windows Task Scheduler with status, trigger and run times.
 
 - **Select** rows with the mouse or keyboard; `Ctrl` and `Shift` extend the selection.
 - **Actions** in the context menu apply to all selected rows; the menu shows the count and offers only what every selected row allows. The toolbar shows the same actions as icon buttons (those with an icon of their own; the tooltip names them). Destructive actions are shown in red and ask for confirmation, with **No** as the default button.
-- Long-running actions (for example stopping a service) show a progress dialog with **Cancel**.
+- Actions that take time (starting, stopping or restarting a service, terminating processes) show a progress bar with **Cancel** above the status bar; the table stays visible.
 - Every view's context menu ends with **Copy as JSON**, **Export to JSON...**, **Copy as Plain Text** and **Export to Plain Text...**.
 - `Ctrl+C` copies the selected rows as tab-separated text with a header line, in the current column order — ready to paste into a spreadsheet.
 - The view refreshes automatically after an action.
@@ -99,7 +99,7 @@ Tasks of the Windows Task Scheduler with status, trigger and run times.
 
 Double-click a row or press `Enter`. The dialog lists every column of the item. Editable fields (their labels are bold) are text boxes, number boxes or drop-down lists; **OK** applies the changes, **Cancel** discards them. With several rows selected, a picker at the top switches between the items, and OK applies the edits of all of them.
 
-The item's actions are available as buttons below the fields. They are disabled while there are unsaved edits.
+The item's actions are available as icon buttons below the fields; the tooltip names the action. They are disabled while there are unsaved edits.
 
 ## Keyboard shortcuts
 
@@ -128,7 +128,7 @@ The item's actions are available as buttons below the fields. They are disabled 
 ### View
 
 - The ten views
-- **Auto-refresh** (`Ctrl+R`) and **Refresh interval** (1, 2, 5, 10 seconds). Windows, Modules and Scheduled Tasks are refreshed manually only.
+- **Auto-refresh** (`Ctrl+R`) and **Refresh interval** (1, 2, 5, 10 seconds). Windows, Modules and Scheduled Tasks are refreshed manually only: there the Auto-refresh switch is greyed out and the status bar says so (press `F5`).
 - **Theme**: Use Windows setting, Light, Dark, and the Base16 themes under *Dark themes* and *Light themes*. They are the `.yaml` files in the `themes` folder next to `pserv6.exe`; a Base16 scheme file added there appears in the menu at the next start. With a Windows high-contrast theme active, pserv6 uses that instead.
 - **Zoom**: Zoom in, Zoom out, Reset to 100 %
 - **Columns**: show or hide each column of the current view; *Reset columns* restores the default widths and order and shows every column

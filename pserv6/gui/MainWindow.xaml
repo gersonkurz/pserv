@@ -47,7 +47,7 @@
     </MenuBar>
     <NavigationView Grid.Row="1" x:Name="Nav" PaneDisplayMode="Left" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
                     OpenPaneLength="240" SelectionChanged="OnNavSelectionChanged">
-        <Grid RowDefinitions="Auto,*,Auto" Padding="8,6,8,4" RowSpacing="6">
+        <Grid RowDefinitions="Auto,*,Auto,Auto" Padding="8,6,8,4" RowSpacing="6">
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button x:Name="RefreshButton" Click="OnRefreshClick" ToolTipService.ToolTip="Refresh (F5)">
                     <SymbolIcon Symbol="Refresh" />
@@ -63,12 +63,18 @@
                 <!-- Filled in code (UpdateActionBar): the actions available for the selected rows -->
                 <StackPanel x:Name="ActionBar" Orientation="Horizontal" Spacing="4" />
             </StackPanel>
-            <ScrollViewer Grid.Row="1" x:Name="HScroller" HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
-                <Grid RowDefinitions="Auto,*">
-                    <!-- Left-aligned like the rows (a fixed-width element would otherwise be centred) -->
-                    <Grid x:Name="HeaderGrid" Height="30" HorizontalAlignment="Left" />
-                    <ListView Grid.Row="1" x:Name="RowList" HorizontalAlignment="Left" SelectionMode="Extended" IsItemClickEnabled="False"
+            <!-- The list scrolls in both directions (its scrollbars sit at the edges of the view); the
+                 header has a scroller of its own without bars, which the grid keeps at the list's
+                 horizontal offset. -->
+                <Grid Grid.Row="1" RowDefinitions="Auto,*">
+                    <ScrollViewer x:Name="HeaderScroller" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled" IsTabStop="False">
+                        <!-- Left-aligned like the rows (a fixed-width element would otherwise be centred) -->
+                        <Grid x:Name="HeaderGrid" Height="30" HorizontalAlignment="Left" />
+                    </ScrollViewer>
+                    <ListView Grid.Row="1" x:Name="RowList" SelectionMode="Extended" IsItemClickEnabled="False"
+                              ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                               ShowsScrollingPlaceholders="False" SelectionChanged="OnRowSelectionChanged"
                               ContainerContentChanging="OnContainerContentChanging"
                               ContextRequested="OnRowContextRequested" DoubleTapped="OnRowDoubleTapped">
@@ -97,9 +103,18 @@
                         </ListView.ItemTemplate>
                     </ListView>
                 </Grid>
-            </ScrollViewer>
+            <!-- A running action (service start/stop, ...): what it is doing, a bar and Cancel -->
+            <Grid Grid.Row="2" x:Name="ProgressPanel" Visibility="Collapsed" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                  Padding="12,8,8,8" CornerRadius="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                    <TextBlock x:Name="ProgressLabel" TextTrimming="CharacterEllipsis" />
+                    <ProgressBar x:Name="ProgressValue" Minimum="0" Maximum="1" />
+                </StackPanel>
+                <Button Grid.Column="2" x:Name="ProgressCancel" Content="Cancel" Click="OnCancelAction" />
+            </Grid>
             <!-- Status bar: counts on the left, refresh state on the right -->
-            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="16">
                 <TextBlock x:Name="StatusText" Opacity="0.8" TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="1" x:Name="RefreshText" Opacity="0.8" />
             </Grid>

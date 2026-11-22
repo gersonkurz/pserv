@@ -24,6 +24,9 @@ namespace pserv6
         return L"\uE8A5"; // Document
     }
 
+    /// For an action without a glyph where a button needs one (the name is its tooltip).
+    inline constexpr const wchar_t *MoreGlyph = L"\uE712";
+
     /// Segoe Fluent Icons glyph for an action, by its name; nullptr if it has none (no icon is
     /// better than a wrong one).
     inline const wchar_t *ActionGlyph(std::string_view name)
@@ -56,7 +59,10 @@ namespace pserv6
             {"Maximize", L"\uE922"},                // ChromeMaximize
             {"Restore", L"\uE923"},                 // ChromeRestore
             {"Bring To Front", L"\uE8A7"},          // OpenInNewWindow
-            {"Properties", L"\uE946"},              // Info
+            {"Properties", L"\uE946"},
+            {"Set Startup: Automatic", L"\uE895"},  // Sync
+            {"Set Startup: Manual", L"\uE77B"},     // Contact (by hand)
+            {"Set Startup: Disabled", L"\uE72E"},   // Lock
         };
         for (const auto &[action, glyph] : exact)
             if (action == name)
@@ -65,7 +71,6 @@ namespace pserv6
             {"Copy", L"\uE8C8"},        // Copy
             {"Add", L"\uE710"},         // Add
             {"Export", L"\uE74E"},      // Save
-            {"Set Startup", L"\uE8AB"}, // Switch
         };
         for (const auto &[prefix, glyph] : prefixes)
             if (name.starts_with(prefix))

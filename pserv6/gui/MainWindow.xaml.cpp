@@ -118,7 +118,7 @@ namespace winrt::pserv6::implementation
     {
         InitializeComponent();
         ExtendsContentIntoTitleBar(false);
-        m_grid.Attach(RowList(), HeaderGrid());
+        m_grid.Attach(RowList(), HeaderGrid(), HeaderScroller());
         m_grid.m_onHeaderChanged = [this] { RebuildSortMenu(); };
         m_hwnd = WindowHandle();
 
@@ -179,6 +179,12 @@ namespace winrt::pserv6::implementation
         callbacks.status = [this](const std::string &text) { StatusText().Text(to_hstring(text)); };
         callbacks.isRemote = [this](const pserv::DataController *c) { return IsRemote(c); };
         callbacks.targetGeneration = [this] { return m_targetGeneration; };
+        callbacks.progress = [this](bool bActive, double value, const std::string &text) { ShowActionProgress(bActive, value, text); };
+        // The finished bar stays for a moment: a service that starts in 200 ms would only flash it
+        m_progressHideTimer = DispatcherQueue().CreateTimer();
+        m_progressHideTimer.Interval(std::chrono::milliseconds(900));
+        m_progressHideTimer.IsRepeating(false);
+        m_progressHideTimer.Tick([this](auto &&, auto &&) { ProgressPanel().Visibility(Visibility::Collapsed); });
         m_runner = std::make_unique<::pserv6::ActionRunner>(std::move(callbacks));
         if (!SetWindowSubclass(m_hwnd, &MainWindow::SubclassProc, 1, reinterpret_cast<DWORD_PTR>(this)))
             LogWin32Error("SetWindowSubclass");
@@ -209,6 +215,8 @@ namespace winrt::pserv6::implementation
                 *m_alive = false;
                 if (m_autoRefreshTimer)
                     m_autoRefreshTimer.Stop();
+                if (m_progressHideTimer)
+                    m_progressHideTimer.Stop();
                 if (m_runner)
                     m_runner->Shutdown();
                 RemoveWindowSubclass(m_hwnd, &MainWindow::SubclassProc, 1);
@@ -324,7 +332,8 @@ namespace winrt::pserv6::implementation
             return;
         }
         const size_t total = m_pCurrent->GetDataObjects().GetSize();
-        std::string text = std::format("{} {}s", m_grid.RowCount(), m_pCurrent->GetItemName());
+        const std::string item{m_pCurrent->GetItemName()};
+        std::string text = std::format("{} {}{}", m_grid.RowCount(), item, item.ends_with('s') ? "es" : "s"); // Process -> Processes
         if (m_grid.RowCount() != total)
             text += std::format(" (of {})", total);
         if (const size_t selected = m_grid.GetSelection().size())
@@ -343,8 +352,13 @@ namespace winrt::pserv6::implementation
         if (!m_pCurrent)
             return;
         std::string text;
-        if (!m_pCurrent->SupportsAutoRefresh())
-            text = "Refresh with F5";
+        // Views that are too slow or too disruptive to enumerate every few seconds: the switch is
+        // greyed out there (it keeps its setting for the other views)
+        const bool bSupported = m_pCurrent->SupportsAutoRefresh();
+        AutoRefreshSwitch().IsEnabled(bSupported);
+        ToolTipService::SetToolTip(AutoRefreshSwitch(), bSupported ? nullptr : box_value(to_hstring(std::format("{} is not refreshed automatically: press F5", m_pCurrent->GetControllerName()))));
+        if (!bSupported)
+            text = "No auto-refresh in this view (F5 refreshes)";
         else if (AutoRefreshSwitch().IsOn())
             text = std::format("Auto-refresh every {} s", std::clamp(pserv::config::theSettings.autoRefresh.intervalMs.get(), 1000, 10000) / 1000);
         else
@@ -616,6 +630,32 @@ namespace winrt::pserv6::implementation
             return;
         m_grid.SelectOnly(pObject);
         RunAction(&pserv::theDataPropertiesAction, {pObject});
+    }
+
+    // The running action above the status bar. Operations that report no fraction (0) get an
+    // indeterminate bar.
+    void MainWindow::ShowActionProgress(bool bActive, double value, const std::string &text)
+    {
+        if (!*m_alive)
+            return;
+        ProgressPanel().Visibility(Visibility::Visible);
+        if (!text.empty())
+            ProgressLabel().Text(to_hstring(text));
+        ProgressValue().IsIndeterminate(bActive && value <= 0.0);
+        ProgressValue().Value(bActive ? value : 1.0);
+        ProgressCancel().IsEnabled(bActive);
+        if (bActive)
+            m_progressHideTimer.Stop();
+        else
+            m_progressHideTimer.Start();
+    }
+
+    void MainWindow::OnCancelAction(Windows::Foundation::IInspectable const &, RoutedEventArgs const &)
+    {
+        if (m_runner)
+            m_runner->CancelOperation();
+        ProgressCancel().IsEnabled(false);
+        ProgressLabel().Text(L"Cancelling...");
     }
 
     bool MainWindow::IsOffered(const pserv::DataAction *pAction, const std::vector<pserv::DataObject *> &selection) const

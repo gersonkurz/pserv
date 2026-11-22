@@ -163,6 +163,17 @@ Build note for the x64 machine: `git submodule update --init --recursive`, then 
 
     Still open, in the order suggested: the owner's look at menus, dialogs and action glyphs under a theme (item 25/27 notes); a new `docs/pserv6.png` (the present one predates themes, icons and the status bar); item 23 on ARM64; the elevated runs (16, 21, 33); the installer criteria in a disposable environment (18); the interactive checklist (22); a custom title bar and an inline progress card if wanted (34).
 
+38. **Owner's feedback of 2026-11-22 on the build of item 37** (checks 1-5 of that round passed: themed context menu and dialogs, in-place refresh under keyboard navigation elevated, font dialog, Ctrl+wheel, closing during a Windows refresh). Verbatim: "Horizontal scroll bar works fine, vertical scroll bar is missing. Action buttons (you already have the icons, and the text should come out as screenshots). I think 'Windows controller' does not support auto-refresh, but one would not know from the UI. When starting/shutting down/doing anything with a service, I'd expect a progress bar [...]. Properties dialog: actions should be buttons with icons only, not 'icons + text': the text should be tooltip for the buttons. Otherwise, not all actions fit the screen."
+
+    **Done (2026-11-22):**
+    - *Vertical scrollbar:* the list scrolls in both directions itself (its scrollbars are at the edges of the view); the header sits in a bar-less ScrollViewer that DataGrid keeps at the list's horizontal offset (ViewChanged). Executed: screenshot with both scrollbars; scrolled fully right through UI Automation, header and rows aligned; self-test passes (container counts unchanged, so rows still virtualize).
+    - *Auto-refresh not supported:* in Windows, Modules and Scheduled Tasks the Auto-refresh switch is greyed out with a tooltip, and the status bar reads "No auto-refresh in this view (F5 refreshes)".
+    - *Progress:* a bar with the operation's text and Cancel above the status bar replaces the modal progress dialog (ActionRunner::Callbacks::progress, MainWindow::ShowActionProgress); indeterminate while the operation reports no fraction; it stays about a second after the end so a fast start is still seen. **Not executed:** a real service start/stop (needs elevation) - the owner's check.
+    - *Properties dialog:* icon-only action buttons, the name as tooltip; an action without a glyph gets "...". The three Set Startup actions have glyphs of their own now. **Not seen rendered.**
+    - Also: "Processes" instead of "Processs" in the status bar.
+
+    **Open question to the owner:** "Action buttons (you already have the icons, and the text should come out as screenshots)" - read as "icon buttons with the name as tooltip", which is what the toolbar does; if it meant something else (all actions in the toolbar, including Copy... and Set Startup...? text labels?), it is not done.
+
 ## Notes for the next session (written 2026-11-19 on the ARM64 machine; that session's memory and transcript do not travel)
 
 Where things stand, in the owner's words: Gemini's version is "best bang-for-the-buck" and was finished first by far, but "not perfect"; Codex's finds more bugs but is a less polished experience; this branch is "not there yet". Each has pros and cons - take ideas from both, do not copy either wholesale. The other two trees are other agents' work: read-only (`git fetch`, then `git show origin/pserv6-gemini:<path>` / `origin/codex-branch:<path>`; their GUI sources are `pserv6/MainWindow.xaml.cpp` and `pserv6/ui/` respectively).
