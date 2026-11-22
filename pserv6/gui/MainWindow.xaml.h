@@ -56,6 +56,8 @@ namespace winrt::pserv6::implementation
         void OnPublished(pserv::DataController *pController);
         void UpdateStatus();
         void UpdateRefreshStatus();
+        void UpdateActionBar();
+        bool IsOffered(const pserv::DataAction *pAction, const std::vector<pserv::DataObject *> &selection) const;
         HWND WindowHandle();
         void RestoreWindowPlacement();
         void SaveSettings();
@@ -108,6 +110,7 @@ namespace winrt::pserv6::implementation
         int m_zoomPercent{100};
         std::chrono::steady_clock::time_point m_refreshRequested{std::chrono::steady_clock::now()};
         std::string m_lastRefresh; ///< Status bar: time and duration of the last publish
+        std::vector<const pserv::DataAction *> m_barActions; ///< What the toolbar's action buttons show
         int m_wheelDelta{0}; ///< Ctrl+wheel movement not yet turned into a zoom step
         uint64_t m_connectGeneration{0}; ///< Bumped by every connect: a superseded probe result is dropped.
         uint64_t m_targetGeneration{0};  ///< Bumped when the target machine changes (ActionRunner guard).

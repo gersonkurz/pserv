@@ -24,17 +24,25 @@
                 <MenuFlyoutItem.Icon><SymbolIcon Symbol="Refresh" /></MenuFlyoutItem.Icon>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator />
-            <MenuFlyoutItem x:Name="ConnectRemoteItem" Text="Connect to Remote Machine..." Click="OnConnectRemote" />
-            <MenuFlyoutItem x:Name="ConnectLocalItem" Text="Connect to Local Machine" Click="OnConnectLocal" />
+            <MenuFlyoutItem x:Name="ConnectRemoteItem" Text="Connect to Remote Machine..." Click="OnConnectRemote">
+                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8AF;" /></MenuFlyoutItem.Icon>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem x:Name="ConnectLocalItem" Text="Connect to Local Machine" Click="OnConnectLocal">
+                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7F4;" /></MenuFlyoutItem.Icon>
+            </MenuFlyoutItem>
             <MenuFlyoutSeparator />
             <MenuFlyoutItem Text="Exit" Click="OnExit" KeyboardAcceleratorTextOverride="Alt+F4" />
         </MenuBarItem>
         <!-- Filled in code (BuildViewMenu): the views, auto-refresh, theme, zoom -->
         <MenuBarItem x:Name="ViewMenu" Title="View" AccessKey="V" />
         <MenuBarItem Title="Help" AccessKey="H">
-            <MenuFlyoutItem Text="Documentation" Click="OnDocumentation" />
+            <MenuFlyoutItem Text="Documentation" Click="OnDocumentation">
+                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE897;" /></MenuFlyoutItem.Icon>
+            </MenuFlyoutItem>
             <MenuFlyoutSeparator />
-            <MenuFlyoutItem Text="About pserv6..." Click="OnAbout" />
+            <MenuFlyoutItem Text="About pserv6..." Click="OnAbout">
+                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE946;" /></MenuFlyoutItem.Icon>
+            </MenuFlyoutItem>
         </MenuBarItem>
     </MenuBar>
     <NavigationView Grid.Row="1" x:Name="Nav" PaneDisplayMode="Left" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"

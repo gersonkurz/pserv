@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "properties_dialog.h"
+#include "icons.h"
 #include <core/data_controller.h>
 #include <core/data_object.h>
 
@@ -141,7 +142,22 @@ namespace pserv6
             if (m_bRemote && pAction->RequiresLocalMachine())
                 continue;
             Button button;
-            button.Content(box_value(to_hstring(pAction->GetName())));
+            if (const wchar_t *glyph = ActionGlyph(pAction->GetName()))
+            {
+                StackPanel content;
+                content.Orientation(Orientation::Horizontal);
+                content.Spacing(6);
+                FontIcon icon;
+                icon.Glyph(glyph);
+                icon.FontSize(14);
+                TextBlock label;
+                label.Text(to_hstring(pAction->GetName()));
+                content.Children().Append(icon);
+                content.Children().Append(label);
+                button.Content(content);
+            }
+            else
+                button.Content(box_value(to_hstring(pAction->GetName())));
             if (pAction->IsDestructive())
                 button.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Media::Brush>());
             button.IsEnabled(m_edits.empty());

@@ -272,6 +272,7 @@ namespace winrt::pserv6::implementation
         RequestRefresh(false);
         UpdateStatus();
         UpdateRefreshStatus();
+        UpdateActionBar();
     }
 
     void MainWindow::RequestRefresh(bool bAutoRefresh)
@@ -302,6 +303,7 @@ namespace winrt::pserv6::implementation
             return;
         m_grid.Refresh();
         UpdateStatus();
+        UpdateActionBar(); // a selected service may have started or stopped
         SYSTEMTIME now{};
         GetLocalTime(&now);
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_refreshRequested).count();
@@ -355,6 +357,7 @@ namespace winrt::pserv6::implementation
     void MainWindow::OnRowSelectionChanged(Windows::Foundation::IInspectable const &, SelectionChangedEventArgs const &)
     {
         UpdateStatus();
+        UpdateActionBar();
     }
 
     void MainWindow::OnRefreshClick(Windows::Foundation::IInspectable const &, RoutedEventArgs const &)
@@ -615,6 +618,52 @@ namespace winrt::pserv6::implementation
         RunAction(&pserv::theDataPropertiesAction, {pObject});
     }
 
+    bool MainWindow::IsOffered(const pserv::DataAction *pAction, const std::vector<pserv::DataObject *> &selection) const
+    {
+        // The action runs on the whole selection, so every selected object must allow it; for a
+        // remote machine's objects, nothing that needs this machine (Explorer, Registry Editor, ...)
+        return !pAction->IsSeparator() && (static_cast<int>(pAction->GetVisibility()) & static_cast<int>(pserv::ActionVisibility::ContextMenu)) != 0 &&
+               std::ranges::all_of(selection, [pAction](const pserv::DataObject *p) { return pAction->IsAvailableFor(p); }) &&
+               !(IsRemote(m_pCurrent) && pAction->RequiresLocalMachine());
+    }
+
+    // The toolbar's action buttons: the view's actions for the selected rows that have an icon of
+    // their own (the context menu has all of them). Rebuilt only when the set changes, so an
+    // auto-refresh does not flicker them.
+    void MainWindow::UpdateActionBar()
+    {
+        std::vector<const pserv::DataAction *> actions;
+        const auto selection = m_grid.GetSelection();
+        if (m_pCurrent && !selection.empty())
+        {
+            for (const auto *pAction : m_pCurrent->GetActions(selection.front()))
+            {
+                const std::string name = pAction->GetName();
+                if (IsOffered(pAction, selection) && ::pserv6::ActionGlyph(name) && !name.starts_with("Copy") && !name.starts_with("Set Startup"))
+                    actions.push_back(pAction);
+            }
+        }
+        if (actions == m_barActions)
+            return;
+        m_barActions = actions;
+        ActionBar().Children().Clear();
+        for (const auto *pAction : actions)
+        {
+            Button button;
+            FontIcon icon;
+            icon.Glyph(::pserv6::ActionGlyph(pAction->GetName()));
+            icon.FontSize(16);
+            button.Content(icon);
+            const hstring name = to_hstring(pAction->GetName());
+            ToolTipService::SetToolTip(button, box_value(name));
+            winrt::Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button, name);
+            if (pAction->IsDestructive())
+                button.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Media::Brush>());
+            button.Click([this, pAction](auto &&, auto &&) { RunAction(pAction, m_grid.GetSelection()); });
+            ActionBar().Children().Append(button);
+        }
+    }
+
     // The row context menu (as pserv5's): the view's actions for the clicked object plus the
     // common copy/export actions, those available for the object, separators collapsed, the
     // selection count in multi-selection, destructive actions in the critical colour.
@@ -653,11 +702,7 @@ namespace winrt::pserv6::implementation
                 bLastWasSeparator = true;
                 continue;
             }
-            // The action runs on the whole selection, so every selected object must allow it
-            if (!std::ranges::all_of(selection, [pAction](const pserv::DataObject *p) { return pAction->IsAvailableFor(p); }))
-                continue;
-            // A remote machine's objects: nothing that needs this machine (Explorer, Registry Editor, ...)
-            if (IsRemote(pController) && pAction->RequiresLocalMachine())
+            if (!IsOffered(pAction, selection))
                 continue;
             MenuFlyoutItem item;
             std::string label = pAction->GetName();

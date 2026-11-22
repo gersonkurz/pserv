@@ -40,7 +40,7 @@ namespace pserv6
             {"Delete", L"\uE74D"},                  // Delete
             {"Uninstall", L"\uE74D"},
             {"Uninstall Service", L"\uE74D"},
-            {"Delete Registry Key", L"\uE74D"},
+            {"Delete Registry Key", L"\uE894"},  // Clear
             {"Terminate Process", L"\uE711"},       // Cancel
             {"Close", L"\uE711"},
             {"Close Connection", L"\uE711"},
