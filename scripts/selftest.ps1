@@ -1,8 +1,9 @@
 # Runs `pserv6 --selftest` and prints its timing log. Exits 0 only if the log ends in
 # RESULT: PASS *and* pserv6 exited with code 0: the PASS line is written before the window closes,
 # so a crash during shutdown shows up only in the exit code.
-# pserv6 requires administrator: run from an elevated shell, or pass -RunAsInvoker to measure
-# unelevated (some views then show less data).
+# pserv6 runs with the caller's rights: run from an elevated shell for the full data (unelevated,
+# some views show less). -RunAsInvoker is from the time pserv6 required administrator; it is
+# accepted and changes nothing now.
 param(
     [Parameter(Mandatory = $true)][string]$Exe,
     [int]$Seconds = 3,

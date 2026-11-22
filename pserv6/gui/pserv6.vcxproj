@@ -75,7 +75,7 @@
     <Link>
       <!-- F6: ApplicationType=Windows Store leaves EnableUAC empty, which silently drops UACExecutionLevel -->
       <EnableUAC>true</EnableUAC>
-      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <UACExecutionLevel>AsInvoker</UACExecutionLevel>
       <!-- F7: MinimalCoreWin drops the classic Win32 import libraries the core needs -->
       <AdditionalDependencies>comctl32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;user32.lib;iphlpapi.lib;ws2_32.lib;psapi.lib;taskschd.lib;comsuppw.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>

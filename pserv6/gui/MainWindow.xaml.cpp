@@ -203,6 +203,15 @@ namespace winrt::pserv6::implementation
                     });
             });
         Root().Loaded([this](auto &&, auto &&) { ApplyThemeToChrome(); });
+        {
+            wil::unique_handle token;
+            TOKEN_ELEVATION elevation{};
+            DWORD size = 0;
+            m_bElevated = OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, token.put()) &&
+                          GetTokenInformation(token.get(), TokenElevation, &elevation, sizeof(elevation), &size) && elevation.TokenIsElevated;
+            ElevateButton().Visibility(m_bElevated ? Visibility::Collapsed : Visibility::Visible);
+            ElevateItem().IsEnabled(!m_bElevated);
+        }
         ApplyTheme(settings.application.theme.get());
         SetZoomPercent(settings.application.fontSizeScaled.get() / 16);
         SetTableFont(settings.application.fontFamily.get());
@@ -667,41 +676,149 @@ namespace winrt::pserv6::implementation
                !(IsRemote(m_pCurrent) && pAction->RequiresLocalMachine());
     }
 
-    // The toolbar's action buttons: the view's actions for the selected rows that have an icon of
-    // their own (the context menu has all of them). Rebuilt only when the set changes, so an
-    // auto-refresh does not flicker them.
+    // The action a toolbar button stands for, if the selected rows allow it now: the view's list
+    // for an object leaves out what its state rules out (a stopped service has no Stop).
+    const pserv::DataAction *MainWindow::OfferedAction(const std::string &name, const std::vector<pserv::DataObject *> &selection) const
+    {
+        if (!m_pCurrent || selection.empty())
+            return nullptr;
+        for (const auto *pAction : m_pCurrent->GetActions(selection.front()))
+        {
+            if (pAction->GetName() == name)
+                return IsOffered(pAction, selection) ? pAction : nullptr;
+        }
+        return nullptr;
+    }
+
+    // The toolbar's action buttons: every action of the view, always (owner, 2026-11-22: what a
+    // view can do must be visible without selecting the right row first); those the selected rows
+    // do not allow are disabled. Families of actions (Copy ..., Set Priority: ..., Set Startup: ...)
+    // share one drop-down button. Built once per view; a refresh only updates what is enabled.
     void MainWindow::UpdateActionBar()
     {
-        std::vector<const pserv::DataAction *> actions;
-        const auto selection = m_grid.GetSelection();
-        if (m_pCurrent && !selection.empty())
+        if (m_pBarController != m_pCurrent)
         {
-            for (const auto *pAction : m_pCurrent->GetActions(selection.front()))
+            m_pBarController = m_pCurrent;
+            m_barButtons.clear();
+            m_barMenuItems.clear();
+            m_barGroups.clear();
+            ActionBar().Children().Clear();
+            const auto criticalBrush = Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Media::Brush>();
+            const auto run = [this](const std::string &name)
             {
+                const auto selection = m_grid.GetSelection();
+                if (const auto *pAction = OfferedAction(name, selection))
+                    RunAction(pAction, selection);
+            };
+            const auto iconOf = [](const wchar_t *glyph)
+            {
+                FontIcon icon;
+                icon.Glyph(glyph);
+                icon.FontSize(16);
+                return icon;
+            };
+            static const std::pair<std::string_view, const wchar_t *> families[] = {
+                {"Copy", ::pserv6::CopyGlyph}, {"Set Priority", ::pserv6::PriorityGlyph}, {"Set Startup", ::pserv6::StartupGlyph}};
+            std::map<std::string_view, MenuFlyout> familyMenus;
+            for (const auto *pAction : m_pCurrent ? m_pCurrent->GetAllActions() : std::vector<const pserv::DataAction *>{})
+            {
+                if (pAction->IsSeparator() || (static_cast<int>(pAction->GetVisibility()) & static_cast<int>(pserv::ActionVisibility::ContextMenu)) == 0)
+                    continue;
                 const std::string name = pAction->GetName();
-                if (IsOffered(pAction, selection) && ::pserv6::ActionGlyph(name) && !name.starts_with("Copy") && !name.starts_with("Set Startup"))
-                    actions.push_back(pAction);
+                const hstring label = to_hstring(name);
+                const auto family = std::ranges::find_if(families, [&name](const auto &f) { return name.starts_with(f.first); });
+                if (family != std::end(families))
+                {
+                    auto it = familyMenus.find(family->first);
+                    if (it == familyMenus.end())
+                    {
+                        MenuFlyout menu;
+                        it = familyMenus.emplace(family->first, menu).first;
+                        menu.Placement(Primitives::FlyoutPlacementMode::BottomEdgeAlignedLeft);
+                        DropDownButton button;
+                        button.Content(iconOf(family->second));
+                        button.Flyout(menu);
+                        const hstring familyName = to_hstring(std::string{family->first});
+                        ToolTipService::SetToolTip(button, box_value(familyName));
+                        winrt::Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button, familyName);
+                        ActionBar().Children().Append(button);
+                        m_barGroups.emplace_back(button, menu);
+                    }
+                    MenuFlyoutItem item;
+                    item.Text(label);
+                    item.Click([run, name](auto &&, auto &&) { run(name); });
+                    it->second.Items().Append(item);
+                    m_barMenuItems.emplace_back(name, item);
+                    continue;
+                }
+                Button button;
+                const wchar_t *glyph = ::pserv6::ActionGlyph(name);
+                button.Content(iconOf(glyph ? glyph : ::pserv6::MoreGlyph));
+                ToolTipService::SetToolTip(button, box_value(label));
+                winrt::Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button, label);
+                if (pAction->IsDestructive())
+                    button.Foreground(criticalBrush);
+                button.Click([run, name](auto &&, auto &&) { run(name); });
+                ActionBar().Children().Append(button);
+                m_barButtons.emplace_back(name, button);
             }
         }
-        if (actions == m_barActions)
-            return;
-        m_barActions = actions;
-        ActionBar().Children().Clear();
-        for (const auto *pAction : actions)
+
+        const auto selection = m_grid.GetSelection();
+        for (const auto &[name, button] : m_barButtons)
         {
-            Button button;
-            FontIcon icon;
-            icon.Glyph(::pserv6::ActionGlyph(pAction->GetName()));
-            icon.FontSize(16);
-            button.Content(icon);
-            const hstring name = to_hstring(pAction->GetName());
-            ToolTipService::SetToolTip(button, box_value(name));
-            winrt::Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button, name);
-            if (pAction->IsDestructive())
-                button.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Media::Brush>());
-            button.Click([this, pAction](auto &&, auto &&) { RunAction(pAction, m_grid.GetSelection()); });
-            ActionBar().Children().Append(button);
+            const bool bEnabled = OfferedAction(name, selection) != nullptr;
+            if (button.IsEnabled() != bEnabled)
+                button.IsEnabled(bEnabled);
         }
+        for (const auto &[name, item] : m_barMenuItems)
+            item.IsEnabled(OfferedAction(name, selection) != nullptr);
+        for (const auto &[button, menu] : m_barGroups)
+        {
+            bool bAny = false;
+            for (auto const &entry : menu.Items())
+                bAny = bAny || entry.as<MenuFlyoutItem>().IsEnabled();
+            if (button.IsEnabled() != bAny)
+                button.IsEnabled(bAny);
+        }
+    }
+
+    // pserv6 starts with the caller's rights. "Run as administrator" starts a second, elevated
+    // instance (the UAC prompt) and closes this one once that has started.
+    void MainWindow::OnElevate(Windows::Foundation::IInspectable const &, RoutedEventArgs const &)
+    {
+        if (m_bElevated || (m_runner && m_runner->IsBusy()))
+            return;
+        SaveSettings(); // the new instance reads them when it starts
+        const std::wstring exe = wil::GetModuleFileNameW().get();
+        SHELLEXECUTEINFOW info{sizeof(info)};
+        info.lpVerb = L"runas";
+        info.lpFile = exe.c_str();
+        info.hwnd = m_hwnd;
+        info.nShow = SW_SHOWNORMAL;
+        if (ShellExecuteExW(&info))
+        {
+            Close();
+            return;
+        }
+        const DWORD error = GetLastError();
+        if (error != ERROR_CANCELLED) // the user said No to the prompt: nothing to report
+        {
+            LogWin32ErrorCode("ShellExecuteExW", error, "runas {}", pserv::utils::WideToUtf8(exe));
+            if (m_runner)
+                m_runner->ShowMessage(pserv::ActionMessageKind::Error, "Run as administrator", "pserv could not be restarted as administrator (see the log).");
+        }
+    }
+
+    // "pserv 6.0.0", the remote machine if any, and whether this instance is elevated
+    void MainWindow::UpdateTitle()
+    {
+        std::string title = std::format("pserv {}", PSERV_VERSION_STRING);
+        if (const std::string machine = pserv::config::theSettings.application.serviceMachineName.get(); !machine.empty())
+            title += " - " + machine;
+        if (m_bElevated)
+            title += " (Administrator)";
+        Title(to_hstring(title));
     }
 
     // The row context menu (as pserv5's): the view's actions for the clicked object plus the
@@ -878,7 +995,7 @@ namespace winrt::pserv6::implementation
         }
         ConnectLocalItem().IsEnabled(bRemote);
         UpdateViewMenu();
-        Title(bRemote ? to_hstring(std::format("pserv6 - {}", machineName)) : hstring{L"pserv6"});
+        UpdateTitle();
         if (bRemote && m_pCurrent)
         {
             const std::string current{m_pCurrent->GetControllerName()};
@@ -1182,7 +1299,7 @@ namespace winrt::pserv6::implementation
         dialog.XamlRoot(Content().XamlRoot());
         dialog.RequestedTheme(Root().ActualTheme());
         dialog.Style(Application::Current().Resources().Lookup(box_value(L"DefaultContentDialogStyle")).as<Style>());
-        dialog.Title(box_value(L"About pserv6"));
+        dialog.Title(box_value(L"About pserv"));
         StackPanel panel;
         panel.Spacing(6);
         auto line = [&panel](const std::string &text, bool bStrong = false)
@@ -1195,7 +1312,7 @@ namespace winrt::pserv6::implementation
                 block.FontWeight(winrt::Microsoft::UI::Text::FontWeights::SemiBold());
             panel.Children().Append(block);
         };
-        line(std::format("pserv6 {} ({}, {})", PSERV_VERSION_STRING, architecture, configuration), true);
+        line(std::format("pserv {} ({}, {})", PSERV_VERSION_STRING, architecture, configuration), true);
         line("Windows system administration tool: services, devices, processes, windows, modules, installed programs, "
              "environment variables, startup programs, network connections and scheduled tasks.");
         line(PSERV_COPYRIGHT);

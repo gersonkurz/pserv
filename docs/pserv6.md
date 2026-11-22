@@ -1,6 +1,6 @@
 # pserv6 - Graphical User Interface
 
-`pserv6.exe` is the graphical interface of pserv6, a Windows system administration tool. It is a native WinUI 3 application for x64 and ARM64 and requires administrator rights (Windows asks for elevation when it starts).
+`pserv6.exe` is the graphical interface of pserv6, a Windows system administration tool. It is a native WinUI 3 application for x64 and ARM64 . It starts with your own rights: views show what you may see, and most changes (starting a service, terminating another user's process) are refused. **Run as administrator** at the right of the toolbar, or **File > Restart as Administrator**, restarts it elevated (Windows asks for confirmation); the title bar then reads "pserv 6.0.0 (Administrator)".
 
 ![pserv6 showing the Services view](pserv6.png)
 

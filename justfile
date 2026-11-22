@@ -47,7 +47,7 @@ build-release: (_msbuild "Release" platform)
 build-all: (_msbuild "Debug" "x64") (_msbuild "Release" "x64") (_msbuild "Debug" "ARM64") (_msbuild "Release" "ARM64")
 
 # Build Debug (native arch), run pserv_core_tests, and check that every built pserv6.exe
-# requires administrator (plan F6); exits non-zero if any check fails
+# starts as the invoker (asInvoker; plan F6); exits non-zero if any check fails
 test: build
     @pserv6\bin\tests\{{platform}}\Debug\pserv_core_tests.exe
     @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-manifest.ps1
@@ -58,13 +58,13 @@ test-asan: _require-devshell
     msbuild {{solution}} /restore /t:pserv_core_tests /p:Configuration=Debug /p:Platform={{platform}} /p:EnableASAN=true /p:PservBuildVariant=-asan /m /nologo /v:minimal
     @set "PATH=%VCToolsInstallDir%bin\{{_asan_bin}};%PATH%" && pserv6\bin\tests\{{platform}}\Debug-asan\pserv_core_tests.exe --stress 50
 
-# Build Debug + launch pserv6 (native arch; from an elevated shell: it requires administrator)
+# Build Debug + launch pserv6 (native arch; it starts with the shell's rights)
 run: build
     @pserv6\bin\{{platform}}\Debug\pserv6.exe
 
 # Build Release (native arch) and run `pserv6 --selftest`: every view loaded, scrolled and
 # refreshed, with timings against the plan's budgets. Elevated shell for the real figures;
-# `just selftest -RunAsInvoker` measures unelevated.
+# pserv6 runs with the shell's rights (`-RunAsInvoker` is accepted and no longer needed).
 selftest *ARGS: build-release
     @powershell -NoProfile -ExecutionPolicy Bypass -File scripts\selftest.ps1 -Exe pserv6\bin\{{platform}}\Release\pserv6.exe {{ARGS}}
 

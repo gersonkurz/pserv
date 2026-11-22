@@ -28,12 +28,12 @@ The code uses modern C++; all projects currently select MSVC `stdcpplatest` and 
 Run recipes from the repository root with `just` in a **Visual Studio 2026 Developer shell**. The build requires `VisualStudioVersion=18.0` and `msbuild` on PATH. Do not merely set that variable to bypass the guard; initialize the VS toolchain environment.
 
 - `just build` — Debug, native architecture; builds every project in the solution.
-- `just test` — `just build`, then run `pserv_core_tests` and check every built `pserv6.exe` manifest for `requireAdministrator`.
+- `just test` — `just build`, then run `pserv_core_tests` and check every built `pserv6.exe` manifest for `asInvoker` (pserv6 starts unelevated and offers "Run as administrator" itself).
 - `just test-asan` — the same tests under AddressSanitizer, with the 50-round background-refresh stress run.
 - `just build-release` — Release, native architecture.
 - `just build-all` — Debug and Release for x64 and ARM64 (there is no x86 build).
-- `just run` — build Debug and launch pserv6 (elevated shell: it requires administrator).
-- `just selftest` — build Release and run `pserv6 --selftest`, which loads, scrolls and refreshes every view, runs grid checks and prints a timing log; `-RunAsInvoker` measures unelevated.
+- `just run` — build Debug and launch pserv6 (with the shell's rights).
+- `just selftest` — build Release and run `pserv6 --selftest`, which loads, scrolls and refreshes every view, runs grid checks and prints a timing log; it runs with the shell's rights, so an elevated shell gives the full data.
 - `just run-cli services` — build Debug and list services through the CLI.
 - `just --list` — current public recipes.
 

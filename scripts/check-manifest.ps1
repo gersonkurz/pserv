@@ -1,6 +1,8 @@
-# Fails unless every built pserv6.exe embeds a manifest with requireAdministrator
-# (docs/pserv6-plan.md F6: with ApplicationType=Windows Store, a missing EnableUAC silently drops
-# UACExecutionLevel, and the app would start unelevated). Needs mt.exe (VS Developer shell).
+# Fails unless every built pserv6.exe embeds a manifest with asInvoker: pserv6 starts with the
+# caller's rights and offers "Run as administrator" itself (owner, 2026-11-22; before that it
+# required administrator). The check exists because of docs/pserv6-plan.md F6: with
+# ApplicationType=Windows Store, a missing EnableUAC silently drops the UAC entry from the manifest.
+# Needs mt.exe (VS Developer shell).
 param([string]$BinRoot = "pserv6\bin")
 
 $ErrorActionPreference = "Stop"
@@ -20,10 +22,10 @@ foreach ($exe in $exes) {
     }
     $manifest = Get-Content $out -Raw
     Remove-Item $out
-    if ($manifest -match 'requestedExecutionLevel\s+level="requireAdministrator"') {
+    if ($manifest -match 'requestedExecutionLevel\s+level="asInvoker"') {
         Write-Host "manifest check: ok   $($exe.FullName)"
     } else {
-        Write-Host "manifest check: FAIL $($exe.FullName): requestedExecutionLevel is not requireAdministrator"
+        Write-Host "manifest check: FAIL $($exe.FullName): requestedExecutionLevel is not asInvoker"
         $failed++
     }
 }

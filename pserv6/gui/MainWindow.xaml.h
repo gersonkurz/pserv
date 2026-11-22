@@ -23,6 +23,7 @@ namespace winrt::pserv6::implementation
         void OnRefreshClick(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnAutoRefreshToggled(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnFilterChanged(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::Controls::TextChangedEventArgs const &);
+        void OnElevate(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnCancelAction(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::RoutedEventArgs const &);
         void OnRowSelectionChanged(Windows::Foundation::IInspectable const &, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const &);
         void OnContainerContentChanging(Microsoft::UI::Xaml::Controls::ListViewBase const &, Microsoft::UI::Xaml::Controls::ContainerContentChangingEventArgs const &);
@@ -58,6 +59,8 @@ namespace winrt::pserv6::implementation
         void UpdateStatus();
         void UpdateRefreshStatus();
         void UpdateActionBar();
+        void UpdateTitle();
+        const pserv::DataAction *OfferedAction(const std::string &name, const std::vector<pserv::DataObject *> &selection) const;
         void ShowActionProgress(bool bActive, double value, const std::string &text);
         bool IsOffered(const pserv::DataAction *pAction, const std::vector<pserv::DataObject *> &selection) const;
         HWND WindowHandle();
@@ -113,7 +116,12 @@ namespace winrt::pserv6::implementation
         int m_zoomPercent{100};
         std::chrono::steady_clock::time_point m_refreshRequested{std::chrono::steady_clock::now()};
         std::string m_lastRefresh; ///< Status bar: time and duration of the last publish
-        std::vector<const pserv::DataAction *> m_barActions; ///< What the toolbar's action buttons show
+        // The toolbar's action buttons (owned by the toolbar; no handler captures them), by action name
+        pserv::DataController *m_pBarController{nullptr}; ///< The view they were built for
+        std::vector<std::pair<std::string, Microsoft::UI::Xaml::Controls::Button>> m_barButtons;
+        std::vector<std::pair<std::string, Microsoft::UI::Xaml::Controls::MenuFlyoutItem>> m_barMenuItems;
+        std::vector<std::pair<Microsoft::UI::Xaml::Controls::DropDownButton, Microsoft::UI::Xaml::Controls::MenuFlyout>> m_barGroups;
+        bool m_bElevated{false}; ///< This process has administrator rights
         int m_wheelDelta{0}; ///< Ctrl+wheel movement not yet turned into a zoom step
         uint64_t m_connectGeneration{0}; ///< Bumped by every connect: a superseded probe result is dropped.
         uint64_t m_targetGeneration{0};  ///< Bumped when the target machine changes (ActionRunner guard).

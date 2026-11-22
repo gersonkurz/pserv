@@ -27,6 +27,11 @@ namespace pserv6
     /// For an action without a glyph where a button needs one (the name is its tooltip).
     inline constexpr const wchar_t *MoreGlyph = L"\uE712";
 
+    /// The toolbar's drop-down buttons for families of actions (Copy ..., Set Priority: ..., Set Startup: ...)
+    inline constexpr const wchar_t *CopyGlyph = L"\uE8C8";
+    inline constexpr const wchar_t *PriorityGlyph = L"\uE7C1"; // Flag
+    inline constexpr const wchar_t *StartupGlyph = L"\uE7E8";  // PowerButton
+
     /// Segoe Fluent Icons glyph for an action, by its name; nullptr if it has none (no icon is
     /// better than a wrong one).
     inline const wchar_t *ActionGlyph(std::string_view name)

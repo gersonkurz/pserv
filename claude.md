@@ -13,12 +13,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Build with `just` (recipes in the repo-root `justfile`) from a **Visual Studio 2026** Developer shell (the `_msbuild` recipe guards on `VisualStudioVersion=18.0`):
 
 - `just build` — Debug, native arch (builds every project in the solution)
-- `just test` — `just build`, then run `pserv_core_tests` and check that every built `pserv6.exe` embeds `requireAdministrator` (exit code 0 = all checks pass)
+- `just test` — `just build`, then run `pserv_core_tests` and check that every built `pserv6.exe` embeds an `asInvoker` manifest (exit code 0 = all checks pass)
 - `just test-asan` — `pserv_core` + tests under AddressSanitizer (Debug, native arch, `-asan` output folders), with the 50-round background-refresh stress run. Native ARM64 on ARM64 hardware: the x64 ASan runtime does not start under emulation.
 - `just build-release` — Release, native arch
 - `just build-all` — Debug+Release for x64 and ARM64
-- `just run` / `just run-cli [-- args]` — build Debug + launch pserv6 (from an elevated shell: it requires administrator) / pservc
-- `just selftest [-RunAsInvoker]` — build Release + run `pserv6 --selftest` (every view loaded, scrolled, refreshed; grid checks; timing log vs. the plan's section 7 budgets; exit 1 unless `RESULT: PASS` and exit code 0)
+- `just run` / `just run-cli [-- args]` — build Debug + launch pserv6 (it starts with the shell's rights; "Run as administrator" in the window restarts it elevated) / pservc
+- `just selftest` — build Release + run `pserv6 --selftest` (every view loaded, scrolled, refreshed; grid checks; timing log vs. the plan's section 7 budgets; exit 1 unless `RESULT: PASS` and exit code 0)
 - `just clean`, `just rebuild`
 - `just release` — build x64+ARM64 Release, then the 2 MSIs + the multi-arch bundle `.exe`
 - `just check-msi <x64|arm64>` — check a built MSI without installing it (administrative extract compared with the staged payload); `scripts\check-msi.ps1 -SelfTest` also runs the extracted pserv6

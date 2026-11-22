@@ -33,7 +33,7 @@ From a Visual Studio 2026 Developer shell, with [just](https://github.com/casey/
 
 ```
 just build      # Debug, native architecture (x64 or ARM64)
-just run        # build and start pserv6 (needs an elevated shell)
+just run        # build and start pserv6 (it starts unelevated; "Run as administrator" in the window elevates)
 just test       # build and run the core tests
 just release    # Release builds, MSI installers (needs MSIS 3.x) and the bundle
 ```

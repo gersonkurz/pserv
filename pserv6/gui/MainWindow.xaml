@@ -19,7 +19,7 @@
         <Border x:Name="BrushAlternate" Background="{ThemeResource ControlAltFillColorSecondaryBrush}" />
     </StackPanel>
     <!-- One row for the menu and the toolbar: refresh, sort, auto-refresh, filter, the selection's actions -->
-    <Grid ColumnDefinitions="Auto,*">
+    <Grid ColumnDefinitions="Auto,*,Auto">
     <MenuBar x:Name="MainMenu">
         <MenuBarItem Title="File" AccessKey="F">
             <MenuFlyoutItem Text="Refresh" Click="OnRefreshClick" KeyboardAcceleratorTextOverride="F5">
@@ -31,6 +31,9 @@
             </MenuFlyoutItem>
             <MenuFlyoutItem x:Name="ConnectLocalItem" Text="Connect to Local Machine" Click="OnConnectLocal">
                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7F4;" /></MenuFlyoutItem.Icon>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem x:Name="ElevateItem" Text="Restart as Administrator" Click="OnElevate">
+                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xEA18;" /></MenuFlyoutItem.Icon>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator />
             <MenuFlyoutItem Text="Exit" Click="OnExit" KeyboardAcceleratorTextOverride="Alt+F4" />
@@ -62,6 +65,14 @@
                 <!-- Filled in code (UpdateActionBar): the actions available for the selected rows -->
                 <StackPanel x:Name="ActionBar" Orientation="Horizontal" Spacing="4" />
             </StackPanel>
+        <!-- Shown while pserv6 runs without administrator rights (it starts as the invoker) -->
+        <Button Grid.Column="2" x:Name="ElevateButton" Click="OnElevate" Visibility="Collapsed" VerticalAlignment="Center" Margin="0,2,8,2"
+                ToolTipService.ToolTip="Restart pserv as administrator: without it, some data is missing and most changes are refused">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <FontIcon Glyph="&#xEA18;" FontSize="16" />
+                <TextBlock Text="Run as administrator" />
+            </StackPanel>
+        </Button>
     </Grid>
     <NavigationView Grid.Row="1" x:Name="Nav" PaneDisplayMode="Left" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
                     OpenPaneLength="240" SelectionChanged="OnNavSelectionChanged">
