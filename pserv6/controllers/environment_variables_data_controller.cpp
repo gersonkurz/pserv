@@ -133,7 +133,7 @@ namespace pserv
             }
 
             // Write the new (or updated) variable first: if that fails, nothing has changed
-            if (!EnvironmentVariableManager::SetEnvironmentVariable(m_editBuffer.name, m_editBuffer.value, envVar->GetScope()))
+            if (!EnvironmentVariableManager::SetEnvironmentVariable(m_editBuffer.name, m_editBuffer.value, envVar->GetScope(), oldName))
             {
                 spdlog::error("Failed to set environment variable");
                 m_editingObject = nullptr;

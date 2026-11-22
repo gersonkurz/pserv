@@ -491,6 +491,37 @@ void TestEditTransactions(const std::vector<DataController *> &controllers)
                 environment->SetPropertyEdit(pa, 1, "value-c");
                 Check(environment->CommitPropertyEdits(pa), "env rename: renaming to a free name succeeds");
                 Check(value(a) == "<missing>" && value(c) == "value-c", std::format("env rename: old name gone, new name has the value ('{}')", value(c)));
+
+                // An expandable variable stays expandable through an edit and a rename
+                auto type = [](const std::string &name)
+                {
+                    DWORD t = 0;
+                    RegGetValueW(HKEY_CURRENT_USER, L"Environment", utils::Utf8ToWide(name).c_str(), RRF_RT_ANY | RRF_NOEXPAND, &t, nullptr, nullptr);
+                    return t;
+                };
+                const wchar_t *expand = L"%SystemRoot%";
+                RegSetKeyValueW(HKEY_CURRENT_USER, L"Environment", utils::Utf8ToWide(a).c_str(), REG_EXPAND_SZ, expand, static_cast<DWORD>((wcslen(expand) + 1) * sizeof(wchar_t)));
+                environment->Refresh();
+                if (auto *pe = find(a))
+                {
+                    environment->BeginPropertyEdits(pe);
+                    environment->SetPropertyEdit(pe, 1, "%TEMP%");
+                    Check(environment->CommitPropertyEdits(pe) && type(a) == REG_EXPAND_SZ, "env type: REG_EXPAND_SZ kept through an edit");
+                    environment->BeginPropertyEdits(pe);
+                    environment->SetPropertyEdit(pe, 0, b + "_X");
+                    Check(environment->CommitPropertyEdits(pe) && type(b + "_X") == REG_EXPAND_SZ, "env type: REG_EXPAND_SZ kept through a rename");
+                    RegDeleteKeyValueW(HKEY_CURRENT_USER, L"Environment", utils::Utf8ToWide(b + "_X").c_str());
+                }
+                else
+                    Check(false, "env type: the expandable throwaway variable is listed");
+                // A plain variable stays plain even if its new value contains a reference
+                environment->Refresh();
+                if (auto *pc = find(c))
+                {
+                    environment->BeginPropertyEdits(pc);
+                    environment->SetPropertyEdit(pc, 1, "100%");
+                    Check(environment->CommitPropertyEdits(pc) && type(c) == REG_SZ, "env type: REG_SZ kept through an edit");
+                }
             }
             for (const auto &name : {a, b, c})
                 RegDeleteKeyValueW(HKEY_CURRENT_USER, L"Environment", utils::Utf8ToWide(name).c_str());

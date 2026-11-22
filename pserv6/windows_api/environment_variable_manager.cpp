@@ -77,10 +77,10 @@ namespace pserv
         }
     }
 
-    bool EnvironmentVariableManager::SetEnvironmentVariable(const std::string &name, const std::string &value, EnvironmentVariableScope scope)
+    bool EnvironmentVariableManager::SetEnvironmentVariable(const std::string &name, const std::string &value, EnvironmentVariableScope scope, const std::string &typeOf)
     {
         wil::unique_hkey hKey;
-        LSTATUS status = RegOpenKeyExW(GetRegistryRoot(scope), GetRegistryPath(scope).c_str(), 0, KEY_SET_VALUE, &hKey);
+        LSTATUS status = RegOpenKeyExW(GetRegistryRoot(scope), GetRegistryPath(scope).c_str(), 0, KEY_SET_VALUE | KEY_QUERY_VALUE, &hKey);
         if (status != ERROR_SUCCESS)
         {
             LogWin32ErrorCode("RegOpenKeyExW", status, "opening environment key for scope {} to set '{}'",
@@ -91,7 +91,17 @@ namespace pserv
         std::wstring wName = utils::Utf8ToWide(name);
         std::wstring wValue = utils::Utf8ToWide(value);
 
-        status = RegSetValueExW(hKey.get(), wName.c_str(), 0, REG_SZ,
+        // Keep the registry type of the variable being changed: writing REG_SZ over a REG_EXPAND_SZ
+        // value (Path, TEMP) stops its %references% from expanding. A new variable gets
+        // REG_EXPAND_SZ if it contains a reference, as the Windows dialog does.
+        DWORD type = 0;
+        if (RegQueryValueExW(hKey.get(), utils::Utf8ToWide(typeOf.empty() ? name : typeOf).c_str(), nullptr, &type, nullptr, nullptr) != ERROR_SUCCESS ||
+            (type != REG_SZ && type != REG_EXPAND_SZ))
+        {
+            type = value.find('%') != std::string::npos ? REG_EXPAND_SZ : REG_SZ;
+        }
+
+        status = RegSetValueExW(hKey.get(), wName.c_str(), 0, type,
             reinterpret_cast<const BYTE *>(wValue.c_str()),
             static_cast<DWORD>((wValue.length() + 1) * sizeof(wchar_t)));
 

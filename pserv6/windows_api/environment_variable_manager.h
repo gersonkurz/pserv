@@ -31,7 +31,8 @@ namespace pserv
         /// @param value Variable value.
         /// @param scope User or System scope.
         /// @return true on success.
-        static bool SetEnvironmentVariable(const std::string &name, const std::string &value, EnvironmentVariableScope scope);
+        /// typeOf: the variable whose registry type (REG_SZ/REG_EXPAND_SZ) is kept; empty: name itself.
+        static bool SetEnvironmentVariable(const std::string &name, const std::string &value, EnvironmentVariableScope scope, const std::string &typeOf = {});
 
         /// @brief Delete an environment variable.
         /// @param name Variable name.
