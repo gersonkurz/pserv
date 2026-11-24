@@ -1,6 +1,8 @@
 # pservc - Command Line Interface
 
-`pservc.exe` is the command-line interface for pserv6. It provides full access to all system management features without a graphical interface, making it ideal for scripts, automation, and remote administration.
+[Back to the contents](index.md)
+
+`pservc.exe` is the command-line interface of pserv. It provides full access to all system management features without a graphical interface, making it ideal for scripts, automation, and remote administration.
 
 ## Quick Start
 

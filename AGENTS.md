@@ -59,7 +59,7 @@ Paths below are relative to `pserv6/` unless stated otherwise.
 | `windows_api/` | Windows resource enumeration and manipulation |
 | `config/` | TOML-backed settings and per-view configuration |
 | `utils/` | Logging, string conversions, Win32 errors, common app setup (`BaseApp`) |
-| Repository `docs/pserv6.md`, `docs/pservc.md` | User-facing GUI and CLI manuals |
+| Repository `docs/manual/` | The user manual (GUI and CLI), published to https://gersonkurz.github.io/pserv/ |
 | Repository `setup/`, `scripts/` | MSIS installers; version-stamping, manifest, MSI and self-test scripts |
 
 ## Architecture and Change Conventions
@@ -82,7 +82,11 @@ When adding a view:
 3. Add the per-view settings in `config/settings.h` and the lookup in `config/settings.cpp`.
 4. Add source/header entries to the relevant `.vcxproj` files and maintain their `.filters` files. Shared sources go into `pserv_core/pserv_core.vcxproj`, which the GUI, the CLI and the tests link; they are not discovered automatically. List a controller's columns in its model's property-id order (`DataObjectColumn` takes the property enum first); `just test` fails otherwise.
 5. Check CLI argument/action registration and behavior. The CLI enumerates the shared controller library, but frontend-specific action handling may still be required.
-6. Update the relevant user manual when behavior or commands change.
+6. Update the manual (`docs/manual/`) when behavior or commands change.
+
+## Manual
+
+English Markdown in `docs/manual/`, one page per area (`index.md` is the contents page; `cli.md` documents `pservc`). `.github/workflows/manual.yml` publishes only that folder to GitHub Pages (Jekyll, primer theme) on every push to `main` that touches it; **Help > Documentation** in pserv6 opens the published site. A change users can see is not done until its page says so. Links between pages are relative `.md` links. Screenshots live in `docs/manual/images/` and are also used by `README.md`; take them from the Services or Devices view only (other views show window titles, command lines, environment variables or network addresses of the machine they were taken on).
 
 ## Dependencies
 

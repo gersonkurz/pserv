@@ -1342,7 +1342,7 @@ namespace winrt::pserv6::implementation
     void MainWindow::OnDocumentation(Windows::Foundation::IInspectable const &, RoutedEventArgs const &)
     {
         const auto result = reinterpret_cast<INT_PTR>(
-            ShellExecuteW(m_hwnd, L"open", L"https://github.com/gersonkurz/pserv/blob/main/docs/pserv6.md", nullptr, nullptr, SW_SHOWNORMAL));
+            ShellExecuteW(m_hwnd, L"open", L"https://gersonkurz.github.io/pserv/", nullptr, nullptr, SW_SHOWNORMAL));
         if (result <= 32)
             m_runner->ShowMessage(pserv::ActionMessageKind::Error, "Documentation", "The documentation page could not be opened in a browser.");
     }
