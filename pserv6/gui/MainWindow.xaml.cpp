@@ -1355,6 +1355,8 @@ namespace winrt::pserv6::implementation
                                GetTokenInformation(token.get(), TokenElevation, &elevation, sizeof(elevation), &size) && elevation.TokenIsElevated;
 #if defined(_M_ARM64)
         const char *architecture = "ARM64";
+#elif defined(_M_IX86)
+        const char *architecture = "x86";
 #else
         const char *architecture = "x64";
 #endif
@@ -1385,6 +1387,7 @@ namespace winrt::pserv6::implementation
         line("Windows system administration tool: services, devices, processes, windows, modules, installed programs, "
              "environment variables, startup programs, network connections and scheduled tasks.");
         line(PSERV_COPYRIGHT);
+        line("Co-written with Claude Code (Claude Fable 5.2).");
         line(std::format("Built {} {}", __DATE__, __TIME__));
         line(std::format("Running as administrator: {}", bElevated ? "yes" : "no (some data and actions are unavailable)"));
         line(std::format("Settings and logs: {}", pserv::utils::WideToUtf8(pserv::utils::GetConfigFolder().wstring())));
