@@ -119,9 +119,9 @@ namespace winrt::pserv6::implementation
         std::string m_lastRefresh; ///< Status bar: time and duration of the last publish
         // The toolbar's action buttons (owned by the toolbar; no handler captures them), by action name
         pserv::DataController *m_pBarController{nullptr}; ///< The view they were built for
-        std::vector<std::pair<std::string, Microsoft::UI::Xaml::Controls::Button>> m_barButtons;
+        std::vector<std::pair<std::string, Microsoft::UI::Xaml::Controls::AppBarButton>> m_barButtons;
         std::vector<std::pair<std::string, Microsoft::UI::Xaml::Controls::MenuFlyoutItem>> m_barMenuItems;
-        std::vector<std::pair<Microsoft::UI::Xaml::Controls::DropDownButton, Microsoft::UI::Xaml::Controls::MenuFlyout>> m_barGroups;
+        std::vector<std::pair<Microsoft::UI::Xaml::Controls::AppBarButton, Microsoft::UI::Xaml::Controls::MenuFlyout>> m_barGroups;
         bool m_bElevated{false}; ///< This process has administrator rights
         int m_wheelDelta{0}; ///< Ctrl+wheel movement not yet turned into a zoom step
         uint64_t m_connectGeneration{0}; ///< Bumped by every connect: a superseded probe result is dropped.

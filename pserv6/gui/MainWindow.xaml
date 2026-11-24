@@ -60,21 +60,24 @@
             </MenuFlyoutItem>
         </MenuBarItem>
     </MenuBar>
-        <StackPanel Grid.Column="2" x:Name="ToolBar" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="12,2,8,2">
+        <Grid Grid.Column="2" x:Name="ToolBar" ColumnDefinitions="Auto,Auto,Auto,Auto,*" ColumnSpacing="8" VerticalAlignment="Center" Margin="12,0,8,0">
                 <Button x:Name="RefreshButton" Click="OnRefreshClick" ToolTipService.ToolTip="Refresh (F5)">
                     <SymbolIcon Symbol="Refresh" />
                 </Button>
-                <DropDownButton x:Name="SortButton" AccessKey="S" ToolTipService.ToolTip="Sort by column (Alt+S)">
+                <DropDownButton Grid.Column="1" x:Name="SortButton" AccessKey="S" ToolTipService.ToolTip="Sort by column (Alt+S)">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <SymbolIcon Symbol="Sort" />
                         <TextBlock Text="Sort" />
                     </StackPanel>
                 </DropDownButton>
-                <ToggleSwitch x:Name="AutoRefreshSwitch" OnContent="Auto-refresh" OffContent="Auto-refresh" Toggled="OnAutoRefreshToggled" MinWidth="0" />
-                <TextBox x:Name="FilterBox" PlaceholderText="Filter" Width="260" TextChanged="OnFilterChanged" />
-                <!-- Filled in code (UpdateActionBar): the actions available for the selected rows -->
-                <StackPanel x:Name="ActionBar" Orientation="Horizontal" Spacing="4" />
-            </StackPanel>
+                <ToggleSwitch Grid.Column="2" x:Name="AutoRefreshSwitch" OnContent="Auto-refresh" OffContent="Auto-refresh" Toggled="OnAutoRefreshToggled" MinWidth="0" />
+                <TextBox Grid.Column="3" x:Name="FilterBox" PlaceholderText="Filter" Width="220" VerticalAlignment="Center" TextChanged="OnFilterChanged" />
+                <!-- Filled in code (UpdateActionBar): the view's actions. A CommandBar, so that what does
+                     not fit moves into its "..." menu instead of being cut off. Left-aligned: the
+                     space it does not need stays part of the title bar. -->
+                <CommandBar Grid.Column="4" x:Name="ActionBar" DefaultLabelPosition="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Center"
+                            Background="Transparent" />
+            </Grid>
         <!-- Shown while pserv6 runs without administrator rights (it starts as the invoker) -->
         <Button Grid.Column="3" x:Name="ElevateButton" Click="OnElevate" Visibility="Collapsed" VerticalAlignment="Center" Margin="0,2,8,2"
                 ToolTipService.ToolTip="Restart pserv as administrator: without it, some data is missing and most changes are refused">

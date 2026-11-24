@@ -122,7 +122,7 @@ namespace winrt::pserv6::implementation
         SetTitleBar(TitleBarRow());
         AppWindow().TitleBar().PreferredHeightOption(winrt::Microsoft::UI::Windowing::TitleBarHeightOption::Tall);
         TitleBarRow().SizeChanged([this](auto &&, auto &&) { UpdateTitleBarRegions(); });
-        ToolBar().SizeChanged([this](auto &&, auto &&) { UpdateTitleBarRegions(); });
+        ActionBar().SizeChanged([this](auto &&, auto &&) { UpdateTitleBarRegions(); });
         m_grid.Attach(RowList(), HeaderGrid(), HeaderScroller());
         m_grid.m_onHeaderChanged = [this] { RebuildSortMenu(); };
         m_hwnd = WindowHandle();
@@ -705,6 +705,7 @@ namespace winrt::pserv6::implementation
     // view can do must be visible without selecting the right row first); those the selected rows
     // do not allow are disabled. Families of actions (Copy ..., Set Priority: ..., Set Startup: ...)
     // share one drop-down button. Built once per view; a refresh only updates what is enabled.
+    // The bar is a CommandBar: buttons that do not fit move into its overflow menu.
     void MainWindow::UpdateActionBar()
     {
         if (m_pBarController != m_pCurrent)
@@ -713,7 +714,7 @@ namespace winrt::pserv6::implementation
             m_barButtons.clear();
             m_barMenuItems.clear();
             m_barGroups.clear();
-            ActionBar().Children().Clear();
+            ActionBar().PrimaryCommands().Clear();
             const auto criticalBrush = Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Media::Brush>();
             const auto run = [this](const std::string &name)
             {
@@ -746,13 +747,14 @@ namespace winrt::pserv6::implementation
                         MenuFlyout menu;
                         it = familyMenus.emplace(family->first, menu).first;
                         menu.Placement(Primitives::FlyoutPlacementMode::BottomEdgeAlignedLeft);
-                        DropDownButton button;
-                        button.Content(iconOf(family->second));
+                        AppBarButton button;
+                        button.Icon(iconOf(family->second));
                         button.Flyout(menu);
                         const hstring familyName = to_hstring(std::string{family->first});
+                        button.Label(familyName); // shown in the overflow menu, and the automation name
+                        button.Width(44); // the stock 68 leaves room for a label that is collapsed here
                         ToolTipService::SetToolTip(button, box_value(familyName));
-                        winrt::Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button, familyName);
-                        ActionBar().Children().Append(button);
+                        ActionBar().PrimaryCommands().Append(button);
                         m_barGroups.emplace_back(button, menu);
                     }
                     MenuFlyoutItem item;
@@ -762,15 +764,16 @@ namespace winrt::pserv6::implementation
                     m_barMenuItems.emplace_back(name, item);
                     continue;
                 }
-                Button button;
+                AppBarButton button;
                 const wchar_t *glyph = ::pserv6::ActionGlyph(name);
-                button.Content(iconOf(glyph ? glyph : ::pserv6::MoreGlyph));
+                button.Icon(iconOf(glyph ? glyph : ::pserv6::MoreGlyph));
+                button.Label(label);
+                button.Width(44);
                 ToolTipService::SetToolTip(button, box_value(label));
-                winrt::Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button, label);
                 if (pAction->IsDestructive())
                     button.Foreground(criticalBrush);
                 button.Click([run, name](auto &&, auto &&) { run(name); });
-                ActionBar().Children().Append(button);
+                ActionBar().PrimaryCommands().Append(button);
                 m_barButtons.emplace_back(name, button);
             }
         }
@@ -851,7 +854,9 @@ namespace winrt::pserv6::implementation
         if (inset > 0 && CaptionInset().Width() != inset)
             CaptionInset().Width(inset);
         std::vector<winrt::Windows::Graphics::RectInt32> rects;
-        for (FrameworkElement const &element : {MainMenu().as<FrameworkElement>(), ToolBar().as<FrameworkElement>(), ElevateButton().as<FrameworkElement>()})
+        for (FrameworkElement const &element : {MainMenu().as<FrameworkElement>(), RefreshButton().as<FrameworkElement>(), SortButton().as<FrameworkElement>(),
+                                                 AutoRefreshSwitch().as<FrameworkElement>(), FilterBox().as<FrameworkElement>(), ActionBar().as<FrameworkElement>(),
+                                                 ElevateButton().as<FrameworkElement>()})
         {
             if (element.Visibility() != Visibility::Visible || element.ActualWidth() <= 0)
                 continue;
