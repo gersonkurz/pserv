@@ -193,12 +193,19 @@ Build note for the x64 machine: `git submodule update --init --recursive`, then 
     - *Font dialog sets the size too:* the size becomes the zoom (10.5 pt = 100 %), which therefore takes any value from 50 to 200, not only steps of 10. **Not executed** (a modal Win32 dialog): the owner's check.
     - *x86.* Solution platform `x86` (output `bin\Win32`), `setup\pserv6-x86.msis`, the bundle's 32-bit slot; reverses plan D10. x86 Release: pserv_core_tests 0 failures, `--selftest` and `--selftest-actions` PASS on this x64 machine. A 32-bit process sees fewer modules and less of 64-bit processes; not looked at view by view. Not run on a 32-bit Windows.
     - *Symbols in the MSI* as feature "Debug Symbols", off by default (Feature.Level 32767 in all three MSIs); the symbol zips and `scripts\zip-symbols.ps1` are gone. The MSIs are about 32-35 MB instead of 17 (the plan's 20 MB budget is given up for this). `just check-msi` PASS for x64, x86 and arm64 (it now expects the .pdb files in the extract). **Not executed:** selecting the feature in the installer's dialog (no installs on this machine); the bundle `.exe` has no feature selection of its own.
+
+42. **[done 2026-11-24] Release preparation (owner: main, README with screenshots, manual on GitHub Pages).**
+    - `main` on GitHub fast-forwarded to this branch. The manual is `docs/manual/` (nine pages plus `cli.md`, the former `docs/pservc.md`), published by `.github/workflows/manual.yml` to https://gersonkurz.github.io/pserv/ (Pages source "GitHub Actions", enabled through the API); `docs/pserv6.md` and `docs/pserv6.png` are gone, Help > Documentation opens the site.
+    - Screenshots (`docs/manual/images/`) were taken on the owner's machine from Services and Devices only; they show which services are installed there.
+    - *Toolbar overflow:* the action buttons were cut off entirely below about 1800 DIP of window width. They are a CommandBar now; what does not fit is in its "..." menu. Screenshot checked at 1350 and 1900 DIP. **Not executed:** opening the overflow menu and the three family drop-downs by pointer.
+    - About names Claude Code (Claude Fable 5.2) as co-author; an x86 build says x86 there.
+    - **Still open for the release:** no GitHub release exists yet (the manual and README link to the releases page); the MSIs in `setup\` predate the last GUI commits (`just release`, then `just check-msi` for x64, x86, arm64); no installer has been run anywhere; the owner's checks listed under items 40 and 41.
 ## Notes for the next session (written 2026-11-19 on the ARM64 machine; that session's memory and transcript do not travel)
 
 Where things stand, in the owner's words: Gemini's version is "best bang-for-the-buck" and was finished first by far, but "not perfect"; Codex's finds more bugs but is a less polished experience; this branch is "not there yet". Each has pros and cons - take ideas from both, do not copy either wholesale. The other two trees are other agents' work: read-only (`git fetch`, then `git show origin/pserv6-gemini:<path>` / `origin/codex-branch:<path>`; their GUI sources are `pserv6/MainWindow.xaml.cpp` and `pserv6/ui/` respectively).
 
 Standing decisions of the owner:
-- Branch `pserv6-claude`; commit per step and push only when asked. `main` stays untouched.
+- Since 2026-11-24 this line of work is `main` (owner: the Gemini and Codex branches are abandoned; `main` was fast-forwarded to `pserv6-claude`). Commit per step and push only when asked.
 - Never install an MSI on a development machine (it upgrades the installed pserv5 away). Check MSIs with `just check-msi <arch>` only.
 - The yaaadabi review loop is off (too slow). Verify yourself: `just build-all && just test`, `just selftest -RunAsInvoker`, `scripts\selftest.ps1 -Actions`, and a screenshot for anything visual.
 - Phase 5's coverage gaps are accepted ("I will do a manual review anyway"); x86 is built too since 2026-11-22; settings in `%APPDATA%\pserv6`.
