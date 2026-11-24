@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1840" height="680" viewBox="0 0 1840 680">
+  <!-- pserv's banner (README and manual). The mark: a hexagon holding a list of items with their
+       state - running ones in the accent colour, as in the application. The version text is
+       stamped by scripts\set-version.ps1 (`just version X.Y.Z`): keep the id "version". -->
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F0642D"/>
+      <stop offset="1" stop-color="#F5A01E"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1F1F24"/>
+      <stop offset="1" stop-color="#17171B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1840" height="680" fill="url(#ground)"/>
+  <path d="M 0 0 H 330 L 0 330 Z" fill="#F0642D" opacity="0.07"/>
+  <path d="M 1840 680 H 1510 L 1840 350 Z" fill="#F5A01E" opacity="0.07"/>
+
+  <!-- the mark -->
+  <polygon points="320,172 465.5,256 465.5,424 320,508 174.5,424 174.5,256" fill="#000000" opacity="0.35" transform="translate(0,10)"/>
+  <polygon points="320,172 465.5,256 465.5,424 320,508 174.5,424 174.5,256" fill="url(#accent)"/>
+  <polygon points="320,226 418.7,283 418.7,397 320,454 221.3,397 221.3,283" fill="#22201F"/>
+  <g>
+    <circle cx="262" cy="298" r="10" fill="#F5A01E"/>
+    <rect x="286" y="290" width="98" height="16" rx="8" fill="#F2F2F2"/>
+    <circle cx="262" cy="340" r="10" fill="#6B6661"/>
+    <rect x="286" y="332" width="70" height="16" rx="8" fill="#6B6661"/>
+    <circle cx="262" cy="382" r="10" fill="#F5A01E"/>
+    <rect x="286" y="374" width="86" height="16" rx="8" fill="#F2F2F2"/>
+  </g>
+
+  <!-- the name and the version -->
+  <text x="596" y="318" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="176" font-weight="300" fill="#FFFFFF">pserv <tspan id="version" font-weight="700" fill="url(#accent)">6.0</tspan></text>
+  <text x="600" y="412" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="38" fill="#A7A7AD" letter-spacing="7">WINDOWS SYSTEM ADMINISTRATION</text>
+  <rect x="600" y="446" width="276" height="4" rx="2" fill="url(#accent)"/>
+  <rect x="900" y="446" width="138" height="4" rx="2" fill="#3A3A40"/>
+  <rect x="1062" y="446" width="69" height="4" rx="2" fill="#3A3A40"/>
+  <text x="600" y="516" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="30" fill="#6E6E76">since 1998 &#183; p-nand-q.com</text>
+</svg>

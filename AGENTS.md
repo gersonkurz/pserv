@@ -96,7 +96,7 @@ Configuration uses TOML: `%APPDATA%\pserv6\config.toml`, shared by pserv6 (reads
 
 ## Versioning and Packaging
 
-- `just version X.Y.Z` updates `pserv6/version.h` and `setup/*.msis`; `gui/pserv6.rc` and `pservc/pservc.rc` consume the version header via `version.rc2`.
+- `just version X.Y.Z` updates `pserv6/version.h`, `setup/*.msis` and the version printed in the banner `docs/manual/images/logo.svg`; `gui/pserv6.rc` and `pservc/pservc.rc` consume the version header via `version.rc2`.
 - Packaging requires MSIS 3.x (`msis` on PATH) in addition to the VS build tools.
 - `just package-x64`, `just package-x86` and `just package-arm64` build and stage the respective Release payload and symbols, then create an MSI; the `.pdb` files are its optional "Debug Symbols" feature, not installed by default. `just package-all` runs all three.
 - `just bundle` combines the per-architecture MSIs; `just release` builds both packages and the bundle.

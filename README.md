@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.jpg" alt="pserv logo" width="1024"/>
+  <img src="docs/manual/images/logo.svg" alt="pserv 6.0 - Windows system administration" width="1024"/>
 </p>
 
 # pserv 6

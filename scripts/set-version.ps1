@@ -35,4 +35,10 @@ foreach ($name in @('pserv6-x64.msis', 'pserv6-x86.msis', 'pserv6-arm64.msis', '
     [System.IO.File]::WriteAllText($msisPath, $msis, $utf8)
 }
 
-Write-Host "pserv6 version set to $Version (pserv6\version.h + setup\*.msis)"
+# 3) The banner (README and manual) prints major.minor.
+$logoPath = Join-Path $root 'docs\manual\images\logo.svg'
+$logo = Get-Content -Raw $logoPath
+$logo = [regex]::Replace($logo, '(<tspan id="version"[^>]*>)[^<]*(</tspan>)', { param($m) $m.Groups[1].Value + "$major.$minor" + $m.Groups[2].Value })
+[System.IO.File]::WriteAllText($logoPath, $logo, $utf8)
+
+Write-Host "pserv6 version set to $Version (pserv6\version.h, setup\*.msis, the banner)"

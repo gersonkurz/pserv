@@ -22,7 +22,7 @@ Build with `just` (recipes in the repo-root `justfile`) from a **Visual Studio 2
 - `just clean`, `just rebuild`
 - `just release` — build x64, x86 and ARM64 Release, then the 3 MSIs + the multi-arch bundle `.exe`
 - `just check-msi <x64|x86|arm64>` — check a built MSI without installing it (administrative extract compared with the staged payload); `scripts\check-msi.ps1 -SelfTest` also runs the extracted pserv6
-- `just version X.Y.Z` — stamp `pserv6/version.h` + `setup/*.msis` (the `.rc` files read `version.h`)
+- `just version X.Y.Z` — stamp `pserv6/version.h`, `setup/*.msis` and the banner `docs/manual/images/logo.svg` (the `.rc` files read `version.h`)
 
 Builds are solution-driven (`pserv6/pserv6.slnx`) so `$(SolutionDir)` resolves — building a bare `.vcxproj` leaves output paths undefined.
 

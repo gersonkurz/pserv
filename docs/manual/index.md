@@ -1,3 +1,5 @@
+![pserv](images/logo.svg)
+
 # pserv
 
 pserv is a Windows system administration tool. One window shows the things an administrator
